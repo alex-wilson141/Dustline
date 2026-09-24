@@ -1,0 +1,8 @@
+{
+  "name": "dustline",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/test-sprint-m1.mjs && node tests/test-framefire-m1.mjs"
+  }
+}

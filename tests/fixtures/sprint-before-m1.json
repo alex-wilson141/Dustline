@@ -1,0 +1,78 @@
+{
+  "baseline": [
+    {
+      "fps": 15,
+      "switchesOver12s": 47,
+      "staminaLast4s": [
+        0.15000000000016245,
+        1.4500000000001632
+      ],
+      "distanceOver12s": 49.7,
+      "fovLast4s": [
+        70.85882352932418,
+        73.861328125
+      ]
+    },
+    {
+      "fps": 30,
+      "switchesOver12s": 137,
+      "staminaLast4s": [
+        0.46666666666656864,
+        1.3333333333332054
+      ],
+      "distanceOver12s": 63.06,
+      "fovLast4s": [
+        71.2802530521933,
+        73.28023545093764
+      ]
+    },
+    {
+      "fps": 60,
+      "switchesOver12s": 274,
+      "staminaLast4s": [
+        0.7333333333256056,
+        1.1666666666589118
+      ],
+      "distanceOver12s": 63.1033,
+      "fovLast4s": [
+        71.73116190290474,
+        72.72969531061685
+      ]
+    },
+    {
+      "fps": 120,
+      "switchesOver12s": 549,
+      "staminaLast4s": [
+        0.866666666637532,
+        1.0833333333042616
+      ],
+      "distanceOver12s": 63.0817,
+      "fovLast4s": [
+        71.97544748965583,
+        72.4706518505918
+      ]
+    }
+  ],
+  "frameClampTiming": [
+    {
+      "fps": 15,
+      "walkMetersOver5s": 13.125000000000016,
+      "gameSeconds": 3.7499999999999947
+    },
+    {
+      "fps": 30,
+      "walkMetersOver5s": 17.50000000000132,
+      "gameSeconds": 5.000000000000371
+    },
+    {
+      "fps": 60,
+      "walkMetersOver5s": 17.49999999999746,
+      "gameSeconds": 4.999999999999268
+    },
+    {
+      "fps": 120,
+      "walkMetersOver5s": 17.499999999996348,
+      "gameSeconds": 4.999999999998984
+    }
+  ]
+}
