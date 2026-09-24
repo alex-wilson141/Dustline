@@ -206,7 +206,7 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
   }
   function reset() { flinch = 0; fall = null; rig.quaternion.identity(); rig.position.set(0, 0, 0); rifle.position.set(.075, .285, -.275); }
   function state() {
-    return { flinch, falling: !!fall, fallTime: fall ? fall.t : 0, variant: fall ? fall.variant : null,
+    return { flinch, low, falling: !!fall, fallTime: fall ? fall.t : 0, variant: fall ? fall.variant : null,
       fallDone: !!fall && fall.t >= fall.duration, rigTilt: fall ? fall.tilt || 0 : 2 * Math.acos(Math.min(1, Math.abs(rig.quaternion.w))) };
   }
   function animate({ speed = 0, time = 0, dead = false, crouch = false, dt = 1 / 60 } = {}) {

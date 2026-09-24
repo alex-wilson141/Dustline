@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 06)
+# DUSTLINE — Operation Broken Signal (Build 07)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -31,16 +31,16 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - E: collect the story route log
 - H: apply a field dressing; movement slows and shooting cancels treatment
 - Q: cycle squad orders (advance, follow, hold)
-- Escape / P: pause and free the pointer
+- P: pause and free the cursor without leaving full screen; P again resumes. Esc is the browser's own key: it frees the cursor and leaves full screen, and the game pauses and offers a FULLSCREEN button to go back
 - L: leave the mission and return to class selection
 - M: show or hide the tactical map, squad list and control guide
 - F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
-Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemy positions are not revealed on the map. Friendly fire is disabled.
+Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
 
 ## Co-op setup
 
-The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. **Both players must run the same build** (the menu shows the build number). Builds 05 and 06 add host-sent hit messages for blood, blood splats, reactions, deaths and wall dust; mixing builds still connects but shows those effects incorrectly. Refresh both players before connecting.
+The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. **Both players must run the same build** (the menu shows the build number). Builds 05–07 add host-sent hit, crouch and respawn data for blood, blood splats, reactions, deaths and wall dust; mixing builds still connects but shows those effects incorrectly. Refresh both players before connecting.
 
 1. Both players choose **Private co-op** and a class.
 2. Host chooses **Create host code** and sends the generated code to the teammate.
@@ -59,6 +59,14 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Enemies and performance update (Build 07)
+
+- **Enemies move:** five patrol routes across the valley and two guard the relay. When they spot you (or hear shots nearby) they run to cover, crouch behind low walls, rise briefly to shoot and move again when hit. Their accuracy, damage and rate of fire are unchanged, and at most three shoot at the same target at once.
+- **Reinforcements:** killed enemies are replaced later from out of sight, at least 35 m from any player, in a limited number per mission stage. The relay can always be captured and extraction reached.
+- **Stuck enemy fixed:** spawn and route points are checked against the walls, and enemies route around thin walls instead of into them.
+- **Faster shots and sight checks:** the terrain is now tested only where a ray actually crosses it, with identical results; heavy combat frames dropped from about 15–22 ms to about 10 ms on a MacBook Pro M1 (Chromium).
+- **Pause keeps full screen:** use P to pause and resume. Esc still leaves full screen in every browser; the pause panel explains this and can re-enter full screen.
 
 ## Combat feel update (Build 06)
 
@@ -95,8 +103,11 @@ node tests/test-framefire-m1.mjs
 node tests/test-diagnostics-m1.mjs
 node tests/test-combatfeel-m2.mjs
 node tests/test-combatfeel-m3.mjs
+node tests/test-enemies-b07.mjs
+node tests/test-perf02-b07.mjs
+node tests/test-pausekeys-b07.mjs
 ```
 
-These run 34 movement, 24 firing, 3 diagnostics and 26 combat-feel checks (10 Build 05, 16 Build 06) against the game code. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
+These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence and 11 pause/fullscreen checks against the game code. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
 
 Read and update `DUSTLINE-ROADMAP.md` after each development task. It records verified changes, remaining playtests and the next bounded milestone.

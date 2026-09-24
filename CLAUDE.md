@@ -18,15 +18,15 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
-Build 06 (local, 2026-09-23) corrects Build 05 combat feel after the user's playtest:
-neutral hit marker plus a text-only kill alert, pooled larger blood (`dist/effects.js`),
-persistent blood decals (cap 40, oldest first, cleared on reset), six authored death
-variants chosen by hit zone and direction (`dist/characters.js`), and end text that
-names who was killed. Build 05 added blood, flinches, falling deaths, co-op `impact`
-messages and the PERF-01 Auto resolution fix. Build 04 removed sprint stamina
-entirely; the user accepted M1 in Safari. Never reintroduce exhaustion, recharge
-delays, stamina gates or a stamina HUD. Keep current class speeds, weapon balance
-and combat interruption rules. Do not add stairs or mantling without a separate request.
+Build 07 (local, 2026-09-24): enemies patrol, use cover and reposition, with bounded
+reinforcements (`dist/enemy-ai.js` holds every tunable in `ENEMY_AI`, read live);
+navigation matches collision and every placement is validated (AI-02); the terrain is
+raycast only where a ray crosses it (PERF-02, proven identical); P pauses/resumes
+without leaving fullscreen (Escape is the browser's key). Build 06 corrected combat
+feel; Build 04 removed sprint stamina entirely and the user accepted M1 in Safari.
+Never reintroduce exhaustion, recharge delays, stamina gates or a stamina HUD. Keep
+current class speeds, weapon balance and combat interruption rules. Do not add
+stairs or mantling without a separate request.
 
 Preserve Kohar Valley, Viper squad, the convoy route log, relay and extraction;
 the four classes; combat and reload behavior; bots; experimental co-op; and
@@ -35,7 +35,10 @@ intentional). Co-op: the host is authoritative for hits and sends `impact`
 messages (zone, victim yaw and decal included); snapshots own HP but must not set
 death rotation. Both players must run the same build; change the menu build label
 whenever co-op messages change. Cosmetic effects use Math.random, never the seeded
-gameplay rand(). Effects must not raycast the terrain mesh (use `terrainAt`).
+gameplay rand(); enemy AI decisions use its own seeded `aiRng`. Nothing may raycast the
+terrain mesh directly (use `terrainRay`/`terrainAt`). Enemy fire cadence, hit chance and
+damage (the fire block and `aiHit`) must stay unchanged unless explicitly requested.
+Do not rebind Escape as pause: browsers exit fullscreen on Escape before the page sees it.
 
 ## Run and verify
 
@@ -57,14 +60,17 @@ node tests/test-framefire-m1.mjs
 node tests/test-diagnostics-m1.mjs
 node tests/test-combatfeel-m2.mjs
 node tests/test-combatfeel-m3.mjs
+node tests/test-enemies-b07.mjs
+node tests/test-perf02-b07.mjs
+node tests/test-pausekeys-b07.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 06 source passed 34 movement, 24 firing, 3 diagnostics and
-10 + 16 combat-feel checks. These
+The last checked Build 07 source passed 34 movement, 24 firing, 3 diagnostics,
+10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence and 11 pause/fullscreen checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
