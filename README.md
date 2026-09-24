@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 04)
+# DUSTLINE — Operation Broken Signal (Build 05)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -40,7 +40,7 @@ Cover blocks bullets and movement. There is no automatic health regeneration. AI
 
 ## Co-op setup
 
-The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. Each player should refresh to the same build before connecting.
+The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. **Both players must run the same build** (the menu shows the build number). Build 05 adds host-sent hit messages for blood, reactions, deaths and wall dust; mixing Build 04 and Build 05 still connects but shows those effects incorrectly. Refresh both players before connecting.
 
 1. Both players choose **Private co-op** and a class.
 2. Host chooses **Create host code** and sends the generated code to the teammate.
@@ -60,6 +60,12 @@ Graphics uses automatic resolution scaling by default; choose Performance to red
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
 
+## Combat feel update (Build 05)
+
+Character hits show brief blood (disable with the **Blood** setting next to Audio), push the target away from the shot for a fraction of a second, and kills play an authored fall in the direction of the shot instead of an instant sideways roll. This is animation, not physics or ragdolls. Your hits give a stronger marker and a short tick; headshots show a red marker and a two-tone tick. In co-op the host sends each hit to the guest, so both players see the same blood, reactions, deaths and wall dust. Weapon damage, accuracy, fire rates and reload times are unchanged. Only player kills count toward the kill total; bot kills deliberately do not.
+
+Auto graphics now judges performance over 5 seconds of active play using the typical (median) frame time, ignores menus and pauses, is not lowered by a single hitch, and raises resolution again after sustained smooth play.
+
 ## Movement update (Build 04)
 
 Sprint has no resource meter, exhaustion or recharge delay. All four classes retain their existing movement multipliers; none had a resource-based perk to replace. Jumping and aim sway no longer depend on an energy resource.
@@ -74,8 +80,9 @@ From the project root, with Node.js installed:
 node tests/test-sprint-m1.mjs
 node tests/test-framefire-m1.mjs
 node tests/test-diagnostics-m1.mjs
+node tests/test-combatfeel-m2.mjs
 ```
 
-These run 34 movement and 24 firing checks against the game code: sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
+These run 34 movement, 24 firing, 3 diagnostics and 10 combat-feel checks against the game code. The combat-feel checks cover blood, reactions, deaths and cleanup in solo, host and guest paths plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
 
 Read and update `DUSTLINE-ROADMAP.md` after each development task. It records verified changes, remaining playtests and the next bounded milestone.

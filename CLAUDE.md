@@ -18,15 +18,20 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
-Build 04 was published on 2026-09-23. It removes sprint stamina entirely and
-fixes reproduced stamina-threshold oscillation and slow-frame movement timing.
-Never reintroduce exhaustion, recharge delays, stamina gates or a stamina HUD.
-Keep current class speeds and combat interruption rules. No stamina-based class
-perk existed to replace. Do not add stairs or mantling without a separate request.
+Build 05 (local, 2026-09-23) adds M2 combat feel on top of Build 04: blood with a
+Blood setting, directional flinches, authored falling deaths, hit sound/marker with
+headshots, host-sent co-op `impact` messages, and the PERF-01 Auto resolution fix.
+Build 04 removed sprint stamina entirely; the user accepted M1 in Safari. Never
+reintroduce exhaustion, recharge delays, stamina gates or a stamina HUD. Keep
+current class speeds, weapon balance and combat interruption rules. Do not add
+stairs or mantling without a separate request.
 
 Preserve Kohar Valley, Viper squad, the convoy route log, relay and extraction;
 the four classes; combat and reload behavior; bots; experimental co-op; and
-pointer capture, pause and leave controls.
+pointer capture, pause and leave controls. Only player kills count (KILL-01 is
+intentional). Co-op: the host is authoritative for hits and sends `impact`
+messages; snapshots own HP but must not set death rotation. Both players must run
+the same build; change the menu build label whenever co-op messages change.
 
 ## Run and verify
 
@@ -46,13 +51,15 @@ With a current Node.js version (last verified with 24.19.0):
 node tests/test-sprint-m1.mjs
 node tests/test-framefire-m1.mjs
 node tests/test-diagnostics-m1.mjs
+node tests/test-combatfeel-m2.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 04 source passed 34 movement and 24 firing checks. These
+The last checked Build 05 source passed 34 movement, 24 firing, 3 diagnostics and
+10 combat-feel checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

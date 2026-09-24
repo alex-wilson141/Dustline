@@ -29,7 +29,8 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
  const api=Function(...parameters,source+`
  const originalBlocked=blocked, originalGroundY=groundY;
  const harnessMessages=[];
- tickAI=()=>{};missionTick=()=>{};sound=()=>{};
+ const harnessSounds=[];
+ tickAI=()=>{};missionTick=()=>{};sound=type=>harnessSounds.push(type);
  for(const a of actors)a.animate=()=>{};
  peer.send=m=>harnessMessages.push(structuredClone(m));
  const originalAnimate=viewmodel.animate;
@@ -39,12 +40,14 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
    set(o){if('yaw'in o)yaw=o.yaw;if('aim'in o)aim=o.aim;if('crouch'in o)crouch=o.crouch;if('trigger'in o)trigger=o.trigger;if('healing'in o)healing=o.healing;if('hostPaused'in o)hostPaused=o.hostPaused;if('hp'in o)hp=o.hp;},
    clearLane(){blocked=()=>false;},restoreWorld(){blocked=originalBlocked;},blocked:(x,z)=>blocked(x,z),groundY:(x,z)=>groundY(x,z),
    play(){setState('playing');document.pointerLockElement=renderer.domElement;},
-   messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage};
+   messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
+   // typeof guards keep the harness able to load older builds for baseline comparisons.
+   scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined})};
  `)(...values);
  assert.equal(await api.viewmodel.ready,true,'actual rifle asset is available');
  api.press=code=>listeners.get('keydown')({code,target:{tagName:'BODY'},repeat:false,preventDefault(){}});
  api.release=code=>listeners.get('keyup')({code});
- api.listeners=listeners;api.elements=elements;
+ api.listeners=listeners;api.elements=elements;api.el=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);};
  let now=api.getLast();api.step=seconds=>api.frame(now+=seconds*1000);
  api.simulate=(seconds,fps)=>{const count=Math.round(seconds*fps);for(let i=0;i<count;i++)api.step(1/fps);};
  api.prepare=({role=null,clearLane=true,classId='assault'}={})=>{api.peer.connected=Boolean(role);api.peer.role=role;api.setMode(role?'coop':'story');api.setClass(classId);api.reset();api.play();if(clearLane)api.clearLane();else api.restoreWorld();api.player.set(0,0,0);api.camera.fov=70;api.messages.length=0;};

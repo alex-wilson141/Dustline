@@ -2,25 +2,30 @@
 
 _Updated 2026-09-23. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build:** 04 (unlimited sprint, no stamina) + F3 diagnostic overlay (local only, not published).
+**Build:** 05, local only (Git, no remote; the public Site still runs its earlier build).
 
-**Open problem:** human playtest in a real browser: *"Sprinting is fine for a few seconds, then I slow down and the view shakes."*
-MOV-01 and M1.02 are reopened as UNVERIFIED. Headless T8/T9 still pass (34/34, 24/24), so the cause is
-probably in something the tests cannot see (frame pacing, auto resolution, input, perception).
+**Done:** M1 unlimited sprint, accepted by the user ("sprint jitter is gone in Safari on Build 04").
+M2 combat feel in code: blood + Blood setting (on by default), .22 s directional flinch, authored falling deaths
+with direction and slide (no ragdoll), hit tick + stronger marker with red headshot / larger kill variants.
+Co-op: host sends `impact` per character hit and surface hit; `hit` reply carries head/kill; snapshots no longer
+force the sideways roll. PERF-01 fixed (median-based Auto resolution, no checks in menu/pause, recovers upward).
 
-**Candidate mechanisms (roadmap E10):** Auto render-scale ratchet (every 5 s, FPS < 42 → lower, never back up);
-.25 s cap (only frames > 250 ms lose time); sprint gate (aim/crouch/trigger/reload/dressing cut speed and FOV together);
-substep CPU cost growing as FPS drops. Found, not fixed: PERF-01 (auto-quality FPS average is thrown off by single hitches).
+**Checks:** T8 34/34, T9 24/24, T10 3/3, T11 10/10 (all headless). Not verified: how blood, flinches and falls look,
+the hit sounds, real GPU behaviour of Auto resolution, and any live WebRTC co-op on Build 05.
 
-**Waiting on:** the user's F3 overlay dump from a real sprint, on Auto and on Performance graphics.
-Procedure: roadmap → "Recommended next task".
+**Waiting on:** the user's Build 05 playtest, solo plus two browsers on one Mac for co-op (checklist in the roadmap's
+"Recommended next task").
 
-**Next task after that:** read the numbers, tie the symptom to one mechanism, propose one bounded fix for approval.
+**Next development task after that:** fix only evidence-backed Build 05 problems, then M2.02 damage-direction indicator.
+
+**Intentional, do not change:** only player kills count (KILL-01). Allies stand up again after 15 s.
 
 **Filed, not started:** M7.10 continuously spawning enemies that patrol and reposition.
 
-**Checks:** `node tests/test-sprint-m1.mjs`, `node tests/test-framefire-m1.mjs`, `node tests/test-diagnostics-m1.mjs`
-(`node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/.../node/bin/node` works).
+**Commands:** `node tests/test-sprint-m1.mjs`, `node tests/test-framefire-m1.mjs`, `node tests/test-diagnostics-m1.mjs`,
+`node tests/test-combatfeel-m2.mjs` (`node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at
+`~/.cache/codex-runtimes/.../node/bin/node` works). Serve with `python3 -m http.server 8765 --directory dist`.
 
-**Rules:** never reintroduce stamina; preserve story, four classes, combat, bots, co-op, pointer controls; `dist/` is source;
-no desktop screen/audio recording; do not publish to the public Site without an explicit request.
+**Rules:** never reintroduce stamina; preserve story, four classes, weapon balance, bots, co-op, pointer controls;
+`dist/` is source; both co-op players on the same build; no desktop screen/audio recording; do not publish to the
+public Site without an explicit request.

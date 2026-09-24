@@ -94,7 +94,12 @@ const rifleGeometry = packedBoxes([
 const barrelGeometry = new THREE.CylinderGeometry(.012, .012, .17, 8);
 barrelGeometry.rotateX(Math.PI / 2);
 
-/** A 1.8 m articulated visual. Outer placement and death roll belong to the game. */
+// Authored hit reactions and deaths (no physics). Directions are in the soldier's local X/Z frame
+// and point the way the shot travelled, so the body is pushed away from the shooter.
+export const REACTION_SECONDS = .22, FALL_SECONDS = .62, SETTLE_SECONDS = .2;
+const fallAxis = new THREE.Vector3();
+
+/** A 1.8 m articulated visual. Outer placement belongs to the game; flinch and fall are animated here. */
 export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } = {}) {
   const p = palette(team, materials.mat);
   const group = new THREE.Group();
@@ -152,8 +157,25 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
     marker.userData.isAllyMarker = true;
   }
   let stride = index * 1.79, movement = 0, low = 0, down = 0;
+  let flinch = 0, flinchX = 0, flinchZ = 0, fall = null;
+  // Visual only: a flinch never changes the outer transform, so AI movement and hit tests continue.
+  function react({ x = 0, z = 1, strength = .6, kill = false } = {}) {
+    const length = Math.hypot(x, z);
+    if (!(length > 1e-6)) { x = 0; z = 1; } else { x /= length; z /= length; }
+    const s = Math.min(1, Math.max(0, Number.isFinite(strength) ? strength : .6));
+    if (kill) { if (!fall) fall = { x, z, t: 0, slide: .22 + .38 * s }; }
+    else if (!fall) { flinch = .55 + .45 * s; flinchX = x; flinchZ = z; }
+  }
+  function reset() { flinch = 0; fall = null; rig.quaternion.identity(); rig.position.set(0, 0, 0); }
+  function state() {
+    return { flinch, falling: !!fall, fallTime: fall ? fall.t : 0,
+      fallDone: !!fall && fall.t >= FALL_SECONDS + SETTLE_SECONDS, rigTilt: 2 * Math.acos(Math.min(1, Math.abs(rig.quaternion.w))) };
+  }
   function animate({ speed = 0, time = 0, dead = false, crouch = false, dt = 1 / 60 } = {}) {
     const delta = Math.min(.1, Math.max(0, Number.isFinite(dt) ? dt : 0));
+    // A death without a directional impact (for example an older host) falls backwards.
+    if (dead && !fall) fall = { x: 0, z: 1, t: 0, slide: .15 };
+    if (!dead && fall) reset();
     const smoothing = 1 - Math.exp(-delta * 12);
     movement += (Math.min(1, Math.max(0, speed) / 2.6) - movement) * smoothing;
     low += ((crouch ? 1 : 0) - low) * smoothing;
@@ -178,7 +200,27 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
       fore.rotation.x = (left ? .79 : 1.23) - down * .7;
       fore.rotation.z = left ? .85 : -.4;
     }
+    flinch = Math.max(0, flinch - delta / REACTION_SECONDS);
+    if (flinch > 0) {
+      const k = flinch * flinch;
+      torso.rotation.x += flinchZ * .38 * k;
+      torso.rotation.z -= flinchX * .38 * k;
+      rig.position.x = flinchX * .05 * k;
+      rig.position.z = flinchZ * .05 * k;
+    } else if (!fall) rig.position.x = rig.position.z = 0;
+    if (fall) {
+      fall.t += delta;
+      // Stagger in the shot direction, accelerate over like a toppling body, then a small settle bounce.
+      const u = Math.min(1, fall.t / FALL_SECONDS), settle = Math.min(1, Math.max(0, (fall.t - FALL_SECONDS) / SETTLE_SECONDS));
+      const angle = (Math.PI / 2 - .04) * u * u - (settle > 0 && settle < 1 ? .09 * Math.sin(Math.PI * settle) : 0);
+      const slide = fall.slide * (1 - Math.pow(1 - Math.min(1, fall.t / (FALL_SECONDS + SETTLE_SECONDS)), 3));
+      fallAxis.set(fall.z, 0, -fall.x).normalize();
+      rig.quaternion.setFromAxisAngle(fallAxis, angle);
+      rig.position.x = fall.x * slide;
+      rig.position.z = fall.z * slide;
+      rig.position.y += .1 * u;
+    }
   }
   animate({ dt: 0 });
-  return { group, animate };
+  return { group, animate, react, reset, state };
 }
