@@ -54,7 +54,7 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
    messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
    // typeof guards keep the harness able to load older builds for baseline comparisons.
    scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
-   occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},fx:typeof fx==='object'?fx:undefined,
+   occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},resetNav:typeof navEdge!=='undefined'?()=>{navGrid=null;navEdge=null;navComp=null;coverCache=null;}:undefined,fx:typeof fx==='object'?fx:undefined,
    ai:typeof enemyPlan==='function'?{director:()=>director,coverTable,coverQuery,safeSpot,segClear,pathTo,navigationGrid,navComp:()=>navComp,setStage:v=>{stage=v;},humanEyes,objectivePoint,target,extract,intel,finish,missionTick:(dt)=>missionTick(dt),aiRng:()=>aiRng}:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined};
  `)(...values);
  assert.equal(await api.viewmodel.ready,true,'actual rifle asset is available');

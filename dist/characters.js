@@ -124,13 +124,19 @@ export const DEATH_VARIANTS = {
   // Abdomen hit: doubles over clutching the wound, then falls along the shot.
   doubleover: { duration: .9, pose: (t, s) => ({ tilt: TOP * easeIn(span(t, .28, .74)) - bounce(t, .74, .9, .07), sink: .1 * easeOut(span(t, 0, .26)), slide: (.12 + .2 * s) * easeOut(span(t, 0, .75)), twist: 0, bend: .5 * easeOut(span(t, 0, .24)) * (1 - .4 * span(t, .5, .8)), arms: -.6 * smooth(span(t, 0, .22)), knees: .45 * easeOut(span(t, 0, .26)) }) },
 };
-// Deterministic so host and guest pick the same death from the same impact.
-export function deathVariant({ x = 0, z = 1, zone = 'upper' } = {}) {
-  if (zone === 'head') return 'collapse';
+// Chosen from how the body was hit: side of the shot, body zone, height on the torso, how far off-centre (side, m)
+// and a per-kill value (roll, 0-1) derived from the hit so that repeated front chest kills still vary. The host
+// picks the variant and sends it with the impact, so both peers play the same death.
+export function deathVariant({ x = 0, z = 1, zone = 'upper', height = null, side = 0, roll = 0 } = {}) {
+  const lateral = Math.abs(x) > Math.abs(z) * 1.2, behind = z < 0;
   if (zone === 'legs') return 'crumple';
-  if (zone === 'lower') return 'doubleover';
-  if (Math.abs(x) > Math.abs(z) * 1.2) return 'spin';
-  return z >= 0 ? 'stagger' : 'pitch';
+  if (zone === 'lower') return roll < .7 ? 'doubleover' : 'crumple';
+  if (zone === 'head') return lateral ? (roll < .5 ? 'spin' : 'collapse') : roll < .65 ? 'collapse' : behind ? 'pitch' : 'stagger';
+  if (lateral) return roll < .7 ? 'spin' : 'collapse';
+  if (behind) return roll < .75 ? 'pitch' : 'spin';
+  if (Math.abs(side) > .18) return roll < .6 ? 'spin' : 'stagger'; // shoulder or arm
+  if (height != null && height <= 1.25) return roll < .4 ? 'doubleover' : roll < .75 ? 'stagger' : 'collapse';
+  return roll < .45 ? 'stagger' : roll < .75 ? 'collapse' : 'spin';
 }
 
 /** A 1.8 m articulated visual. Outer placement belongs to the game; flinch and fall are animated here. */
@@ -193,15 +199,15 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
   let stride = index * 1.79, movement = 0, low = 0, down = 0;
   let flinch = 0, flinchX = 0, flinchZ = 0, fall = null;
   // Visual only: a flinch never changes the outer transform, so AI movement and hit tests continue.
-  function react({ x = 0, z = 1, strength = .6, kill = false, zone = 'upper' } = {}) {
+  function react({ x = 0, z = 1, strength = .6, kill = false, zone = 'upper', variant = null } = {}) {
     const length = Math.hypot(x, z);
     if (!(length > 1e-6)) { x = 0; z = 1; } else { x /= length; z /= length; }
     const s = Math.min(1, Math.max(0, Number.isFinite(strength) ? strength : .6));
-    if (kill) { if (!fall) startFall(x, z, s, HIT_ZONES.includes(zone) ? zone : 'upper'); }
+    if (kill) { if (!fall) startFall(x, z, s, HIT_ZONES.includes(zone) ? zone : 'upper', variant); }
     else if (!fall) { flinch = .55 + .45 * s; flinchX = x; flinchZ = z; }
   }
-  function startFall(x, z, s, zone) {
-    const variant = deathVariant({ x, z, zone });
+  function startFall(x, z, s, zone, chosen) {
+    const variant = Object.hasOwn(DEATH_VARIANTS, chosen ?? '') ? chosen : deathVariant({ x, z, zone });
     fall = { x, z, t: 0, s, variant, side: x >= 0 ? -1 : 1, duration: DEATH_VARIANTS[variant].duration };
   }
   function reset() { flinch = 0; fall = null; rig.quaternion.identity(); rig.position.set(0, 0, 0); rifle.position.set(.075, .285, -.275); }

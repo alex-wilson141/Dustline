@@ -1,4 +1,5 @@
-// Build 07 enemy behaviour data: tunables, patrol loops, spawn points, reinforcement entries and the cover table.
+// Enemy behaviour data (Build 07, waves and corpse limits Build 08): tunables, patrol loops, spawn points, reinforcement
+// entries and the cover table.
 // game.js reads ENEMY_AI at call time (never copied at load), so every value here is live and testable.
 // Hit chance, damage and fire cadence are NOT here: they stay in game.js's unchanged fire block and aiHit.
 
@@ -19,9 +20,12 @@ export const ENEMY_AI = {
   relocateOnHit: .6, maxCoverHold: [10, 16], relocateMinInterval: 3, maxRelocating: 2,
   lostTargetSearch: 6, searchStopDist: 12, noCoverRetry: [4, 6],
   stuckRepath: 1.5, stuckAbandon: 4,
-  // Reinforcements recycle dead enemy actors, so at most 7 are ever alive.
-  reinforce: true, budget: {0: 4, 1: 6, 2: 3, skirmish: 8}, maxAlive: {0: 5, 1: 6, 2: 4, skirmish: 6},
-  firstSpawnDelay: 25, spawnInterval: [14, 22], directorTick: 1, corpseMinAge: 8,
+  // Reinforcements recycle dead enemy actors (at most 7 are ever alive) and arrive in waves of waveSize from one
+  // entry point, spawnInterval seconds apart. Budgets are per stage, so every stage can be cleared for good.
+  reinforce: true, budget: {0: 6, 1: 9, 2: 6, skirmish: 12}, maxAlive: {0: 6, 1: 7, 2: 6, skirmish: 7}, waveSize: {0: 2, 1: 3, 2: 3, skirmish: 3},
+  firstSpawnDelay: 20, spawnInterval: [22, 32], directorTick: 1, corpseMinAge: 8,
+  // Bodies stay shootable, then sink away after corpseLife seconds or when more than corpseMax are lying (oldest first).
+  corpseLife: 40, corpseMax: 5, corpseSinkTime: 1.5,
   spawnMinHumanDist: 35, spawnMinObjectiveDist: 35, spawnMinAllyDist: 15, humanSightRange: 90,
   // Mission safety: the relay capture must stay winnable.
   relayNoGo: 16, garrisonRadius: 15, garrisonFlushAfter: 12, extractQuietRadius: 20,

@@ -1,4 +1,5 @@
 import * as THREE from './three.module.js';
+import {densifyVillage} from './village-props.js';
 export function dressWorld({scene,renderer,ground,plaster,box,cylinder,mat,wood,metal,sand,groundY,solids,occluders,rand,range}){
  const loader=new THREE.TextureLoader(),maxAniso=Math.min(8,renderer.capabilities.getMaxAnisotropy());
  function tex(name,type,repeat){const t=loader.load(`assets/${name}_${type}_1k.jpg`);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);t.anisotropy=maxAniso;if(type==='diff')t.colorSpace=THREE.SRGBColorSpace;return t;}
@@ -21,5 +22,6 @@ export function dressWorld({scene,renderer,ground,plaster,box,cylinder,mat,wood,
  const leaves=mat('#646a43');for(const [x,z]of[[-46,35],[40,36],[-46,-8],[49,-30],[-13,-69],[33,-64]]){const y=groundY(x,z);cylinder(.09,.2,3.8,x,y+1.9,z,wood);for(let j=0;j<7;j++){const o=new THREE.Mesh(new THREE.IcosahedronGeometry(range(.65,1.2),1),leaves);o.position.set(x+range(-1,1),y+3.5+range(-.5,.7),z+range(-1,1));o.scale.y=.65;o.castShadow=true;scene.add(o);}}
  // Soft suspended dust, using round alpha particles.
  const dc=document.createElement('canvas');dc.width=dc.height=32;const ctx=dc.getContext('2d'),gr=ctx.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'rgba(230,214,173,.6)');gr.addColorStop(1,'rgba(230,214,173,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,32,32);const pts=[];for(let i=0;i<200;i++)pts.push(range(-80,80),range(.2,12),range(-80,70));const dust=new THREE.Points(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(pts,3)),new THREE.PointsMaterial({size:.1,map:new THREE.CanvasTexture(dc),transparent:true,opacity:.27,depthWrite:false}));scene.add(dust);
- return {dust};
+ const props=densifyVillage({THREE,scene,box,cylinder,groundY,solids,occluders,wood,metal,sand,plaster});
+ return {dust,props};
 }

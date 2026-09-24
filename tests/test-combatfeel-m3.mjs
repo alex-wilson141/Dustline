@@ -108,10 +108,11 @@ await check('decals: wall behind the victim gets an oriented splat; otherwise th
     const side = [[1, 0], [-1, 0], [0, 1], [0, -1]][i % 4], p = new THREE.Vector3(side[0] ? (side[0] > 0 ? b.max.x : b.min.x) + side[0] * 1.2 : c.x + ((i % 7) - 3) * .3, Math.min(b.max.y - .05, b.min.y + 1.1), side[1] ? (side[1] > 0 ? b.max.z : b.min.z) + side[1] * 1.2 : c.z + ((i % 5) - 2) * .3);
     const f = g.decalFor(p, new THREE.Vector3(-side[0], 0, -side[1]), i % 3 === 0);
     if (!f || f[4] > .9) continue;
-    const host = g.occluders.slice(1).map(q => new THREE.Box3().setFromObject(q)).find(q => q.expandByScalar(.01).containsPoint(new THREE.Vector3(f[0], f[1], f[2])));
-    assert(host, 'decal sits on a box face');
+    // Where two coplanar faces meet (wall corners), the decal must fit inside the face of one of the boxes it touches.
+    const hosts = g.occluders.slice(1).map(q => new THREE.Box3().setFromObject(q)).filter(q => q.expandByScalar(.01).containsPoint(new THREE.Vector3(f[0], f[1], f[2])));
+    assert(hosts.length, 'decal sits on a box face');
     const r = f[6] / Math.SQRT2 - 1e-6, axes = Math.abs(f[3]) > .5 ? ['y', 'z'] : ['x', 'y'];
-    for (const k of axes) { const v = f[{x: 0, y: 1, z: 2}[k]]; assert(v - r >= host.min[k] && v + r <= host.max[k], 'within face extents'); }
+    assert(hosts.some(host => axes.every(k => { const v = f[{x: 0, y: 1, z: 2}[k]]; return v - r >= host.min[k] && v + r <= host.max[k]; })), 'within face extents');
     boxDecals++;
   }
   assert(boxDecals >= 10, `sampled ${boxDecals} box decals`);
@@ -184,18 +185,19 @@ await check('death variants: selected by shot direction, headshot and body locat
   for (const [input, want] of table) assert.equal(deathVariant(input), want, JSON.stringify(input));
   assert(Object.keys(DEATH_VARIANTS).length >= 5);
   assert(Object.values(DEATH_VARIANTS).every(v => v.duration <= .95), 'every death completes within .95 s');
-  // Real kills through hitScan: the zone and direction choose the variant.
-  const g = await game(), cases = [[1.62, 0, 'collapse'], [1.2, Math.PI, 'stagger'], [1.2, 0, 'pitch'], [1.2, Math.PI / 2, 'spin'], [.85, 0, 'doubleover'], [.4, 0, 'crumple']];
+  // Real kills through hitScan: zone, direction and hit height choose from these sets (Build 08: a per-kill value picks
+  // within the set, so repeated front chest kills no longer all play the same death).
+  const g = await game(), cases = [[1.62, 0, ['collapse', 'pitch']], [1.2, Math.PI, ['doubleover', 'stagger', 'collapse']], [1.2, 0, ['pitch', 'spin']], [1.2, Math.PI / 2, ['spin', 'collapse']], [.85, 0, ['doubleover', 'crumple']], [.4, 0, ['crumple']]];
   // Shooter is at +z; yaw 0 faces -z (shot from behind), yaw pi faces the shooter. Leg shots aim at one leg (x .112).
   const poses = {};
   for (const [i, [h, yaw, want]] of cases.entries()) {
     const e = enemies(g)[i]; place(g, e, -12 + i * 5, 45, yaw); e.hp = 1;
     const from = new THREE.Vector3(e.g.position.x, g.groundY(e.g.position.x, 55) + 1.5, 55);
     g.hitScan(from, at(e, h).add(new THREE.Vector3(h < .7 ? .112 : 0, 0, 0)).sub(from).normalize(), CLASSES.assault, 'local');
-    assert(e.hp <= 0, `killed ${want}`); assert.equal(e.visual.state().variant, want);
+    assert(e.hp <= 0, `killed ${want}`); assert(want.includes(e.visual.state().variant), `${e.visual.state().variant} not in ${want}`);
   }
   g.wait(.3);
-  for (const [i, [, , want]] of cases.entries()) { const e = enemies(g)[i], rig = e.g.children[0], torso = rig.children[0]; poses[want] = [...rig.quaternion.toArray(), rig.position.y, torso.rotation.x].map(v => Math.round(v * 1e3)); }
+  for (const [i] of cases.entries()) { const e = enemies(g)[i], rig = e.g.children[0], torso = rig.children[0]; poses[e.visual.state().variant] = [...rig.quaternion.toArray(), rig.position.y, torso.rotation.x].map(v => Math.round(v * 1e3)); }
   const keys = Object.keys(poses); for (let a = 0; a < keys.length; a++) for (let b = a + 1; b < keys.length; b++) assert.notDeepEqual(poses[keys[a]], poses[keys[b]], `${keys[a]} vs ${keys[b]} differ mid-fall`);
   // Invariant: whatever the variant, the head ends up displaced along the shot (away from the shooter).
   const v = await game(), e = enemies(v)[0];
@@ -220,7 +222,7 @@ await check('guest plays the same death variant from the impact zone; old hosts 
   const guest = await game('guest'), ge = guest.actors.filter(a => !a.remote)[host.actors.filter(a => !a.remote).indexOf(e)]; place(guest, ge, 0, 45);
   guest.receive(m); assert.equal(ge.visual.state().variant, 'crumple');
   const old = await game('guest'), oe = old.actors.filter(a => !a.remote)[host.actors.filter(a => !a.remote).indexOf(e)]; place(old, oe, 0, 45);
-  const legacy = structuredClone(m); delete legacy.zn; delete legacy.dc; legacy.head = true; old.receive(legacy);
+  const legacy = structuredClone(m); delete legacy.zn; delete legacy.dc; delete legacy.dv; delete legacy.st; legacy.head = true; old.receive(legacy);
   assert.equal(oe.visual.state().variant, 'collapse', 'Build 05 impact (no zone) falls back to the head flag');
 });
 

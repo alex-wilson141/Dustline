@@ -143,7 +143,7 @@ await check('reinforcements: corpses recycle within budget and alive cap, out of
   assert.equal((await spawnLog(() => { ENEMY_AI.budget[0] = 0; })).log.length, 0, 'budget read');
   assert.equal((await spawnLog(() => { ENEMY_AI.reinforce = false; })).log.length, 0, 'reinforce switch read');
   assert.equal((await spawnLog(() => { ENEMY_AI.firstSpawnDelay = 1e6; })).log.length, 0, 'firstSpawnDelay read');
-  const spaced = await spawnLog(() => { ENEMY_AI.budget[0] = 3; ENEMY_AI.spawnInterval = [60, 60]; ENEMY_AI.firstSpawnDelay = 5; ENEMY_AI.corpseMinAge = 0; }, 100);
+  const spaced = await spawnLog(() => { ENEMY_AI.budget[0] = 3; ENEMY_AI.waveSize[0] = 1; ENEMY_AI.spawnInterval = [60, 60]; ENEMY_AI.firstSpawnDelay = 5; ENEMY_AI.corpseMinAge = 0; }, 100);
   assert.equal(spaced.log.length, 2, 'spawnInterval read (5 s, then 65 s; the third would be at 125 s)');
   const capped = await spawnLog(() => { ENEMY_AI.maxAlive[0] = 1; ENEMY_AI.budget[0] = 9; ENEMY_AI.firstSpawnDelay = 1; ENEMY_AI.spawnInterval = [1, 1]; ENEMY_AI.corpseMinAge = 0; }, 20);
   assert(capped.maxAlive <= 1, 'maxAlive read');
