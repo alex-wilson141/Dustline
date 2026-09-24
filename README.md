@@ -34,6 +34,7 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - Escape / P: pause and free the pointer
 - L: leave the mission and return to class selection
 - M: show or hide the tactical map, squad list and control guide
+- F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemy positions are not revealed on the map. Friendly fire is disabled.
 
@@ -72,8 +73,9 @@ From the project root, with Node.js installed:
 ```sh
 node tests/test-sprint-m1.mjs
 node tests/test-framefire-m1.mjs
+node tests/test-diagnostics-m1.mjs
 ```
 
-These run 34 movement and 24 firing checks against the game code: sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames.
+These run 34 movement and 24 firing checks against the game code: sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
 
 Read and update `DUSTLINE-ROADMAP.md` after each development task. It records verified changes, remaining playtests and the next bounded milestone.

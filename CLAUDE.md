@@ -45,7 +45,12 @@ With a current Node.js version (last verified with 24.19.0):
 ```sh
 node tests/test-sprint-m1.mjs
 node tests/test-framefire-m1.mjs
+node tests/test-diagnostics-m1.mjs
 ```
+
+`dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
+must be bit-identical with it off or on (checked by the diagnostics test). Read
+`NOW.md` for the current task state.
 
 The last checked Build 04 source passed 34 movement and 24 firing checks. These
 mock rendering, pointer capture and network transport. Human camera/movement

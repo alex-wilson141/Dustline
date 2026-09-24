@@ -6,6 +6,7 @@ import {batchStatic,MinHeap} from './optimization.js';
 import {makeViewmodel} from './viewmodel.js';
 import {makeSoldierVisual} from './characters.js';
 import {advanceSimulation,MAX_FRAME_SECONDS} from './timing.js';
+import {diagnostics} from './diagnostics.js';
 import {RGBELoader} from './RGBELoader.js';
 const $=id=>document.getElementById(id);
 let renderer;
@@ -154,8 +155,12 @@ function frame(now){
  frameMs=frameMs*.96+rawDt*1000*.04;fps=1000/Math.max(1,frameMs);qualityTimer+=Math.min(rawDt,MAX_FRAME_SECONDS);
  if(qualityTimer>5&&$('quality').value==='auto'&&state==='playing'){qualityTimer=0;if(fps<42&&renderScale>.75){renderScale=Math.max(.75,renderScale-.15);renderer.setPixelRatio(renderScale);}}
  let simulationNow=now-Math.min(rawDt,MAX_FRAME_SECONDS)*1000;
- advanceSimulation(rawDt,(dt,isFinalStep)=>{simulationNow+=dt*1000;stepSimulation(dt,simulationNow,isFinalStep);});
+ // F3 diagnostics are read-only; when off, only the substep counter and flag check run.
+ const diag=diagnostics.enabled,cpu0=diag?performance.now():0;let substeps=0;
+ const simulated=advanceSimulation(rawDt,(dt,isFinalStep)=>{substeps++;simulationNow+=dt*1000;stepSimulation(dt,simulationNow,isFinalStep);});
+ const cpu1=diag?performance.now():0;
  networkTick(Math.min(rawDt,MAX_FRAME_SECONDS));renderer.render(scene,camera);
+ if(diag)diagnostics.record({now,rawDt,simulated,substeps,cap:MAX_FRAME_SECONDS,gameFps:fps,simCpuMs:cpu1-cpu0,renderCpuMs:performance.now()-cpu1,quality:$('quality').value,renderScale,pixelRatio:renderer.getPixelRatio?.(),canvas:`${renderer.domElement.width}x${renderer.domElement.height}`,autoCheckIn:Math.max(0,5-qualityTimer),fov:camera.fov,state,x:player.x,z:player.z});
 }
 function stepSimulation(dt,now,isFinalStep){
  if(state==='menu'){camera.position.set(42+Math.sin(now*.00004)*3,9.5,49);camera.lookAt(-9,2,-17);gun.visible=false;}
@@ -166,6 +171,7 @@ function stepSimulation(dt,now,isFinalStep){
   if(healing>0){healing=Math.max(0,healing-dt);if(healing===0&&!(mode==='coop'&&peer.role==='guest'&&peer.connected)){hp=Math.min(100,hp+50);bandages--;notify('DRESSING APPLIED');}}
   let mx=(keys.has('KeyD')?1:0)-(keys.has('KeyA')?1:0),mz=(keys.has('KeyS')?1:0)-(keys.has('KeyW')?1:0),mag=Math.hypot(mx,mz);const running=(keys.has('ShiftLeft')||keys.has('ShiftRight'))&&mz<0&&mag>0&&!aim&&!crouch&&!trigger&&weapon.reloadRemaining===0&&healing===0;
   let speed=(crouch?1.7:running?6.1:3.5)*current().speed*(healing>0?.45:1)*(aim?.68:1);
+  if(diagnostics.enabled)diagnostics.movement({speed,running,classSpeed:current().speed,gate:running?'':!(keys.has('ShiftLeft')||keys.has('ShiftRight'))?'no shift':!(mz<0&&mag>0)?'no forward':aim?'aim':crouch?'crouch':trigger?'trigger':weapon.reloadRemaining>0?'reload':healing>0?'dressing':''});
   let moving=false;if(mag){mx/=mag;mz/=mag;const moved=move(player,(mx*Math.cos(yaw)+mz*Math.sin(yaw))*speed*dt,(-mx*Math.sin(yaw)+mz*Math.cos(yaw))*speed*dt);moving=moved>.002;if(moving)walk+=dt*(running?12:8);footTimer-=dt;if(moved>.002&&footTimer<=0){sound('step',crouch?.2:.5);footTimer=running?.32:.48;}}
   jumpY=Math.max(0,jumpY+jumpV*dt-4.9*dt*dt);jumpV-=9.8*dt;if(jumpY===0)jumpV=0;player.y=groundY(player.x,player.z);stanceHeight=THREE.MathUtils.damp(stanceHeight,crouch?.98:1.7,12,dt);if(lastJumpY>0&&jumpY===0)landing=.09;lastJumpY=jumpY;landing=THREE.MathUtils.damp(landing,0,13,dt);bobAmount=THREE.MathUtils.damp(bobAmount,moving?1:0,12,dt);const eyeHeight=stanceHeight;camera.position.set(player.x,player.y+eyeHeight+jumpY-landing+Math.sin(walk)*.02*bobAmount,player.z);const breath=Math.sin(elapsed*1.7)*(aim?.0008:.0006);camera.rotation.set(pitch+breath,yaw,0);camera.fov=THREE.MathUtils.damp(camera.fov,aim?current().zoom:running?76:70,10,dt);camera.updateProjectionMatrix();gun.visible=!(aim&&classId==='marksman');$('optic').hidden=!(aim&&classId==='marksman');recoil=THREE.MathUtils.damp(recoil,0,14,dt);gunBase.x=THREE.MathUtils.damp(gunBase.x,aim?0:.235,14,dt);gunBase.y=THREE.MathUtils.damp(gunBase.y,aim?-.18:-.25,14,dt);gunBase.z=THREE.MathUtils.damp(gunBase.z,aim?-.64:-.65,14,dt);gun.position.copy(gunBase);gun.position.y+=Math.sin(walk)*.004*bobAmount+Math.sin(elapsed)*.0008*(1-bobAmount);gun.position.z+=recoil;gun.rotation.set(healing>0?-.8:recoil,0,0);muzzle.intensity=Math.max(0,muzzle.intensity-dt*60);flash.visible=muzzle.intensity>1;
   viewmodel.animate({reloadRemaining:weapon.reloadRemaining,reloadDuration:current().reload,time:elapsed,moving,running,aiming:aim,jump:jumpY,landing,dt});if(isFinalStep&&trigger&&current().automatic)shoot();if(mode!=='coop'||peer.role==='host'){tickAI(dt);if(state==='playing')missionTick(dt);}else{for(const a of actors)if(a.netPos){const delta=a.g.position.distanceTo(a.netPos);a.g.position.lerp(a.netPos,Math.min(1,dt*14));a.speed=Math.min(6,delta*14);}}
