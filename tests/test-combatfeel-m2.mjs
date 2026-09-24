@@ -10,7 +10,8 @@ const results = [];
 async function check(name, fn) { await fn(); results.push(name); }
 
 const BLOOD_MIST = 0x6e0f0b, DUST = 0xc4b497;
-const bloodCount = g => g.effects.filter(e => e.spray || e.o.material.color?.getHex() === BLOOD_MIST).length;
+// Build 06 pools blood: count live mist + droplet groups (2 = both present). Build 05 used per-hit effect objects.
+const bloodCount = g => g.fx ? (g.fx.stats().mist > 0) + (g.fx.stats().droplets > 0) : g.effects.filter(e => e.spray || e.o.material.color?.getHex() === BLOOD_MIST).length;
 const dustCount = g => g.effects.filter(e => e.o.material.color?.getHex() === DUST).length;
 const enemies = g => g.actors.filter(a => a.team === 'enemy');
 
@@ -51,7 +52,8 @@ await check('solo: headshot kill confirms as headshot and plays an authored dire
   const from = new THREE.Vector3(0, g.groundY(0, 52) + 1.5, 52), kills = g.kills();
   g.hitScan(from, aim(g, from, e, HEAD), CLASSES.assault, 'local');
   assert(e.hp <= 0); assert.equal(g.kills(), kills + 1, 'player kill still counted');
-  assert(g.el('hit').classList.contains('head') && g.el('hit').classList.contains('kill')); assert(g.sounds.includes('head'));
+  // Build 06: kills no longer change the marker (user request); a text kill alert appears instead.
+  assert(g.el('hit').classList.contains('head') && !g.el('hit').classList.contains('kill') && g.el('killalert').textContent === 'ENEMY DOWN'); assert(g.sounds.includes('head'));
   assert.equal(e.g.rotation.z, 0, 'no pi/2 roll');
   g.wait(.2); const mid = e.visual.state(); assert(mid.falling && !mid.fallDone && mid.rigTilt > .05 && mid.rigTilt < 1.2, 'falling over time');
   g.wait(1); const end = e.visual.state(); assert(end.fallDone && end.rigTilt > 1.4, 'lies down');
@@ -120,8 +122,11 @@ await check('host: guest shots and bot hits react on the host and emit impact/hi
   assert(impacts.some(m => m.t === 'surface'), 'surface dust is sent'); assert(impacts.some(m => m.t === 'host' && m.head === false));
   assert(impacts.some(m => m.t === g.actors.filter(a => !a.remote).indexOf(e2) && m.head === false), 'bot hit sent, never a headshot');
   assert.equal(impacts.filter(m => typeof m.t === 'number').every(m => m.t >= 0 && m.t < 10), true, 'guest avatar hits are not echoed');
-  assert.equal(impacts.length, 5);
-  assert(impacts.every(m => m.p.length === 3 && (m.t === 'surface' || Math.abs(Math.hypot(...m.d) - 1) < 1e-6)));
+  // Build 06: a hit on the guest's avatar also sends a decal-only impact (t:'guest'; no spray, reaction or death data).
+  const guestDecal = impacts.filter(m => m.t === 'guest');
+  assert(guestDecal.length <= 1 && guestDecal.every(m => m.dc && !('d' in m) && !('kill' in m)));
+  assert.equal(impacts.filter(m => m.t !== 'guest').length, 5);
+  assert(impacts.every(m => m.p.length === 3 && (m.t === 'surface' || m.t === 'guest' || Math.abs(Math.hypot(...m.d) - 1) < 1e-6)));
 });
 
 await check('guest: host impacts produce blood, flinch, death, dust and marker; later snapshots do not overwrite the fall', async () => {
@@ -137,7 +142,7 @@ await check('guest: host impacts produce blood, flinch, death, dust and marker; 
   g.wait(.2);
   for (const m of hostMessages.slice(firstKill).filter(m => m.type !== 'snapshot')) g.receive(m);
   assert(e.hp <= 0 && e.visual.state().falling, 'kill starts the fall immediately');
-  assert(g.el('hit').classList.contains('head') && g.el('hit').classList.contains('kill') && g.sounds.includes('head'));
+  assert(g.el('hit').classList.contains('head') && !g.el('hit').classList.contains('kill') && g.el('killalert').textContent === 'ENEMY DOWN' && g.sounds.includes('head'));
   assert(dustCount(g) > 0, 'guest sees dust for surface hits');
   assert(g.remote.visual.state().flinch > 0, 'host avatar reacts on the guest when the host is hit');
   g.wait(.15);
@@ -189,7 +194,7 @@ await check('repeated kills: deaths complete, every effect geometry/material is 
       g.reset(); g.play(); g.el('blood').checked = true;
       assert(list.every(e => e.hp === 100 && !e.visual.state().falling && e.visual.state().rigTilt < 1e-6), 'reset stands everyone up');
     }
-    assert(created.size >= 5 * 7 * 2 * 2);
+    assert(created.size >= 5 * 7 * 2, 'tracers (Build 06 blood is pooled and allocates nothing per hit; see test-combatfeel-m3)');
     for (const o of created) assert(disposed.has(o.geometry) && disposed.has(o.material), 'effect geometry and material disposed');
   } finally { THREE.BufferGeometry.prototype.dispose = gd; THREE.Material.prototype.dispose = md; }
 });

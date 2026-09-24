@@ -95,9 +95,43 @@ const barrelGeometry = new THREE.CylinderGeometry(.012, .012, .17, 8);
 barrelGeometry.rotateX(Math.PI / 2);
 
 // Authored hit reactions and deaths (no physics). Directions are in the soldier's local X/Z frame
-// and point the way the shot travelled, so the body is pushed away from the shooter.
-export const REACTION_SECONDS = .22, FALL_SECONDS = .62, SETTLE_SECONDS = .2;
-const fallAxis = new THREE.Vector3();
+// and point the way the shot travelled, so the body is pushed away from the shooter. The soldier
+// faces local -z: a shot travelling +z came from in front, -z from behind, mostly x from the side.
+export const REACTION_SECONDS = .22;
+const fallAxis = new THREE.Vector3(), twistQuat = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0), groundward = new THREE.Vector3(), inverse = new THREE.Quaternion();
+const TOP = Math.PI / 2 - .04;
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const span = (t, a, b) => clamp01((t - a) / (b - a));
+const easeIn = u => u * u, easeOut = u => 1 - (1 - u) * (1 - u), smooth = u => u * u * (3 - 2 * u);
+const bounce = (t, a, b, amount) => t > a && t < b ? amount * Math.sin(Math.PI * (t - a) / (b - a)) : 0;
+// Hit zones by height above the feet; 1.45 m matches the game's existing headshot rule.
+export function hitZone(height) { return height > 1.45 ? 'head' : height > 1.0 ? 'upper' : height > .72 ? 'lower' : 'legs'; }
+export const HIT_ZONES = ['head', 'upper', 'lower', 'legs'];
+// Each variant returns, for time t and strength s, the fall tilt toward the shot direction (rad), how far
+// the rig sinks (m), slides with the shot (m), twists about vertical (rad, signed by side), hunches the torso
+// forward (rad, negative arches back), arm pose (+ flung out, - braced/clutched) and knee fold (0-1).
+export const DEATH_VARIANTS = {
+  // Headshot: legs give way at once, the body slumps and drops along the shot.
+  collapse: { duration: .75, pose: (t, s) => ({ tilt: TOP * easeIn(span(t, .05, .55)) - bounce(t, .55, .75, .07), sink: .24 * easeOut(span(t, 0, .2)), slide: (.1 + .12 * s) * easeOut(span(t, 0, .7)), twist: 0, bend: .3 * easeOut(span(t, 0, .25)), arms: 0, knees: easeOut(span(t, 0, .2)) }) },
+  // Chest hit from the front: staggers back a step or two, arms thrown up, then goes over backwards.
+  stagger: { duration: .95, pose: (t, s) => ({ tilt: .22 * smooth(span(t, 0, .3)) + (TOP - .22) * easeIn(span(t, .3, .78)) - bounce(t, .78, .95, .08), sink: 0, slide: (.45 + .45 * s) * easeOut(span(t, 0, .45)) + .08 * easeOut(span(t, .45, .9)), twist: 0, bend: -.22 * smooth(span(t, 0, .28)), arms: smooth(span(t, 0, .28)), knees: .3 * span(t, .3, .6) }) },
+  // Chest hit from behind: knees buckle and the body pitches forward onto its front, bracing.
+  pitch: { duration: .8, pose: (t, s) => ({ tilt: TOP * easeIn(span(t, .04, .62)) - bounce(t, .62, .8, .07), sink: .12 * easeOut(span(t, 0, .2)), slide: (.18 + .25 * s) * easeOut(span(t, 0, .7)), twist: 0, bend: .28 * smooth(span(t, 0, .3)), arms: -smooth(span(t, .08, .42)), knees: .5 * easeOut(span(t, 0, .2)) }) },
+  // Chest hit from the side: spun round by the impact while falling sideways.
+  spin: { duration: .9, pose: (t, s, side) => ({ tilt: TOP * easeIn(span(t, .12, .72)) - bounce(t, .72, .9, .07), sink: 0, slide: (.25 + .3 * s) * easeOut(span(t, 0, .75)), twist: side * .95 * easeOut(span(t, 0, .45)), bend: .1, arms: .6 * smooth(span(t, 0, .3)), knees: .2 * span(t, .2, .5) }) },
+  // Leg hit: drops to the knees first, slumps, then keels over.
+  crumple: { duration: .95, pose: (t, s) => ({ tilt: (TOP - .08) * easeIn(span(t, .36, .8)) - bounce(t, .8, .95, .06), sink: .3 * easeOut(span(t, 0, .26)), slide: .08 * easeOut(span(t, .36, .9)), twist: 0, bend: .35 * smooth(span(t, .18, .42)), arms: -.3 * smooth(span(t, .1, .35)), knees: easeOut(span(t, 0, .24)) }) },
+  // Abdomen hit: doubles over clutching the wound, then falls along the shot.
+  doubleover: { duration: .9, pose: (t, s) => ({ tilt: TOP * easeIn(span(t, .28, .74)) - bounce(t, .74, .9, .07), sink: .1 * easeOut(span(t, 0, .26)), slide: (.12 + .2 * s) * easeOut(span(t, 0, .75)), twist: 0, bend: .5 * easeOut(span(t, 0, .24)) * (1 - .4 * span(t, .5, .8)), arms: -.6 * smooth(span(t, 0, .22)), knees: .45 * easeOut(span(t, 0, .26)) }) },
+};
+// Deterministic so host and guest pick the same death from the same impact.
+export function deathVariant({ x = 0, z = 1, zone = 'upper' } = {}) {
+  if (zone === 'head') return 'collapse';
+  if (zone === 'legs') return 'crumple';
+  if (zone === 'lower') return 'doubleover';
+  if (Math.abs(x) > Math.abs(z) * 1.2) return 'spin';
+  return z >= 0 ? 'stagger' : 'pitch';
+}
 
 /** A 1.8 m articulated visual. Outer placement belongs to the game; flinch and fall are animated here. */
 export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } = {}) {
@@ -159,22 +193,26 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
   let stride = index * 1.79, movement = 0, low = 0, down = 0;
   let flinch = 0, flinchX = 0, flinchZ = 0, fall = null;
   // Visual only: a flinch never changes the outer transform, so AI movement and hit tests continue.
-  function react({ x = 0, z = 1, strength = .6, kill = false } = {}) {
+  function react({ x = 0, z = 1, strength = .6, kill = false, zone = 'upper' } = {}) {
     const length = Math.hypot(x, z);
     if (!(length > 1e-6)) { x = 0; z = 1; } else { x /= length; z /= length; }
     const s = Math.min(1, Math.max(0, Number.isFinite(strength) ? strength : .6));
-    if (kill) { if (!fall) fall = { x, z, t: 0, slide: .22 + .38 * s }; }
+    if (kill) { if (!fall) startFall(x, z, s, HIT_ZONES.includes(zone) ? zone : 'upper'); }
     else if (!fall) { flinch = .55 + .45 * s; flinchX = x; flinchZ = z; }
   }
-  function reset() { flinch = 0; fall = null; rig.quaternion.identity(); rig.position.set(0, 0, 0); }
+  function startFall(x, z, s, zone) {
+    const variant = deathVariant({ x, z, zone });
+    fall = { x, z, t: 0, s, variant, side: x >= 0 ? -1 : 1, duration: DEATH_VARIANTS[variant].duration };
+  }
+  function reset() { flinch = 0; fall = null; rig.quaternion.identity(); rig.position.set(0, 0, 0); rifle.position.set(.075, .285, -.275); }
   function state() {
-    return { flinch, falling: !!fall, fallTime: fall ? fall.t : 0,
-      fallDone: !!fall && fall.t >= FALL_SECONDS + SETTLE_SECONDS, rigTilt: 2 * Math.acos(Math.min(1, Math.abs(rig.quaternion.w))) };
+    return { flinch, falling: !!fall, fallTime: fall ? fall.t : 0, variant: fall ? fall.variant : null,
+      fallDone: !!fall && fall.t >= fall.duration, rigTilt: fall ? fall.tilt || 0 : 2 * Math.acos(Math.min(1, Math.abs(rig.quaternion.w))) };
   }
   function animate({ speed = 0, time = 0, dead = false, crouch = false, dt = 1 / 60 } = {}) {
     const delta = Math.min(.1, Math.max(0, Number.isFinite(dt) ? dt : 0));
-    // A death without a directional impact (for example an older host) falls backwards.
-    if (dead && !fall) fall = { x: 0, z: 1, t: 0, slide: .15 };
+    // A death without a directional impact (for example an older host) staggers and falls backwards.
+    if (dead && !fall) startFall(0, 1, .3, 'upper');
     if (!dead && fall) reset();
     const smoothing = 1 - Math.exp(-delta * 12);
     movement += (Math.min(1, Math.max(0, speed) / 2.6) - movement) * smoothing;
@@ -209,16 +247,32 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
       rig.position.z = flinchZ * .05 * k;
     } else if (!fall) rig.position.x = rig.position.z = 0;
     if (fall) {
-      fall.t += delta;
-      // Stagger in the shot direction, accelerate over like a toppling body, then a small settle bounce.
-      const u = Math.min(1, fall.t / FALL_SECONDS), settle = Math.min(1, Math.max(0, (fall.t - FALL_SECONDS) / SETTLE_SECONDS));
-      const angle = (Math.PI / 2 - .04) * u * u - (settle > 0 && settle < 1 ? .09 * Math.sin(Math.PI * settle) : 0);
-      const slide = fall.slide * (1 - Math.pow(1 - Math.min(1, fall.t / (FALL_SECONDS + SETTLE_SECONDS)), 3));
+      fall.t = Math.min(fall.duration, fall.t + delta);
+      const k = DEATH_VARIANTS[fall.variant].pose(fall.t, fall.s, fall.side), lying = clamp01(k.tilt / TOP);
+      fall.tilt = k.tilt;
+      // Tilt toward the shot direction after any twist, so every variant ends lying away from the shooter.
       fallAxis.set(fall.z, 0, -fall.x).normalize();
-      rig.quaternion.setFromAxisAngle(fallAxis, angle);
-      rig.position.x = fall.x * slide;
-      rig.position.z = fall.z * slide;
-      rig.position.y += .1 * u;
+      rig.quaternion.setFromAxisAngle(fallAxis, k.tilt).multiply(twistQuat.setFromAxisAngle(UP, k.twist));
+      rig.position.x = fall.x * k.slide;
+      rig.position.z = fall.z * k.slide;
+      // Sink while kneeling; lying down, lift by the body's half-thickness on the side facing the ground
+      // (an ellipse: backpack .24 m, chest rig .17 m, shoulders .33 m) so it rests on the ground rather than in it.
+      groundward.set(0, -1, 0).applyQuaternion(inverse.copy(rig.quaternion).invert());
+      const lift = Math.hypot(.33 * groundward.x, (groundward.z > 0 ? .24 : .17) * groundward.z);
+      rig.position.y += -k.sink * (1 - lying) + lift * lying;
+      torso.rotation.x -= k.bend;
+      for (const leg of legs) { leg.thigh.rotation.x += .9 * k.knees; leg.calf.rotation.x -= 1.6 * k.knees; }
+      for (const { upper, fore, side } of arms) {
+        if (k.arms > 0) { upper.rotation.x -= 1.1 * k.arms; upper.rotation.z += side * .6 * k.arms; }
+        else { upper.rotation.x -= .45 * k.arms; fore.rotation.x -= .5 * k.arms; }
+      }
+      // Settle into a flat lying pose as the body reaches the ground, so arms, rifle and folded knees never
+      // push through it whichever way the body landed. Variants differ in how they fall, not in this rest pose.
+      const rest = smooth(clamp01((lying - .55) / .45)), mix = (from, to) => from + (to - from) * rest;
+      torso.rotation.x = mix(torso.rotation.x, 0); torso.rotation.z = mix(torso.rotation.z, 0);
+      rifle.rotation.x = mix(rifle.rotation.x, Math.PI / 2); rifle.position.set(mix(.075, .3), mix(.285, .2), mix(-.275, .02));
+      legs.forEach(({ thigh, calf }, i) => { thigh.rotation.x = mix(thigh.rotation.x, i ? -.06 : .06); thigh.rotation.z = mix(thigh.rotation.z, i ? -.07 : .07); calf.rotation.x = mix(calf.rotation.x, -.1); });
+      for (const { upper, fore, side } of arms) { upper.rotation.x = mix(upper.rotation.x, .04); upper.rotation.z = mix(upper.rotation.z, side * .06); fore.rotation.x = mix(fore.rotation.x, .12); fore.rotation.z = mix(fore.rotation.z, 0); }
     }
   }
   animate({ dt: 0 });

@@ -10,15 +10,17 @@ const noop=()=>{};
 export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)}={}){
  const ctx=new Proxy({createRadialGradient:()=>({addColorStop:noop})},{get:(o,k)=>o[k]||noop,set:(o,k,v)=>(o[k]=v,true)});
  const elements=new Map(),listeners=new Map();
- function element(){const classes=new Set();return {style:{},classList:{toggle(k,v){v??=!classes.has(k);if(v)classes.add(k);else classes.delete(k)},remove:k=>classes.delete(k),contains:k=>classes.has(k)},appendChild:noop,setAttribute:noop,getContext:()=>ctx,value:'0.8',checked:false,dataset:{},width:256,height:256,hidden:false};}
- globalThis.document={getElementById:id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,querySelectorAll:()=>[],body:element(),addEventListener:(event,fn)=>listeners.set(event,fn),pointerLockElement:null,exitPointerLock(){this.pointerLockElement=null;listeners.get('pointerlockchange')?.();}};
- globalThis.window={addEventListener:noop};globalThis.innerWidth=1200;globalThis.innerHeight=750;globalThis.devicePixelRatio=1;globalThis.requestAnimationFrame=noop;
+ function element(){const classes=new Set();return {style:{},classList:{toggle(k,v){v??=!classes.has(k);if(v)classes.add(k);else classes.delete(k)},remove:k=>classes.delete(k),contains:k=>classes.has(k),toString:()=>[...classes].sort().join(' ')},appendChild:noop,setAttribute:noop,getContext:()=>ctx,value:'0.8',checked:false,dataset:{},width:256,height:256,hidden:false};}
+ // Each instance gets its own document/window, passed into game.js below, so co-op tests with a host and a guest
+ // instance never write into each other's DOM. The globals still point at the newest instance for imported modules.
+ const doc=globalThis.document={getElementById:id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,querySelectorAll:()=>[],body:element(),addEventListener:(event,fn)=>listeners.set(event,fn),pointerLockElement:null,exitPointerLock(){this.pointerLockElement=null;listeners.get('pointerlockchange')?.();}};
+ const win=globalThis.window={addEventListener:noop};globalThis.innerWidth=1200;globalThis.innerHeight=750;globalThis.devicePixelRatio=1;globalThis.requestAnimationFrame=noop;
  Three.TextureLoader.prototype.load=function(){return new Three.Texture()};
  globalThis.fetch=async path=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL('dist/'+path,projectRoot),'utf8'))});
  class Renderer{constructor(){this.domElement=element();this.domElement.requestPointerLock=noop;this.shadowMap={};this.capabilities={getMaxAnisotropy:()=>8};this.info={render:{calls:0,triangles:0}}}setSize(){}setPixelRatio(){}render(){}}
  class RGBELoader{load(){}}
  let source=fs.readFileSync(new URL(sourcePath,import.meta.url),'utf8');
- const parameters=[],values=[];
+ const parameters=['document','window'],values=[doc,win];
  for(const match of source.matchAll(/^import (.*) from '(.*)';$/gm)){
   const [,spec,path]=match;
   if(spec==='* as THREE'){parameters.push('THREE');values.push({...Three,WebGLRenderer:Renderer});continue;}
@@ -30,6 +32,7 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
  const originalBlocked=blocked, originalGroundY=groundY;
  const harnessMessages=[];
  const harnessSounds=[];
+ const originalTickAI=tickAI,originalMissionTick=missionTick;
  tickAI=()=>{};missionTick=()=>{};sound=type=>harnessSounds.push(type);
  for(const a of actors)a.animate=()=>{};
  peer.send=m=>harnessMessages.push(structuredClone(m));
@@ -42,7 +45,8 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
    play(){setState('playing');document.pointerLockElement=renderer.domElement;},
    messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
    // typeof guards keep the harness able to load older builds for baseline comparisons.
-   scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined})};
+   scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
+   occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},fx:typeof fx==='object'?fx:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined};
  `)(...values);
  assert.equal(await api.viewmodel.ready,true,'actual rifle asset is available');
  api.press=code=>listeners.get('keydown')({code,target:{tagName:'BODY'},repeat:false,preventDefault(){}});

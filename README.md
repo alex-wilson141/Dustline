@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 05)
+# DUSTLINE — Operation Broken Signal (Build 06)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -6,7 +6,7 @@ A desktop browser first-person squad combat prototype in a fictional arid mounta
 
 - **Story:** recover the route log in the western field office with E; restore the relay by clearing its perimeter and holding for 25 seconds; reach the eastern courtyard and stay for 5 seconds.
 - **Skirmish:** clear the relay and hold it for 45 seconds.
-- **Private co-op (experimental):** two human players with AI squad support in the story mission. Each chooses a class. Both must reach extraction. A teammate's loss fails the operation.
+- **Private co-op (experimental):** two human players with AI squad support in the story mission. Each chooses a class. Both must reach extraction. A teammate's loss fails the operation; downed AI squadmates never do.
 
 ## Classes
 
@@ -40,7 +40,7 @@ Cover blocks bullets and movement. There is no automatic health regeneration. AI
 
 ## Co-op setup
 
-The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. **Both players must run the same build** (the menu shows the build number). Build 05 adds host-sent hit messages for blood, reactions, deaths and wall dust; mixing Build 04 and Build 05 still connects but shows those effects incorrectly. Refresh both players before connecting.
+The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. **Both players must run the same build** (the menu shows the build number). Builds 05 and 06 add host-sent hit messages for blood, blood splats, reactions, deaths and wall dust; mixing builds still connects but shows those effects incorrectly. Refresh both players before connecting.
 
 1. Both players choose **Private co-op** and a class.
 2. Host chooses **Create host code** and sends the generated code to the teammate.
@@ -59,6 +59,19 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Combat feel update (Build 06)
+
+Changes after the Build 05 playtest:
+
+- **Hit feedback:** one small neutral marker for every hit (red for a headshot). A kill no longer changes the marker; a brief "ENEMY DOWN" text appears under the crosshair instead, only for your own kills.
+- **Blood:** a larger, darker spray and mist that read at normal combat range; headshots are clearly bigger. Blood stays in proportion when you aim or use the Marksman optic.
+- **Blood splats:** a hit leaves a splat on a wall or solid close behind the target, or on the ground just behind it. Splats stay until there are 40 on the map (the oldest go first) or the mission restarts. In co-op both players see the same splats.
+- **Deaths:** six authored falls chosen by where and from which side a character is hit: head, chest from the front, from behind, from the side, stomach, or legs. Every fall goes away from the shooter and ends lying on the ground. This is animation, not physics or ragdolls.
+- **Mission failure:** the end screen now says who was killed. The mission fails only if you or your co-op teammate is killed. Downed AI squadmates regroup behind the start after 15 seconds and never end it.
+- **Blood setting:** unticking Blood removes sprays and splats (including ones already on screen); hits still react.
+
+Measured cost on a MacBook Pro M1 (Chromium): blood and splats together add under 0.1 ms per frame, even under heavy fire.
 
 ## Combat feel update (Build 05)
 
@@ -81,8 +94,9 @@ node tests/test-sprint-m1.mjs
 node tests/test-framefire-m1.mjs
 node tests/test-diagnostics-m1.mjs
 node tests/test-combatfeel-m2.mjs
+node tests/test-combatfeel-m3.mjs
 ```
 
-These run 34 movement, 24 firing, 3 diagnostics and 10 combat-feel checks against the game code. The combat-feel checks cover blood, reactions, deaths and cleanup in solo, host and guest paths plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
+These run 34 movement, 24 firing, 3 diagnostics and 26 combat-feel checks (10 Build 05, 16 Build 06) against the game code. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
 
 Read and update `DUSTLINE-ROADMAP.md` after each development task. It records verified changes, remaining playtests and the next bounded milestone.
