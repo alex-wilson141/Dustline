@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 11)
+# DUSTLINE — Operation Broken Signal (Build 12)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -6,7 +6,7 @@ A desktop browser first-person squad combat prototype in a fictional arid mounta
 
 - **Story:** recover the route log in the western field office with E; restore the relay by clearing its perimeter and holding for 25 seconds; reach the eastern courtyard and stay for 5 seconds.
 - **Skirmish:** clear the relay and hold it for 45 seconds.
-- **Ambush (solo):** survive escalating waves with Viper squad in the west district. There is no win, only how long you last. Kills earn points (headshots more): press E at a barricade to open the next area, or at a weapon crate to buy one of the four class rifles or refill it. Stay inside the striped line; five seconds outside ends the run. From wave 5, choose between waves: X extracts and banks your points, V stays for a bigger bank. Dying banks nothing. Not available during a co-op session.
+- **Ambush (solo):** alone, survive escalating waves in the west district; no AI squad, every kill and every risk is yours. There is no win, only how long you last. Kills earn points (headshots more): press E at a barricade to open the next area, or at a weapon crate to buy one of the four class rifles or refill it. Stay inside the striped line; five seconds outside ends the run. From wave 5, choose between waves: X extracts and banks your points, V stays for a bigger bank. Dying banks nothing. Not available during a co-op session.
 - **Private co-op (experimental):** two human players with AI squad support in the story mission. Each chooses a class. Both must reach extraction. A teammate's loss fails the operation; downed AI squadmates never do.
 
 ## Classes
@@ -30,7 +30,7 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - Space: jump
 - R: reload
 - E: collect the story route log
-- H: apply a field dressing; movement slows and shooting cancels treatment
+- H: apply a field dressing; movement slows and shooting cancels treatment (Ambush: B buys a magazine and N a dressing at a crate)
 - Q: cycle squad orders (advance, follow, hold)
 - P: pause and free the cursor without leaving full screen; P again resumes. Esc is the browser's own key: it frees the cursor and leaves full screen, and the game pauses and offers a FULLSCREEN button to go back
 - L: leave the mission and return to class selection
@@ -60,6 +60,14 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Ambush solo and purchase clarity (Build 12)
+
+- **Solo, for good:** no AI squadmates in Ambush, ever. Story and Skirmish keep their squad. The waves were rebalanced for one player: two enemies at once at waves 1–2, one more every two waves, nine from wave 15; arrivals no faster than one per second.
+- **Five magazines:** a rifle bought at a crate comes with five magazines (the automatic rifle four, its reserve holds three drums).
+- **Dressings for sale:** press N at any crate to buy a field dressing (150 points at wave 1, rising with the waves to 380; the kit holds five). Use it with H.
+- **Plain-words prompts:** at another rifle's crate the prompt says what changes in two phrases, such as "MORE DAMAGE · SLOWER FIRE", worked out from the rifle's real numbers; your own kit (reserve, dressings, B and N prices) sits below a blank line.
+- **Keys you can see:** the dressing count in the vitals panel carries an H keycap in play (it used to appear only with the map), the squad panel shows Q, and crate lines show E, B and N.
 
 ## Ambush difficulty and economy (Build 11)
 
@@ -142,6 +150,7 @@ node tests/test-engage-ai04.mjs
 node tests/test-ambush-b09.mjs
 node tests/test-ambush-b10.mjs
 node tests/test-ambush-b11.mjs
+node tests/test-ambush-b12.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.

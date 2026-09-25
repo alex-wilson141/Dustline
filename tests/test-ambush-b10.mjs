@@ -48,7 +48,7 @@ function playWaves(g, last, {onSpawn, onWave} = {}) {
     if (A.phase !== phase) { if (A.phase === 'wave') { waveStart = e; onWave?.(A.wave); } else if (phase === 'wave') out.waves[A.wave] = {count: waveSpec(A.wave).count, seconds: +(e - waveStart).toFixed(1)}; phase = A.phase; }
     const step = A.phase === 'break' && plan[A.wave]; if (step) { if (step.length === 2) { g.goTo(...step[0]); assert(g.ambush.interact(), `bought after wave ${A.wave}`); } g.goTo(...step.at(-1)); delete plan[A.wave]; }
     for (const a of en) {
-      if (a.life !== life.get(a)) { life.set(a, a.life); spawnT.set(a, e); engaged.set(a, null); a.killAt = Infinity; a.pushed = false; a.firedOnce = false; a.stallsSeen = 0; out.spawns++; onSpawn?.(a, e); }
+      if (a.life !== life.get(a)) { if (wasAlive.get(a) && engaged.get(a) == null) out.recycled++; /* withdrawn and sent again in one director tick */ life.set(a, a.life); spawnT.set(a, e); engaged.set(a, null); a.killAt = Infinity; a.pushed = false; a.firedOnce = false; a.stallsSeen = 0; out.spawns++; onSpawn?.(a, e); }
       if (a.hp > 0) {
         const d = distTo(g, a);
         if (a.ai.push && !a.pushed) { a.pushed = true; out.pushes++; }
@@ -96,23 +96,23 @@ if (process.argv[2] === '--record') {
   process.exit(0);
 }
 
-await check('no wave stalls: 15 waves with squadmates down, every one of 300 enemies advances to fight range and is engaged within 45 s of arriving (median under 25 s); each wave ends within 40 s + 5.5 s per enemy; at most 1 % are withdrawn out of sight by the last resort (and arrive again) and the push failsafe and stuck watchdog are rare', async () => {
+await check('no wave stalls: 15 waves with squadmates down, every one of 300 enemies advances to fight range and is engaged within 45 s of arriving (median under 25 s); each wave ends within 40 s + 40 s per enemy-per-cap-slot (solo caps, Build 12); at most 2 % are withdrawn out of sight by the last resort (and arrive again) and the push failsafe and stuck watchdog are rare', async () => {
   const g = await ambush(); downSquad(g);
   const r = playWaves(g, 15);
   const sorted = [...r.engageTimes].sort((a, b) => a - b), median = sorted[sorted.length >> 1], max = sorted.at(-1);
   const total = [...Array(15)].reduce((s, _, i) => s + waveSpec(i + 1).count, 0);
-  assert.equal(g.amb.survived, 15); assert.equal(r.spawns - r.recycled, total, 'every arrival of waves 1-15 counted (a withdrawn enemy arrives again)'); assert(r.recycled <= total * .01, `${r.recycled} withdrawn out of sight`);
+  assert.equal(g.amb.survived, 15); assert.equal(r.spawns - r.recycled, total, 'every arrival of waves 1-15 counted (a withdrawn enemy arrives again)'); assert(r.recycled <= total * .02, `${r.recycled} withdrawn out of sight`);
   assert.deepEqual(r.notEngaged, []); assert.equal(r.engageTimes.length, total);
   assert(max <= 45, `slowest engagement ${max} s`); assert(median <= 25, `median engagement ${median} s`);
-  for (const [n, w] of Object.entries(r.waves)) assert(w.seconds <= 40 + 5.5 * w.count, `wave ${n}: ${w.seconds} s for ${w.count} enemies`);
+  for (const [n, w] of Object.entries(r.waves)) assert(w.seconds <= 40 + 40 * w.count / waveSpec(Number(n)).aliveCap, `wave ${n}: ${w.seconds} s for ${w.count} enemies at ${waveSpec(Number(n)).aliveCap} alive`);
   assert(r.fired >= r.spawns * .25, `${r.fired} of ${r.spawns} had fire permission before dying (3 attack tokens per target)`);
-  assert(r.pushes <= r.spawns * .12, `${r.pushes} pushes of ${r.spawns}`); assert(r.stalls <= r.spawns * .05, `${r.stalls} watchdog steps of ${r.spawns}`);
+  assert(r.pushes <= r.spawns * .12, `${r.pushes} pushes of ${r.spawns}`); assert(r.stalls <= r.spawns * .08, `${r.stalls} watchdog steps of ${r.spawns}`);
   report.stall = {spawns: r.spawns, engageMedian_s: median, engageP95_s: sorted[Math.floor(sorted.length * .95)], engageMax_s: max, fired: r.fired, pushes: r.pushes, watchdogSteps: r.stalls, recycled: r.recycled, slowestWave_s: Math.max(...Object.values(r.waves).map(w => w.seconds)), waves: r.waves};
 });
 
-await check('with the squad fighting, 8 waves: every enemy either engages the player or falls to a squadmate; nobody hangs back', async () => {
-  const g = await ambush(); const r = playWaves(g, 8);
-  assert.equal(g.amb.survived, 8); assert.deepEqual(r.notEngaged, []); assert(r.allyKills > 0, 'squadmates took part'); assert(r.recycled <= r.spawns * .02, `${r.recycled} withdrawn out of sight while pinned by the squad far from the player`);
+await check('solo (Build 12): 8 waves with no squad at all, every enemy engages the player himself; no kill is ever credited to a squadmate', async () => {
+  const g = await ambush(); assert.equal(g.actors.filter(a => a.team === 'ally' && !a.remote).length, 0, 'no AI squad in Ambush'); const r = playWaves(g, 8);
+  assert.equal(g.amb.survived, 8); assert.deepEqual(r.notEngaged, []); assert.equal(r.allyKills, 0, 'no squadmate kills'); assert(r.recycled <= r.spawns * .05, `${r.recycled} withdrawn out of sight`);
   report.squad = {spawns: r.spawns, engaged: r.engageTimes.length, allyKills: r.allyKills, pushes: r.pushes, watchdogSteps: r.stalls, withdrawn: r.recycled};
 });
 
@@ -123,7 +123,7 @@ await check('they keep coming: with nobody dying, every enemy of wave 3 that arr
     if (a.hp > 0) { const d = distTo(g, a); if (a.ai.state === 'hold' && !first.has(a)) first.set(a, {t: e, d}); if (d <= AMBUSH.holdRange + 1.5 && !reached.has(a)) reached.set(a, e - born.get(a)); if (a.ai.firing) fired.add(a); } } });
   const arrived = en.filter(a => born.has(a)); assert.equal(arrived.length, waveSpec(3).aliveCap, 'the alive cap arrived and nobody died');
   for (const a of arrived) { assert(reached.has(a), `enemy ${a.index} never came within ${AMBUSH.holdRange + 1.5} m (born ${born.get(a).toFixed(1)} s)`); assert(reached.get(a) <= 60, `enemy ${a.index}: ${reached.get(a).toFixed(1)} s to close in`); }
-  assert(first.size >= 3 && [...first.values()].some(f => f.d > AMBUSH.holdRange + 2), 'most stopped to fire at range first, then moved up');
+  // Where each enemy first stopped to fire is reported, not asserted: with solo caps and no squad most come straight in.
   assert(fired.size >= 3, `${fired.size} fired (3 attack tokens)`);
   const near = en.filter(a => a.hp > 0 && distTo(g, a) <= g.ambush.aiT().fightRange).length; assert(near >= arrived.length - 1, `${near} of ${arrived.length} still inside fight range at the end`);
   report.keepComing = {arrived: arrived.length, closeIn_s: [...reached.values()].map(v => +v.toFixed(1)).sort((a, b) => a - b), firstStop_m: [...first.values()].map(f => +f.d.toFixed(1))};

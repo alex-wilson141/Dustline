@@ -9,7 +9,7 @@ import {createGame, projectRoot} from './sprint-harness.mjs';
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
 const {ENEMY_AI} = await import(new URL('dist/enemy-ai.js', projectRoot));
-const {AMBUSH, STATIONS, waveSpec, aiTuningFor, magazinePrice, weaponCompare, weaponFacts} = await import(new URL('dist/ambush.js', projectRoot));
+const {AMBUSH, STATIONS, waveSpec, aiTuningFor, magazinePrice, weaponTradeoff, weaponFacts, rifleMagazines} = await import(new URL('dist/ambush.js', projectRoot));
 const {BEST_KEY, readBest, recordBest} = await import(new URL('dist/records.js', projectRoot));
 const FIXTURE = new URL('fixtures/story-skirmish-ai-b09.json', import.meta.url);
 const results = [], report = {};
@@ -32,9 +32,9 @@ const downSquad = g => { for (const a of g.actors) if (a.team === 'ally') { a.hp
 const openAll = g => { g.amb.points = 1e6; for (const [x, z] of [[-26.5, 3.6], [-39, -8], [-26, -22.4]]) { g.goTo(x, z); assert(g.ambush.interact(), `bought at ${x},${z}`); } };
 function memoryStorage() { const m = new Map(); return {sets: 0, gets: 0, getItem(k) { this.gets++; return m.has(k) ? m.get(k) : null; }, setItem(k, v) { this.sets++; m.set(k, String(v)); }, removeItem(k) { m.delete(k); }, dump: () => Object.fromEntries(m)}; }
 
-await check('the alive cap rises with the wave (4 at wave 1, one more every two waves, 12 from wave 17) and is reached in play at waves 1, 9 and 17, never exceeded, and held at the ceiling while enemies die; the pool leaves room for the corpse limit', async () => {
+await check('the alive cap rises with the wave (2 at wave 1, one more every two waves, 9 from wave 15) and is reached in play at waves 1, 9 and 17, never exceeded, and held at the ceiling while enemies die; the pool leaves room for the corpse limit', async () => {
   let prev = 0; for (let n = 1; n <= 40; n++) { const c = waveSpec(n).aliveCap; assert(c >= prev && c <= AMBUSH.aliveCeiling && c + aiTuningFor(n, ENEMY_AI).corpseMax <= AMBUSH.enemyPool, `wave ${n} cap ${c}`); prev = c; }
-  assert.deepEqual([1, 2, 3, 8, 9, 16, 17, 40].map(n => waveSpec(n).aliveCap), [4, 4, 5, 7, 8, 11, 12, 12]); assert.equal(AMBUSH.aliveCeiling, 12); assert.equal(AMBUSH.enemyPool, 20);
+  assert.deepEqual([1, 2, 3, 8, 9, 14, 15, 40].map(n => waveSpec(n).aliveCap), [2, 2, 3, 5, 6, 8, 9, 9], 'Build 12 solo curve'); assert.equal(AMBUSH.aliveCeiling, 9); assert.equal(AMBUSH.enemyPool, 16);
   report.cap = {curve: Object.fromEntries([1, 3, 5, 7, 9, 11, 13, 15, 17, 18].map(n => [n, waveSpec(n).aliveCap])), reached: {}};
   for (const n of [1, 9, 17]) { const g = await ambush(); downSquad(g); assert.equal(enemies(g).length, AMBUSH.enemyPool, 'Ambush enemy pool'); g.ambush.startWave(n); let most = 0;
     g.run(120, () => { most = Math.max(most, alive(g)); }); assert.equal(most, waveSpec(n).aliveCap, `wave ${n}: cap ${waveSpec(n).aliveCap} reached and never exceeded (${most})`); report.cap.reached[n] = most; }
@@ -42,20 +42,20 @@ await check('the alive cap rises with the wave (4 at wave 1, one more every two 
   const g = await ambush(); downSquad(g); openAll(g); g.goTo(-30, -10); g.ambush.startWave(17); const T = g.ambush.aiT(), A = g.amb; let sum = 0, samples = 0, most = 0;
   g.run(150, t => { if (A.phase === 'decision') g.ambush.decide(false); for (const a of enemies(g)) if (a.hp > 0) { const d = distTo(g, a); if (a.killAt == null && ((a.ai.firing && d <= T.fightRange) || d <= AMBUSH.holdRange + 1)) a.killAt = g.state().elapsed + 1.5; if (a.killAt != null && g.state().elapsed >= a.killAt) { a.hp = 0; a.dead = 998; a.killAt = null; } } else a.killAt = null;
     if (t > 20 && A.phase === 'wave' && A.toSpawn > 0) { sum += alive(g); samples++; most = Math.max(most, alive(g)); } });
-  const mean = sum / samples; assert(samples > 1800 && most === 12 && mean >= 9, `waves 17+ under fire while arrivals remain: ${most} at most, ${mean.toFixed(1)} alive on average over ${samples} frames`); report.cap.sustainedMean17 = +mean.toFixed(1);
+  const mean = sum / samples; assert(samples > 1800 && most === AMBUSH.aliveCeiling && mean >= AMBUSH.aliveCeiling - 3, `waves 17+ under fire while arrivals remain: ${most} at most, ${mean.toFixed(1)} alive on average over ${samples} frames`); report.cap.sustainedMean17 = +mean.toFixed(1);
 });
 
 await check('the extra enemy actors exist only in Ambush: Story and Skirmish keep 7 enemies and 10 local actors (the co-op snapshot shape); switching modes attaches and detaches them cleanly', async () => {
   const g = await game('story'); const count = () => ({enemies: enemies(g).length, local: g.actors.filter(a => !a.remote).length, total: g.actors.length});
   assert.deepEqual(count(), {enemies: 7, local: 10, total: 11});
-  g.setMode('ambush'); g.reset(); assert.deepEqual(count(), {enemies: 20, local: 23, total: 24}); const extras = enemies(g).slice(7); assert(extras.every(a => g.scene.children.includes(a.g) && a.index >= 7 && a.hp <= 0 && a.gone));
+  g.setMode('ambush'); g.reset(); assert.deepEqual(count(), {enemies: 16, local: 16, total: 17}, 'Build 12: 16 enemies, no AI squad, the co-op teammate actor'); const extras = enemies(g).slice(7); assert(extras.every(a => g.scene.children.includes(a.g) && a.index >= 7 && a.hp <= 0 && a.gone));
   g.setMode('skirmish'); g.reset(); assert.deepEqual(count(), {enemies: 7, local: 10, total: 11}); assert(extras.every(a => !g.scene.children.includes(a.g) && !g.actors.includes(a)), 'detached from the scene and the actor list');
   g.play(); g.run(3); assert.equal(g.state().state, 'playing'); assert(enemies(g).every(a => a.index < 7 && a.ai.role !== 'ambush'));
-  g.setMode('ambush'); g.reset(); assert.deepEqual(count(), {enemies: 20, local: 23, total: 24}); assert.equal(enemies(g).slice(7)[0], extras[0], 'the same actors are reused, not recreated');
+  g.setMode('ambush'); g.reset(); assert.deepEqual(count(), {enemies: 16, local: 16, total: 17}); assert.equal(enemies(g).slice(7)[0], extras[0], 'the same actors are reused, not recreated');
   g.setMode('story'); g.reset(); assert.deepEqual(count(), {enemies: 7, local: 10, total: 11});
 });
 
-await check('magazines: the price follows capacity × damage and rises with the wave to a cap (CQB/carbine 70 → 180, DMR 100 → 240, automatic rifle 160 → 400); B deducts exactly the price shown, is refused below it or with a full reserve, adds one magazine up to the reserve limit; E does nothing at the crate of the rifle held; a bought rifle comes with three magazines', async () => {
+await check('magazines: the price follows capacity × damage and rises with the wave to a cap (CQB/carbine 70 → 180, DMR 100 → 240, automatic rifle 160 → 400); B deducts exactly the price shown, is refused below it or with a full reserve, adds one magazine up to the reserve limit; E does nothing at the crate of the rifle held; a bought rifle comes with five magazines (Build 12)', async () => {
   const table = {};
   for (const [id, c] of Object.entries(CLASSES)) { table[id] = [1, 5, 10, 16, 30].map(w => magazinePrice(c, w)); let prev = 0;
     for (let w = 1; w <= 30; w++) { const p = magazinePrice(c, w), scale = Math.min(AMBUSH.magWaveCap, 1 + AMBUSH.magWaveStep * (w - 1)); assert.equal(p, Math.ceil(c.capacity * c.damage / 100 * AMBUSH.magBase * scale / 10) * 10); assert(p >= prev && p % 10 === 0); prev = p; }
@@ -64,34 +64,28 @@ await check('magazines: the price follows capacity × damage and rises with the 
   report.magazines = table;
   const g = await ambush(), A = g.amb, w = g.ambush.weapon(), st = STATIONS[0]; g.goTo(st.at[0], st.at[1] + 1.4);
   assert.equal(g.ambush.gunId(), 'assault'); assert.deepEqual([w.ammo, w.reserve], [30, 180], 'the class rifle starts full');
-  assert.equal(g.prompt().split('\n').at(-1), 'B · MAGAZINE FOR MK4 CARBINE · 30 RDS · 70 PTS (RESERVE FULL) · RESERVE 180/180');
+  assert.equal(g.prompt().split('\n').slice(-2).join('\n'), 'YOUR MK4 CARBINE · RESERVE 180/180 · DRESSINGS 2/5\nB · MAGAZINE (30 RDS) · 70 PTS (RESERVE FULL)   N · FIELD DRESSING · 150 PTS', 'your own kit lines end the prompt');
   A.points = 1000; assert.equal(g.ambush.buyAmmo(), false); assert.equal(A.points, 1000); assert.equal(w.reserve, 180); assert.equal(g.el('notice').textContent, 'RESERVE FULL');
-  w.reserve = 100; A.points = 69; assert.equal(g.prompt().split('\n').at(-1), 'B · MAGAZINE FOR MK4 CARBINE · 30 RDS · 70 PTS (NEED 1 MORE) · RESERVE 100/180'); assert.equal(g.ambush.buyAmmo(), false); assert.deepEqual([A.points, w.reserve], [69, 100]);
+  w.reserve = 100; A.points = 69; assert.match(g.prompt(), /YOUR MK4 CARBINE · RESERVE 100\/180 · DRESSINGS 2\/5\nB · MAGAZINE \(30 RDS\) · 70 PTS \(NEED 1 MORE\)   N · FIELD DRESSING · 150 PTS \(NEED 81 MORE\)$/); assert.equal(g.ambush.buyAmmo(), false); assert.deepEqual([A.points, w.reserve], [69, 100]);
   A.points = 70; const shown = Number(g.prompt().match(/B · MAGAZINE[^\n]*?· (\d+) PTS/)[1]); assert.equal(g.ambush.buyAmmo(), true); assert.deepEqual([70 - A.points, w.reserve, w.ammo], [shown, 130, 30], 'the price shown is the price paid; one magazine into the reserve');
   w.reserve = 170; A.points = 70; assert.equal(g.ambush.buyAmmo(), true); assert.deepEqual([A.points, w.reserve], [0, 180], 'topped up to the limit only');
   A.wave = 10; w.reserve = 0; A.points = 129; assert.match(g.prompt(), /· 130 PTS \(NEED 1 MORE\)/); assert.equal(g.ambush.buyAmmo(), false); A.points = 130; assert.equal(g.ambush.buyAmmo(), true); assert.deepEqual([A.points, w.reserve], [0, 30], 'wave 10 price read from the live wave');
   // E at the crate of the rifle you hold does nothing; E at another crate buys that rifle with three magazines.
-  A.wave = 1; openAll(g); g.goTo(STATIONS[1].at[0], STATIONS[1].at[1] + 1.4); assert.equal(g.prompt().split('\n').length, 1, 'only the magazine line at your own rifle\'s crate'); A.points = 5000; assert.equal(g.ambush.interact(), false); assert.equal(A.points, 5000);
-  g.goTo(st.at[0], st.at[1] + 1.4); assert.match(g.prompt(), /^E · BUY MK4 CQB · 500 PTS · 3 MAGAZINES\n/); assert.equal(g.ambush.interact(), true); assert.equal(A.points, 4500); assert.equal(g.ambush.gunId(), 'medic');
-  const w2 = g.ambush.weapon(); assert.deepEqual([w2.ammo, w2.reserve], [CLASSES.medic.capacity, CLASSES.medic.capacity * (AMBUSH.rifleMagazines - 1)]);
-  assert.equal(g.prompt(), 'B · MAGAZINE FOR MK4 CQB · 30 RDS · 70 PTS · RESERVE 60/120', 'magazines are now for the rifle held, with its reserve limit');
-  assert.equal(g.ambush.buyAmmo(), true); assert.equal(w2.reserve, 90); assert.equal(A.points, 4430);
+  A.wave = 1; openAll(g); g.goTo(STATIONS[1].at[0], STATIONS[1].at[1] + 1.4); assert.equal(g.prompt().split('\n').length, 2, 'only your own kit lines at your own rifle\'s crate'); A.points = 5000; assert.equal(g.ambush.interact(), false); assert.equal(A.points, 5000);
+  g.goTo(st.at[0], st.at[1] + 1.4); assert.match(g.prompt(), /^E · BUY MK4 CQB · 500 PTS · 5 MAGAZINES\n/); assert.equal(g.ambush.interact(), true); assert.equal(A.points, 4500); assert.equal(g.ambush.gunId(), 'medic');
+  const w2 = g.ambush.weapon(); assert.deepEqual([w2.ammo, w2.reserve], [CLASSES.medic.capacity, CLASSES.medic.capacity * (rifleMagazines(CLASSES.medic) - 1)]);
+  assert.match(g.prompt(), /^YOUR MK4 CQB · RESERVE 120\/120 · DRESSINGS 2\/5\nB · MAGAZINE \(30 RDS\) · 70 PTS \(RESERVE FULL\)/, 'magazines are now for the rifle held, with its reserve limit');
+  w2.reserve = 60; assert.equal(g.ambush.buyAmmo(), true); assert.equal(w2.reserve, 90); assert.equal(A.points, 4430);
   assert(A.bought.includes('mag:medic') && A.bought.includes('medic'));
 });
 
-await check('crate prompts show the rifle\'s real numbers (damage, rounds per minute, magazine, fire mode, reload) and the difference from the rifle held, read live from the weapon data: changing a value changes the prompt; the rifle bought is the one those numbers describe', async () => {
+await check('crate prompts (Build 12 form): the rifle on sale with its plain-words trade-off from the live weapon data, a blank line, then your own kit; the rifle bought is the one described', async () => {
   const g = await ambush(), A = g.amb; openAll(g); const st = STATIONS[2]; g.goTo(st.at[0], st.at[1] + 1.4); assert.equal(g.ambush.gunId(), 'assault');
-  const lines = g.prompt().split('\n'); assert.equal(lines.length, 3); assert.equal(lines[0], 'E · BUY MK4 DMR · 1000 PTS · 3 MAGAZINES'); assert.equal(lines[1], weaponCompare(CLASSES.marksman, CLASSES.assault));
-  const m = lines[1].match(/^(\d+) DMG \(([+−]\d+)\) · (\d+) RPM \(([+−]\d+)\) · (\d+)-RD MAG \(([+−]\d+)\) · (AUTO|SEMI) · ([\d.]+) S RELOAD \(([+−][\d.]+)\)$/); assert(m, `readable comparison: ${lines[1]}`);
-  const s = CLASSES.marksman, h = CLASSES.assault, n = v => Number(v.replace('−', '-'));
-  assert.deepEqual([Number(m[1]), n(m[2]), Number(m[3]), n(m[4]), Number(m[5]), n(m[6]), m[7], Number(m[8]), n(m[9])],
-    [s.damage, s.damage - h.damage, Math.round(60 / s.interval), Math.round(60 / s.interval) - Math.round(60 / h.interval), s.capacity, s.capacity - h.capacity, s.automatic ? 'AUTO' : 'SEMI', s.reload, +(s.reload - h.reload).toFixed(1)]);
-  assert.equal(lines[1], '78 DMG (+40) · 200 RPM (−371) · 20-RD MAG (−10) · SEMI · 3.0 S RELOAD (+0.5)');
-  // Live values, not text: change the data and the prompt follows; restore afterwards.
-  const saved = {...s}; s.damage = 99; s.interval = .15; assert.match(g.prompt().split('\n')[1], /^99 DMG \(\+61\) · 400 RPM \(−171\)/); Object.assign(s, saved); assert.equal(g.prompt().split('\n')[1], lines[1]);
+  const lines = g.prompt().split('\n'); assert.equal(lines.length, 5); assert.equal(lines[0], 'E · BUY MK4 DMR · 1000 PTS · 5 MAGAZINES'); assert.equal(lines[1], weaponTradeoff(CLASSES.marksman, CLASSES.assault)); assert.equal(lines[1], 'MORE DAMAGE · SLOWER FIRE'); assert.equal(lines[2], ''); assert.match(lines[3], /^YOUR MK4 CARBINE · RESERVE/);
+  const saved = {...CLASSES.marksman}; CLASSES.marksman.damage = 30; const mutated = g.prompt().split('\n')[1]; assert.equal(mutated, weaponTradeoff(CLASSES.marksman, CLASSES.assault)); assert.notEqual(mutated, lines[1]); assert.doesNotMatch(mutated, /MORE DAMAGE/, 'live values, not text'); Object.assign(CLASSES.marksman, saved); assert.equal(g.prompt().split('\n')[1], lines[1]);
   assert.deepEqual(weaponFacts(CLASSES.support), {damage: 35, rpm: 706, mag: 75, reserve: 225, auto: true, reload: 5.1});
   A.points = 1000; assert.equal(g.ambush.interact(), true); assert.equal(g.ambush.weapon().config, CLASSES.marksman, 'the rifle bought is the one described');
-  assert.equal(g.prompt().split('\n').length, 1, 'holding the DMR at its crate: only the magazine line');
+  assert.equal(g.prompt().split('\n').length, 2, 'holding the DMR at its crate: only your kit lines');
   report.promptExample = lines;
 });
 

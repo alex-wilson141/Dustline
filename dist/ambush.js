@@ -37,10 +37,15 @@ export const AMBUSH = {
   // Build 11 difficulty: the alive cap rises with the wave, 4 at wave 1 to aliveCeiling at wave 17 (see waveSpec); enemyPool
   // enemy actors exist in Ambush (the seven Story soldiers plus extras attached only while Ambush is played), leaving room
   // for corpseMax bodies to lie while the cap is full.
-  aliveCeiling: 12, enemyPool: 20,
+  // Build 12: Ambush is solo (no AI squad), so the cap starts at 2 and tops out at 9 from wave 15; the pool of 16 leaves room
+  // for corpseMax bodies plus spares.
+  aliveCeiling: 9, enemyPool: 16,
   // Build 11 economy: a bought rifle comes loaded with one magazine and rifleMagazines - 1 in reserve; a magazine costs
   // magBase points per 100 hp it can deal (capacity × damage), × (1 + magWaveStep per wave after the first) up to magWaveCap.
-  rifleMagazines: 3, magBase: 6, magWaveStep: .1, magWaveCap: 2.5,
+  rifleMagazines: 5, magBase: 6, magWaveStep: .1, magWaveCap: 2.5,
+  // Build 12: a field dressing (+50 hp, H) can be bought at any crate for dressingBase points × the same wave scale as
+  // magazines; the kit holds at most dressingMax.
+  dressingBase: 150, dressingMax: 5,
 };
 // The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
 export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
@@ -71,15 +76,29 @@ export const STATIONS = [
 // same per potential kill, and it rises with the wave up to magWaveCap: CQB/carbine 70 → 175, DMR 100 → 250, automatic
 // rifle 160 → 400 points (wave 1 → wave 16+). Rounds are added to the reserve up to the rifle's reserve limit.
 export function magazinePrice(config, wave) { const scale = Math.min(AMBUSH.magWaveCap, 1 + AMBUSH.magWaveStep * (Math.max(1, wave) - 1)); return Math.ceil(config.capacity * config.damage / 100 * AMBUSH.magBase * scale / 10) * 10; }
+// Price of one field dressing at wave `wave` (Build 12): 150 at wave 1 rising like magazines to 380 from wave 16.
+export function dressingPrice(wave) { const scale = Math.min(AMBUSH.magWaveCap, 1 + AMBUSH.magWaveStep * (Math.max(1, wave) - 1)); return Math.ceil(AMBUSH.dressingBase * scale / 10) * 10; }
+// Magazines a rifle comes with when bought at a crate: rifleMagazines, but never more reserve than the rifle can carry
+// (the automatic rifle's 225-round reserve holds three drums, so it arrives with four).
+export const rifleMagazines = config => 1 + Math.min(AMBUSH.rifleMagazines - 1, Math.floor(config.reserve / config.capacity));
 // What a rifle really does, read from its live config (never hard-coded text): damage per hit, rounds per minute,
 // magazine, reserve limit, fire mode, reload time.
 export function weaponFacts(config) { return {damage: config.damage, rpm: Math.round(60 / config.interval), mag: config.capacity, reserve: config.reserve, auto: !!config.automatic, reload: config.reload}; }
-// One readable line comparing a rifle for sale with the rifle held, differences in brackets:
-// "78 DMG (+40) · 200 RPM (−371) · 20-RD MAG (−10) · SEMI · 3.0 S RELOAD (+0.6)".
-export function weaponCompare(config, held) {
-  const a = weaponFacts(config), b = held ? weaponFacts(held) : null, sign = v => v > 0 ? '+' : '−';
-  const d = (x, y, fmt = v => String(v)) => b == null || x === y ? '' : ` (${sign(x - y)}${fmt(Math.abs(x - y))})`;
-  return `${a.damage} DMG${d(a.damage, b?.damage)} · ${a.rpm} RPM${d(a.rpm, b?.rpm)} · ${a.mag}-RD MAG${d(a.mag, b?.mag)} · ${a.auto ? 'AUTO' : 'SEMI'} · ${a.reload.toFixed(1)} S RELOAD${d(a.reload, b?.reload, v => v.toFixed(1))}`;
+// The trade-off of a rifle for sale against the rifle held, in plain words (Build 12): the two largest relative differences
+// among damage, rate of fire, magazine size and reload time that reach TRADEOFF_MIN (a change of fire mode counts as a
+// 50 % difference, so it shows unless two bigger ones outrank it), in the fixed order damage, fire, magazine, mode,
+// reload; nothing when the rifles are alike.
+export const TRADEOFF_MIN = .1;
+export function weaponTradeoff(config, held) {
+  const a = weaponFacts(config), b = weaponFacts(held), rel = (x, y) => (x - y) / y;
+  const items = [
+    {order: 0, size: Math.abs(rel(a.damage, b.damage)), words: rel(a.damage, b.damage) > 0 ? 'MORE DAMAGE' : 'LESS DAMAGE'},
+    {order: 1, size: Math.abs(rel(a.rpm, b.rpm)), words: rel(a.rpm, b.rpm) > 0 ? 'FASTER FIRE' : 'SLOWER FIRE'},
+    {order: 2, size: Math.abs(rel(a.mag, b.mag)), words: rel(a.mag, b.mag) > 0 ? 'BIGGER MAGAZINE' : 'SMALLER MAGAZINE'},
+    {order: 3, size: a.auto === b.auto ? 0 : .5, words: a.auto ? 'FULL-AUTO' : 'SEMI-AUTO'},
+    {order: 4, size: Math.abs(rel(a.reload, b.reload)), words: rel(a.reload, b.reload) > 0 ? 'SLOWER RELOAD' : 'FASTER RELOAD'},
+  ].filter(i => i.size >= TRADEOFF_MIN);
+  return items.sort((u, v) => v.size - u.size).slice(0, 2).sort((u, v) => u.order - v.order).map(i => i.words).join(' · ');
 }
 
 // Escalation by count, spawn pressure and aggression only. Enemy accuracy, damage and fire rate are never touched.
@@ -87,8 +106,8 @@ export function waveSpec(n) {
   const k = Math.max(0, n - 1);
   return {
     count: Math.min(4 + 2 * n, 40),                 // 6, 8, 10 ... capped at 40 (wave 18)
-    aliveCap: Math.min(AMBUSH.aliveCeiling, 3 + Math.ceil(n / 2)), // 4, 4, 5, 5, 6, 6, 7, 7, 8, 8 ... 12 from wave 17 (Build 11)
-    spawnGap: Math.max(.8, 4.5 - .3 * k),           // seconds between arrivals (floor .8 s from wave 13, Build 11; was 1.2)
+    aliveCap: Math.min(AMBUSH.aliveCeiling, 1 + Math.ceil(n / 2)), // 2, 2, 3, 3, 4, 4 ... 9 from wave 15 (Build 12, solo)
+    spawnGap: Math.max(1, 4.5 - .3 * k),            // seconds between arrivals (floor 1 s from wave 12; Build 12, solo)
     fightRange: Math.max(14, 26 - k),               // they come this close before stopping to fire
     pauseScale: Math.max(.5, 1 - .05 * k),          // their stops to fire and duck into cover get shorter
   };

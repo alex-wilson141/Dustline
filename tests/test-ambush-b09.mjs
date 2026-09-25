@@ -53,8 +53,8 @@ await check('points: a body kill earns 100 and a headshot kill 150 through the r
   assert(killInFront(g, false)); assert.equal(g.amb.points, 600); assert.equal(pts(g), 600); assert.match(g.el('pointsgain').textContent, /\+100$/);
   assert(killInFront(g, true)); assert.equal(g.amb.points, 750); assert.equal(g.amb.earned, 250); assert.match(g.el('pointsgain').textContent, /\+150 HEADSHOT/);
   assert(killInFront(g, false, 'remote')); assert.equal(g.amb.points, 750, 'no points for a non-local shot');
-  const e = enemies(g).find(a => a.hp <= 0), ally = g.actors.find(a => a.team === 'ally' && !a.remote); e.hp = 1; e.g.visible = true;
-  g.aiHit({pos: e.g.position, a: e}, ally.g.position.clone().setY(1.4), e.g.position.clone().setY(1.25)); assert(e.hp <= 0); assert.equal(g.amb.points, 750, 'squadmate kills earn nothing (KILL-01)');
+  const e = enemies(g).find(a => a.hp <= 0); e.hp = 1; e.g.visible = true;
+  g.aiHit({pos: e.g.position, a: e}, V(-30, 1.4, 10), e.g.position.clone().setY(1.25)); assert(e.hp <= 0); assert.equal(g.amb.points, 750, 'bot kills earn nothing (KILL-01)');
   assert.equal(g.kills(), 3);
 });
 
@@ -72,7 +72,7 @@ await check('purchases are gated on the balance and wired: the price shown is th
   const st = STATIONS[0]; g.goTo(st.at[0], st.at[1] + 1.4); g.amb.points = 499; g.ambush.tick(0);
   assert.match(g.el('interact').textContent, /BUY MK4 CQB · 500 PTS \(NEED 1 MORE\)/); assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.gunId(), 'assault');
   g.amb.points = 500; assert.equal(g.ambush.interact(), true); assert.equal(g.amb.points, 0); assert.equal(g.ambush.gunId(), 'medic');
-  const w = g.ambush.weapon(); assert.equal(w.config, CLASSES.medic); assert.deepEqual([w.ammo, w.reserve], [30, 60], 'a bought rifle comes with three magazines (Build 11)'); assert.equal(g.getClass(), CLASSES.assault, 'class unchanged');
+  const w = g.ambush.weapon(); assert.equal(w.config, CLASSES.medic); assert.deepEqual([w.ammo, w.reserve], [30, 120], 'a bought rifle comes with five magazines (Build 12)'); assert.equal(g.getClass(), CLASSES.assault, 'class unchanged');
   // The purchased rifle is the one that fires: a body hit does the CQB's damage.
   const e = enemies(g)[0]; e.hp = 100; e.dead = 0; e.gone = false; e.g.visible = true; e.resetPose(); e.g.position.set(g.player.x, g.groundY(g.player.x, g.player.z - 8), g.player.z - 8); e.g.updateMatrixWorld(true);
   e.ai = {role: 'ambush', dir: 1, lastHp: 100, state: 'hold', flushed: true, retry: Infinity};
@@ -80,7 +80,7 @@ await check('purchases are gated on the balance and wired: the price shown is th
   g.set({yaw: Math.atan2(-d.x, -d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z))}); g.set({trigger: true}); for (let i = 0; i < 3 && e.hp === 100; i++) g.frame(3 + i * 200); g.set({trigger: false});
   assert.equal(100 - e.hp, CLASSES.medic.damage, 'CQB damage per body hit');
   // Ammunition (Build 11): E does nothing at the crate of the rifle you hold; B buys one magazine at the wave's price.
-  w.ammo = 0; w.reserve = 0; const mp = magazinePrice(CLASSES.medic, 1); g.amb.points = mp - 1; g.ambush.tick(0); assert.match(g.el('interact').textContent, new RegExp(`^B · MAGAZINE FOR MK4 CQB · 30 RDS · ${mp} PTS \\(NEED 1 MORE\\) · RESERVE 0/120$`)); assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.buyAmmo(), false);
+  w.ammo = 0; w.reserve = 0; const mp = magazinePrice(CLASSES.medic, 1); g.amb.points = mp - 1; g.ambush.tick(0); assert.match(g.el('interact').textContent, new RegExp(`^YOUR MK4 CQB · RESERVE 0/120 · DRESSINGS 2/5\\nB · MAGAZINE \\(30 RDS\\) · ${mp} PTS \\(NEED 1 MORE\\)   N · FIELD DRESSING · 150 PTS \\(NEED 81 MORE\\)$`)); assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.buyAmmo(), false);
   g.amb.points = mp; assert.equal(g.ambush.buyAmmo(), true); assert.deepEqual([w.ammo, w.reserve, g.amb.points], [0, 30, 0]);
   // A crate in a closed area cannot be used (you would be outside the arena).
   g.goTo(STATIONS[2].at[0], STATIONS[2].at[1] + 1.4); g.amb.points = 5000; assert.equal(g.ambush.near(), null);
@@ -163,15 +163,13 @@ await check('spawns across 12 waves: never inside geometry, never in the open ar
   assert(all.length >= 150, `${all.length} spawns checked`); assert.deepEqual(bad, []);
 });
 
-await check('death ends the run immediately with the summary; a squadmate going down does not end it and regroups inside the arena after 15 s', async () => {
-  const g = await ambush(), A = g.amb, ally = g.actors.find(a => a.team === 'ally' && !a.remote);
+await check('death ends the run immediately with the summary; Ambush has no squad (Build 12): no AI squadmate exists to go down or regroup', async () => {
+  const g = await ambush(), A = g.amb;
   A.phase = 'break'; A.timer = 0; g.run(2); killInFront(g, true); killInFront(g, false);
-  ally.hp = 1; const e = enemies(g).find(a => a.hp > 0) || enemies(g)[0];
-  g.aiHit({pos: ally.g.position, a: ally}, V(-30, 1.4, 0), ally.g.position.clone().setY(1.25)); assert(ally.hp <= 0); assert.equal(g.state().state, 'playing', 'squadmate down: run continues');
-  g.run(15.5); assert(ally.hp > 0, 'regrouped'); assert(inArena(A.open, ally.g.position.x, ally.g.position.z), `regrouped inside the arena at ${ally.g.position.x.toFixed(1)},${ally.g.position.z.toFixed(1)}`);
+  assert.equal(g.actors.filter(a => a.team === 'ally' && !a.remote).length, 0, 'no AI squadmate in Ambush'); g.run(16); assert.equal(g.actors.filter(a => a.team === 'ally' && !a.remote).length, 0, 'none appears later either');
   g.set({hp: 1}); g.aiHit({pos: g.player, a: null}, V(-30, 1.4, 0), g.player.clone().setY(1.4));
   assert.equal(g.state().state, 'ended', 'player death ends the run in the same call'); assert.equal(g.el('result').textContent, 'Overrun.');
-  const r = g.el('report').textContent; assert.match(r, /^You were killed in wave \d+\. Nothing banked\. \d+ waves survived · 2 kills · 250 points earned · \d+m \d+s\.$/);
+  const r = g.el('report').textContent; assert.match(r, /^You were killed in wave \d+\. Nothing banked\. \d+ waves survived · 2 kills · 250 points earned · \d+m \d+s\./);
   assert.equal(A.banked, 0);
 });
 
