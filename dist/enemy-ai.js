@@ -2,6 +2,7 @@
 // entries and the cover table.
 // game.js reads ENEMY_AI at call time (never copied at load), so every value here is live and testable.
 // Hit chance, damage and fire cadence are NOT here: they stay in game.js's unchanged fire block and aiHit.
+import './build.js'; // DEPLOY-01: an older cached page that fetches this new file reloads instead of mixing builds
 
 export const ENEMY_AI = {
   // Movement (all below player walk speed 3.5 × class multiplier).
@@ -18,7 +19,9 @@ export const ENEMY_AI = {
   attackTokens: 3,
   // Repositioning.
   relocateOnHit: .6, maxCoverHold: [10, 16], relocateMinInterval: 3, maxRelocating: 2,
-  lostTargetSearch: 6, searchStopDist: 12, noCoverRetry: [4, 6],
+  // After lostTargetSearch s without sight an engaged enemy hunts toward the last known position. While its foe (the
+  // target it last saw) is alive and within engageLeash m it stays in the fight; otherwise it returns to duty (AI-04).
+  lostTargetSearch: 6, searchStopDist: 12, noCoverRetry: [4, 6], engageLeash: 60,
   stuckRepath: 1.5, stuckAbandon: 4,
   // Reinforcements recycle dead enemy actors (at most 7 are ever alive) and arrive in waves of waveSize from one
   // entry point, spawnInterval seconds apart. Budgets are per stage, so every stage can be cleared for good.

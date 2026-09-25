@@ -1,8 +1,9 @@
 import * as THREE from './three.module.js';
 import {densifyVillage} from './village-props.js';
+import {assetURL} from './build.js';
 export function dressWorld({scene,renderer,ground,plaster,box,cylinder,mat,wood,metal,sand,groundY,solids,occluders,rand,range}){
  const loader=new THREE.TextureLoader(),maxAniso=Math.min(8,renderer.capabilities.getMaxAnisotropy());
- function tex(name,type,repeat){const t=loader.load(`assets/${name}_${type}_1k.jpg`);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);t.anisotropy=maxAniso;if(type==='diff')t.colorSpace=THREE.SRGBColorSpace;return t;}
+ function tex(name,type,repeat){const t=loader.load(assetURL(`assets/${name}_${type}_1k.jpg`));t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);t.anisotropy=maxAniso;if(type==='diff')t.colorSpace=THREE.SRGBColorSpace;return t;}
  function pbr(material,name,repeat,normal=.8){material.map=tex(name,'diff',repeat);material.normalMap=tex(name,'nor_gl',repeat);material.roughnessMap=tex(name,'rough',repeat);material.normalScale.set(normal,normal);material.needsUpdate=true;}
  ground.material.color.set('#d8c9aa');pbr(ground.material,'rocks_ground_05',[520,520],.8);
  plaster.color.set('#e2cdb1');pbr(plaster,'beige_wall_001',[1,1],.45);

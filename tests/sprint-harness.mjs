@@ -23,10 +23,11 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
   async exitFullscreen(){calls.exitFullscreen++;this.fullscreenElement=null;fire(docL,'fullscreenchange');}};
  docEl.requestFullscreen=async()=>{calls.requestFullscreen++;doc.fullscreenElement=docEl;fire(docL,'fullscreenchange');};
  const win=globalThis.window={addEventListener:add(winL)};globalThis.innerWidth=1200;globalThis.innerHeight=750;globalThis.devicePixelRatio=1;globalThis.requestAnimationFrame=noop;
- Three.TextureLoader.prototype.load=function(){return new Three.Texture()};
- globalThis.fetch=async path=>({ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL('dist/'+path,projectRoot),'utf8'))});
+ // Asset URLs the game requests are recorded (DEPLOY-01 checks that each carries its content hash).
+ const assetRequests=[];Three.TextureLoader.prototype.load=function(url){assetRequests.push(url);return new Three.Texture()};
+ globalThis.fetch=async path=>(assetRequests.push(path),{ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL('dist/'+path,projectRoot),'utf8'))});
  class Renderer{constructor(){this.domElement=element();const d=this.domElement;d.requestPointerLock=()=>{calls.requestPointerLock++;if(lockPolicy==='grant'){queueMicrotask(()=>{doc.pointerLockElement=d;fire(docL,'pointerlockchange');});return Promise.resolve();}if(lockPolicy==='deny'){queueMicrotask(()=>fire(docL,'pointerlockerror'));return Promise.reject(new Error('The user has exited the lock before this request was completed.'));}if(lockPolicy==='pending')return new Promise(noop);};this.shadowMap={};this.capabilities={getMaxAnisotropy:()=>8};this.info={render:{calls:0,triangles:0}}}setSize(){}setPixelRatio(){}render(){}}
- class RGBELoader{load(){}}
+ class RGBELoader{load(url){assetRequests.push(url);}}
  let source=fs.readFileSync(new URL(sourcePath,import.meta.url),'utf8');
  const parameters=['document','window'],values=[doc,win];
  for(const match of source.matchAll(/^import (.*) from '(.*)';$/gm)){
@@ -61,7 +62,7 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
  api.press=(code,{repeat=false}={})=>{const ev={code,key:code,target:{tagName:'BODY'},repeat,preventDefault(){}};fire(docL,'keydown',ev);fire(winL,'keydown',ev);};
  api.release=code=>{fire(docL,'keyup',{code});fire(winL,'keyup',{code});};
  api.listeners={get:event=>docL.has(event)?arg=>fire(docL,event,arg):undefined};
- api.calls=calls;api.doc=doc;api.fireDoc=(e,a)=>fire(docL,e,a);api.fireWin=(e,a)=>fire(winL,e,a);api.setLockPolicy=v=>{lockPolicy=v;};
+ api.calls=calls;api.assetRequests=assetRequests;api.doc=doc;api.fireDoc=(e,a)=>fire(docL,e,a);api.fireWin=(e,a)=>fire(winL,e,a);api.setLockPolicy=v=>{lockPolicy=v;};
  // Browser Escape models. Safari 18.5 (WebKit EventHandler::internalKeyEvent): pointer lock is released first; in element
  // fullscreen WebKit then cancels fullscreen and never dispatches the keydown. Windowed, the keydown is dispatched.
  api.safariEscape=()=>{const locked=!!doc.pointerLockElement,fs=!!doc.fullscreenElement;if(locked)doc.pointerLockElement=null;if(fs)doc.fullscreenElement=null;if(!fs)api.press('Escape');if(locked)fire(docL,'pointerlockchange');if(fs)fire(docL,'fullscreenchange');return {locked,fs,keydownDelivered:!fs};};

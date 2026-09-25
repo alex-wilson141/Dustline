@@ -66,7 +66,8 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 - **Bodies can be shot:** hitting a body shows blood and leaves a splat. It never counts as a hit, a kill or mission progress. Bodies sink into the ground after about 40 seconds, or sooner when more than five are lying.
 - **Reinforcement waves:** reinforcements arrive two or three at a time from out of sight: 6 per stage in the first stage, 9 at the relay and 12 in skirmish. Their accuracy and damage are unchanged, and the mission can always be completed.
 - **Busier village:** about 180 crates, barrels, tyres, sacks, pots, sandbag walls, concrete barriers, handcarts, fences and bits of debris, built from the game's existing materials. Solid ones block movement and bullets and give cover. Enemy routes, spawns and objectives were kept clear. On a MacBook Pro M1 (Chromium) this adds about 0.3–0.6 ms per frame.
-- **After updating, hard-reload the page** (Safari Option+Cmd+R, Chromium Cmd+Shift+R). A browser can otherwise keep some older game files. The menu should say BUILD 08.
+- **Enemies stay in the fight:** an enemy that is fighting you keeps at it while you are alive and nearby. If you duck out of sight it holds, takes cover or moves up to find you instead of wandering back to its patrol, and it no longer loses track of you when your squad is closer to it than you are. It gives up only if you get far away (about 60 m) or its target is down.
+- **No stale files:** every game file's address carries a fingerprint of its contents, and the page checks on start-up that it is the build the server has now. A browser can no longer combine cached older files with new ones (checked in Safari 18.5 and Chromium). After updating from an earlier build, reload once; from then on it is automatic.
 
 ## Enemies and performance update (Build 07)
 
@@ -115,8 +116,12 @@ node tests/test-enemies-b07.mjs
 node tests/test-perf02-b07.mjs
 node tests/test-pausekeys-b07.mjs
 node tests/test-build08.mjs
+node tests/test-cache-deploy01.mjs
+node tests/test-engage-ai04.mjs
 ```
 
-These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen and 5 Build 08 scenario checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
+These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning and 3 enemy-engagement checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
+
+After changing anything in `dist/`, run `node tools/stamp-build.mjs` to refresh the file fingerprints (the file-versioning check fails until you do).
 
 Read and update `DUSTLINE-ROADMAP.md` after each development task. It records verified changes, remaining playtests and the next bounded milestone.

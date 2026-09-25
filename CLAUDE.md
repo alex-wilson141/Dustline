@@ -14,6 +14,9 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `tests/`: portable Node.js headless regression checks and historical evidence.
+- `tools/stamp-build.mjs`: stamps content hashes into `dist/index.html` (import map,
+  stylesheet, start-up check) and `dist/build.js` (asset hashes). Run it after every
+  change in `dist/`.
 - `dist/credits.html` and `dist/THREE-LICENSE.txt`: bundled asset/library credits.
 
 ## Current state
@@ -22,8 +25,15 @@ Build 08 (local, 2026-09-24): death variants chosen per kill and sent to the gue
 (`dv`/`st`); enemy corpses shootable for blood only (never score, kills or mission) and
 sunk after `corpseLife`/beyond `corpseMax` (`gn` snapshot mask); reinforcement waves
 (`waveSize`); 183 props in `dist/village-props.js` (bundled materials only; solid props are
-unrotated boxes kept clear of spawns, loops, entries and objectives). Browsers can mix
-cached older modules with a new `game.js`, so hard-reload when testing (DEPLOY-01).
+unrotated boxes kept clear of spawns, loops, entries and objectives). DEPLOY-01 (fixed):
+every module and asset URL carries a content hash (import map + `assetURL()` from
+`dist/build.js`), and `index.html` starts the game only when the served page has the same
+build token. After editing anything in `dist/`, run `node tools/stamp-build.mjs` (the
+cache test fails otherwise). Keep relative import specifiers plain (no `?v=`), load
+assets only through `assetURL()`, and add no dynamic imports or workers without
+extending the stamp. AI-04 (fixed): enemies sight-check every target in range (their foe
+first) and stay engaged while their foe is alive and within `engageLeash`; do not reintroduce
+the nearest-three limit for enemies or end an engagement on the sight timer alone.
 Build 07 (local, 2026-09-24): enemies patrol, use cover and reposition, with bounded
 reinforcements (`dist/enemy-ai.js` holds every tunable in `ENEMY_AI`, read live);
 navigation matches collision and every placement is validated (AI-02); the terrain is
@@ -70,6 +80,8 @@ node tests/test-enemies-b07.mjs
 node tests/test-perf02-b07.mjs
 node tests/test-pausekeys-b07.mjs
 node tests/test-build08.mjs
+node tests/test-cache-deploy01.mjs
+node tests/test-engage-ai04.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
@@ -77,8 +89,8 @@ must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
 The last checked Build 08 source passed 34 movement, 24 firing, 3 diagnostics,
-10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen and 5 Build 08
-scenario checks. These
+10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
+scenario, 6 file-versioning and 3 enemy-engagement checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
