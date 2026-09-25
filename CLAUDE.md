@@ -21,6 +21,14 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 11 (local, 2026-09-25): Ambush difficulty and economy. Alive cap `min(aliveCeiling, 3+ceil(n/2))`
+(12 from wave 17) with `enemyPool` (20) Ambush-only enemy actors attached by `ambushPool(true)` in
+`ambushReset` and detached at the start of every `reset()` (Story/Skirmish/co-op always see 7 enemies and
+10 local actors; never let extras leak). Magazines (B key, `ambushBuyAmmo`, `magazinePrice`) replace
+the half-price refill; a bought rifle gets `rifleMagazines`. Crate prompts come from `weaponCompare`
+(live `CLASSES` values, never text). `dist/records.js` keeps the Ambush personal best in localStorage
+(one key, guarded; the only persistent data). Spawn spots need a route ≤ `spawnMaxRoute`; cover must lie
+on the route (`coverOnRoute`). Build 10 playtest: wave 7, no stalls, confirmed working.
 Build 10 (local, 2026-09-24): Ambush playtest fixes. Ambush enemies run `ambushPlan` (role
 `ambush` only): advance to a slot `holdRange` from the player, stop to fire inside the wave's
 `fightRange`, brief cover only where it gains ground, push failsafe after `pushAfter` s without
@@ -102,15 +110,16 @@ node tests/test-cache-deploy01.mjs
 node tests/test-engage-ai04.mjs
 node tests/test-ambush-b09.mjs
 node tests/test-ambush-b10.mjs
+node tests/test-ambush-b11.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 10 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 11 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush and 8 Build 10 Ambush checks. These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10 and 6 Build 11 checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

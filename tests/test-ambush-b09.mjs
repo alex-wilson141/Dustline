@@ -7,7 +7,7 @@ import {createGame, projectRoot} from './sprint-harness.mjs';
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
 const {ENEMY_AI} = await import(new URL('dist/enemy-ai.js', projectRoot));
-const {AMBUSH, AREAS, GATES, STATIONS, waveSpec, aiTuningFor, bankMultiplier, ammoPrice, inArena, distToArena} = await import(new URL('dist/ambush.js', projectRoot));
+const {AMBUSH, AREAS, GATES, STATIONS, waveSpec, aiTuningFor, bankMultiplier, magazinePrice, inArena, distToArena} = await import(new URL('dist/ambush.js', projectRoot));
 const results = [], report = {};
 async function check(name, fn) { await fn(); results.push(name); }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -72,16 +72,16 @@ await check('purchases are gated on the balance and wired: the price shown is th
   const st = STATIONS[0]; g.goTo(st.at[0], st.at[1] + 1.4); g.amb.points = 499; g.ambush.tick(0);
   assert.match(g.el('interact').textContent, /BUY MK4 CQB · 500 PTS \(NEED 1 MORE\)/); assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.gunId(), 'assault');
   g.amb.points = 500; assert.equal(g.ambush.interact(), true); assert.equal(g.amb.points, 0); assert.equal(g.ambush.gunId(), 'medic');
-  const w = g.ambush.weapon(); assert.equal(w.config, CLASSES.medic); assert.deepEqual([w.ammo, w.reserve], [30, 120]); assert.equal(g.getClass(), CLASSES.assault, 'class unchanged');
+  const w = g.ambush.weapon(); assert.equal(w.config, CLASSES.medic); assert.deepEqual([w.ammo, w.reserve], [30, 60], 'a bought rifle comes with three magazines (Build 11)'); assert.equal(g.getClass(), CLASSES.assault, 'class unchanged');
   // The purchased rifle is the one that fires: a body hit does the CQB's damage.
   const e = enemies(g)[0]; e.hp = 100; e.dead = 0; e.gone = false; e.g.visible = true; e.resetPose(); e.g.position.set(g.player.x, g.groundY(g.player.x, g.player.z - 8), g.player.z - 8); e.g.updateMatrixWorld(true);
   e.ai = {role: 'ambush', dir: 1, lastHp: 100, state: 'hold', flushed: true, retry: Infinity};
   g.frame(2); const cam = g.camera.position, chest = e.g.position.clone().setY(e.g.position.y + 1.15), d = chest.clone().sub(cam);
   g.set({yaw: Math.atan2(-d.x, -d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z))}); g.set({trigger: true}); for (let i = 0; i < 3 && e.hp === 100; i++) g.frame(3 + i * 200); g.set({trigger: false});
   assert.equal(100 - e.hp, CLASSES.medic.damage, 'CQB damage per body hit');
-  // Refill: the same crate now refills the CQB for half price.
-  w.ammo = 0; w.reserve = 0; g.amb.points = ammoPrice(500) - 1; g.ambush.tick(0); assert.match(g.el('interact').textContent, /REFILL MK4 CQB AMMO · 250 PTS/); assert.equal(g.ambush.interact(), false);
-  g.amb.points = 250; assert.equal(g.ambush.interact(), true); assert.deepEqual([w.ammo, w.reserve, g.amb.points], [30, 120, 0]);
+  // Ammunition (Build 11): E does nothing at the crate of the rifle you hold; B buys one magazine at the wave's price.
+  w.ammo = 0; w.reserve = 0; const mp = magazinePrice(CLASSES.medic, 1); g.amb.points = mp - 1; g.ambush.tick(0); assert.match(g.el('interact').textContent, new RegExp(`^B · MAGAZINE FOR MK4 CQB · 30 RDS · ${mp} PTS \\(NEED 1 MORE\\) · RESERVE 0/120$`)); assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.buyAmmo(), false);
+  g.amb.points = mp; assert.equal(g.ambush.buyAmmo(), true); assert.deepEqual([w.ammo, w.reserve, g.amb.points], [0, 30, 0]);
   // A crate in a closed area cannot be used (you would be outside the arena).
   g.goTo(STATIONS[2].at[0], STATIONS[2].at[1] + 1.4); g.amb.points = 5000; assert.equal(g.ambush.near(), null);
 });
@@ -124,7 +124,7 @@ await check('the arena edge: a marked line along every open border (not between 
 await check('waves escalate by count, pressure and aggression within bounds (never accuracy or damage), and the director delivers exactly that', async () => {
   let prev = null;
   for (let n = 1; n <= 40; n++) { const w = waveSpec(n);
-    assert(w.count <= 40 && w.aliveCap <= 7 && w.spawnGap >= 1.2 && w.fightRange >= 14 && w.pauseScale >= .5);
+    assert(w.count <= 40 && w.aliveCap <= AMBUSH.aliveCeiling && w.spawnGap >= .8 && w.fightRange >= 14 && w.pauseScale >= .5);
     if (prev) { assert(w.count >= prev.count && w.aliveCap >= prev.aliveCap && w.spawnGap <= prev.spawnGap && w.fightRange <= prev.fightRange && w.pauseScale <= prev.pauseScale); if (n <= 18) assert(w.count > prev.count, `wave ${n} larger`); }
     prev = w; }
   const t = aiTuningFor(12, ENEMY_AI), base = Object.keys(ENEMY_AI).filter(k => !['reinforce', 'corpseMax', 'corpseLife', 'engageLeash'].includes(k));

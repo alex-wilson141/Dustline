@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 10)
+# DUSTLINE — Operation Broken Signal (Build 11)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -60,6 +60,13 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Ambush difficulty and economy (Build 11)
+
+- **More enemies at once:** four at wave 1, one more every two waves, twelve from wave 17 (it was seven from wave 7). Waves get harder, not just longer. Accuracy and damage are unchanged.
+- **Ammunition costs points:** at any weapon crate press B to buy one magazine for the rifle you hold. The price follows how much damage a magazine can deal and rises with the wave, from 70 points for a carbine magazine at wave 1 to 180 from wave 16 (DMR 100 → 240, automatic rifle 160 → 400). Your reserve cannot exceed the rifle's limit. A rifle bought at a crate comes with three magazines.
+- **Clearer purchases:** the crate prompt shows the rifle's damage, rate of fire, magazine size, fire mode and reload time, with the difference from the rifle you hold, and the magazine line with its price and your reserve.
+- **Personal best:** the end-of-run summary shows your best wave and best bank, kept in this browser (no account, no server). It updates only when you beat it; if the browser blocks storage the line is simply absent.
 
 ## Ambush playtest fixes (Build 10)
 
@@ -134,6 +141,7 @@ node tests/test-cache-deploy01.mjs
 node tests/test-engage-ai04.mjs
 node tests/test-ambush-b09.mjs
 node tests/test-ambush-b10.mjs
+node tests/test-ambush-b11.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.

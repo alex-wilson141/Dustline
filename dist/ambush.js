@@ -15,6 +15,9 @@ export const AMBUSH = {
   outOfBounds: 5,              // seconds outside the open arena before the run ends
   spawnMargin: 6,              // spawns stay at least this far outside the open arena ...
   spawnMinDist: 35, spawnMaxDist: 85, spawnTests: 24, // ... and 35-85 m from the player, unseen (up to 24 nearest tested per attempt)
+  // Build 11: a spot whose walking route to the player is longer than spawnMaxRoute cells (2 m each) is skipped, so nobody
+  // arrives by a 90 m detour around a closed barricade; at most spawnRouteTests routes are computed per attempt.
+  spawnMaxRoute: 36, spawnRouteTests: 6,
   // Each wave arrives from one direction: spawns within sectorSpread degrees of the wave's bearing (seen from where the
   // player stood when it began), widened by 30 degrees after every sectorWiden spawn attempts that find no spot.
   sectorSpread: 40, sectorWiden: 6,
@@ -25,11 +28,19 @@ export const AMBUSH = {
   // seconds while unseen and the enemy is withdrawn and sent again.
   holdRange: 7, fightTime: [2.5, 4], boundTime: [3, 5], coverTime: [.6, 1.2], fireTime: [1, 2], coverSearch: 10,
   coverRunLimit: 4, lostSight: 1.2, replan: 1.5, pushAfter: 8, closeStep: 3, pushStop: 6, recycleAfter: 30,
+  coverOnRoute: 5,        // Build 11: cover is taken only within this distance of one of the next five route cells
   // Stuck watchdog: an enemy on the move (advancing or running to cover, route still ahead of it) that has not shifted
   // stallStep metres in stallTime seconds is grinding on a corner (its .34 m body against a route planned at .45 m
   // clearance); it steps to the nearest navigable spot, takes a different slot and re-routes.
   stallTime: 3, stallStep: 1,
   arenaWallHeight: 1.2,   // the arena's brick walls in Ambush: over a standing eye (1.7 m) you see and fire; crouched you hide
+  // Build 11 difficulty: the alive cap rises with the wave, 4 at wave 1 to aliveCeiling at wave 17 (see waveSpec); enemyPool
+  // enemy actors exist in Ambush (the seven Story soldiers plus extras attached only while Ambush is played), leaving room
+  // for corpseMax bodies to lie while the cap is full.
+  aliveCeiling: 12, enemyPool: 20,
+  // Build 11 economy: a bought rifle comes loaded with one magazine and rifleMagazines - 1 in reserve; a magazine costs
+  // magBase points per 100 hp it can deal (capacity × damage), × (1 + magWaveStep per wave after the first) up to magWaveCap.
+  rifleMagazines: 3, magBase: 6, magWaveStep: .1, magWaveCap: 2.5,
 };
 // The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
 export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
@@ -56,21 +67,34 @@ export const STATIONS = [
   {area: 3, weapon: 'marksman', price: 1000, at: [-50, -3]},
   {area: 4, weapon: 'support', price: 1250, at: [-20, -46]},
 ];
-export const ammoPrice = price => Math.round(price / 2 / 50) * 50;
+// Build 11 economy. A magazine's price follows the damage it can deal (capacity × damage), so every rifle pays about the
+// same per potential kill, and it rises with the wave up to magWaveCap: CQB/carbine 70 → 175, DMR 100 → 250, automatic
+// rifle 160 → 400 points (wave 1 → wave 16+). Rounds are added to the reserve up to the rifle's reserve limit.
+export function magazinePrice(config, wave) { const scale = Math.min(AMBUSH.magWaveCap, 1 + AMBUSH.magWaveStep * (Math.max(1, wave) - 1)); return Math.ceil(config.capacity * config.damage / 100 * AMBUSH.magBase * scale / 10) * 10; }
+// What a rifle really does, read from its live config (never hard-coded text): damage per hit, rounds per minute,
+// magazine, reserve limit, fire mode, reload time.
+export function weaponFacts(config) { return {damage: config.damage, rpm: Math.round(60 / config.interval), mag: config.capacity, reserve: config.reserve, auto: !!config.automatic, reload: config.reload}; }
+// One readable line comparing a rifle for sale with the rifle held, differences in brackets:
+// "78 DMG (+40) · 200 RPM (−371) · 20-RD MAG (−10) · SEMI · 3.0 S RELOAD (+0.6)".
+export function weaponCompare(config, held) {
+  const a = weaponFacts(config), b = held ? weaponFacts(held) : null, sign = v => v > 0 ? '+' : '−';
+  const d = (x, y, fmt = v => String(v)) => b == null || x === y ? '' : ` (${sign(x - y)}${fmt(Math.abs(x - y))})`;
+  return `${a.damage} DMG${d(a.damage, b?.damage)} · ${a.rpm} RPM${d(a.rpm, b?.rpm)} · ${a.mag}-RD MAG${d(a.mag, b?.mag)} · ${a.auto ? 'AUTO' : 'SEMI'} · ${a.reload.toFixed(1)} S RELOAD${d(a.reload, b?.reload, v => v.toFixed(1))}`;
+}
 
 // Escalation by count, spawn pressure and aggression only. Enemy accuracy, damage and fire rate are never touched.
 export function waveSpec(n) {
   const k = Math.max(0, n - 1);
   return {
     count: Math.min(4 + 2 * n, 40),                 // 6, 8, 10 ... capped at 40 (wave 18)
-    aliveCap: Math.min(7, 3 + Math.ceil(n / 2)),    // 4, 4, 5, 5, 6, 6, 7 ... (7 enemy soldiers exist)
-    spawnGap: Math.max(1.2, 4.5 - .3 * k),          // seconds between arrivals
+    aliveCap: Math.min(AMBUSH.aliveCeiling, 3 + Math.ceil(n / 2)), // 4, 4, 5, 5, 6, 6, 7, 7, 8, 8 ... 12 from wave 17 (Build 11)
+    spawnGap: Math.max(.8, 4.5 - .3 * k),           // seconds between arrivals (floor .8 s from wave 13, Build 11; was 1.2)
     fightRange: Math.max(14, 26 - k),               // they come this close before stopping to fire
     pauseScale: Math.max(.5, 1 - .05 * k),          // their stops to fire and duck into cover get shorter
   };
 }
 // The enemy AI tunables for wave n: the normal ones (movement speeds, sensing), the Ambush attack values with the
-// wave's aggression applied, and corpse limits suited to a pool of seven soldiers.
+// wave's aggression applied, and corpse limits that leave the enemyPool room for the alive cap and bodies that still lie in view (20 = 12 alive + 4 lying + 4 spare).
 export function aiTuningFor(n, base) {
   const w = waveSpec(n), s = r => [r[0] * w.pauseScale, r[1] * w.pauseScale];
   return {...base, reinforce: false, engageLeash: 200, corpseMax: 4, corpseLife: 20, fightRange: w.fightRange,
