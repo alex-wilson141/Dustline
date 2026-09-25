@@ -21,6 +21,16 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 10 (local, 2026-09-24): Ambush playtest fixes. Ambush enemies run `ambushPlan` (role
+`ambush` only): advance to a slot `holdRange` from the player, stop to fire inside the wave's
+`fightRange`, brief cover only where it gains ground, push failsafe after `pushAfter` s without
+progress, stuck watchdog (`stallTime`/`stallStep`, AMB-04), last-resort recycle after
+`recycleAfter` s unseen. Waves arrive from one bearing (`sectorSpread`). The four `ARENA_WALLS`
+are kept out of the static batch and lowered to `arenaWallHeight` (1.2 m) in Ambush only.
+Story/Skirmish enemy behaviour must stay trace-identical to `tests/fixtures/story-skirmish-ai-b09.json`
+(T20 replays it; re-record only from the Build 09 source `21abfb6` with `--record`). All Build 10
+tunables live in `AMBUSH` in `dist/ambush.js`. Never touch the shared movement/stuck code to fix an
+Ambush-only problem; keep fixes inside `ambushPlan`/`ambushDirector`.
 Build 09 (local, 2026-09-24): Ambush mode phase 1, solo wave survival in the west
 district (`dist/ambush.js` data and rules, `game.js` Ambush block). Four areas behind
 purchasable barricades, weapon crates with the four class rifles (the weapon id `gunId`
@@ -91,15 +101,16 @@ node tests/test-build08.mjs
 node tests/test-cache-deploy01.mjs
 node tests/test-engage-ai04.mjs
 node tests/test-ambush-b09.mjs
+node tests/test-ambush-b10.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 09 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 10 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks. These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush and 8 Build 10 Ambush checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

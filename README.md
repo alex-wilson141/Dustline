@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 09)
+# DUSTLINE — Operation Broken Signal (Build 10)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -60,6 +60,12 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Ambush playtest fixes (Build 10)
+
+- **Enemies come to you:** they walk in from one direction per wave (the radio and objective text name it), stop briefly to fire once you are in range, and keep moving up until they stand and fight about 7 m away. They duck into cover only where it gains ground. An enemy that stops making progress pushes straight in after 8 s; one grinding on a corner is nudged free after 3 s; one out of sight for 30 s without progress is withdrawn and sent again. Their accuracy, damage and rate of fire are unchanged.
+- **Chest-high walls:** the four brick walls in and around the arena are 1.2 m tall in Ambush only. Standing, you see and shoot over them; crouched behind one you are hidden from standing enemies and your own shots stop at the wall. In Story and Skirmish they stay full height.
+- **Checked:** 15 waves with 300 arrivals and no stall in the headless checks; Story and Skirmish enemy behaviour is identical to Build 09 sample for sample. Human feel is still to be playtested.
 
 ## Ambush mode (Build 09)
 
@@ -127,6 +133,7 @@ node tests/test-build08.mjs
 node tests/test-cache-deploy01.mjs
 node tests/test-engage-ai04.mjs
 node tests/test-ambush-b09.mjs
+node tests/test-ambush-b10.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.

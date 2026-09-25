@@ -124,10 +124,10 @@ await check('the arena edge: a marked line along every open border (not between 
 await check('waves escalate by count, pressure and aggression within bounds (never accuracy or damage), and the director delivers exactly that', async () => {
   let prev = null;
   for (let n = 1; n <= 40; n++) { const w = waveSpec(n);
-    assert(w.count <= 40 && w.aliveCap <= 7 && w.spawnGap >= 1.2 && w.lostTargetSearch >= 2 && w.hideScale >= .5 && w.engageMinDist >= 8);
-    if (prev) { assert(w.count >= prev.count && w.aliveCap >= prev.aliveCap && w.spawnGap <= prev.spawnGap && w.lostTargetSearch <= prev.lostTargetSearch && w.engageMinDist <= prev.engageMinDist); if (n <= 18) assert(w.count > prev.count, `wave ${n} larger`); }
+    assert(w.count <= 40 && w.aliveCap <= 7 && w.spawnGap >= 1.2 && w.fightRange >= 14 && w.pauseScale >= .5);
+    if (prev) { assert(w.count >= prev.count && w.aliveCap >= prev.aliveCap && w.spawnGap <= prev.spawnGap && w.fightRange <= prev.fightRange && w.pauseScale <= prev.pauseScale); if (n <= 18) assert(w.count > prev.count, `wave ${n} larger`); }
     prev = w; }
-  const t = aiTuningFor(12, ENEMY_AI), base = Object.keys(ENEMY_AI).filter(k => !['lostTargetSearch', 'engageMinDist', 'hideTime', 'reinforce', 'corpseMax', 'corpseLife', 'engageLeash'].includes(k));
+  const t = aiTuningFor(12, ENEMY_AI), base = Object.keys(ENEMY_AI).filter(k => !['reinforce', 'corpseMax', 'corpseLife', 'engageLeash'].includes(k));
   for (const k of base) assert.deepEqual(t[k], ENEMY_AI[k], `${k} unchanged`);
   const g = await ambush(), A = g.amb, en = enemies(g), life = new Map(en.map(a => [a, a.life])), per = {};
   let maxOver = 0, wave = 0;

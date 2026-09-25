@@ -15,8 +15,24 @@ export const AMBUSH = {
   outOfBounds: 5,              // seconds outside the open arena before the run ends
   spawnMargin: 6,              // spawns stay at least this far outside the open arena ...
   spawnMinDist: 35, spawnMaxDist: 85, spawnTests: 24, // ... and 35-85 m from the player, unseen (up to 24 nearest tested per attempt)
-  strandedAfter: 90, strandedDist: 50, // an enemy still this far away after this long is replaced nearer
+  // Each wave arrives from one direction: spawns within sectorSpread degrees of the wave's bearing (seen from where the
+  // player stood when it began), widened by 30 degrees after every sectorWiden spawn attempts that find no spot.
+  sectorSpread: 40, sectorWiden: 6,
+  // Attack (Build 10). Enemies move up on the player to their own spot holdRange from you; seeing you within the wave's
+  // fight range they stop and fire for fightTime, then move up again; every boundTime of advancing they may duck into
+  // cover that gains ground, for coverTime, then rise and fire for fireTime. Failsafe: no closeStep of progress for
+  // pushAfter seconds and they push straight in until within pushStop. Last resort: no progress for recycleAfter
+  // seconds while unseen and the enemy is withdrawn and sent again.
+  holdRange: 7, fightTime: [2.5, 4], boundTime: [3, 5], coverTime: [.6, 1.2], fireTime: [1, 2], coverSearch: 10,
+  coverRunLimit: 4, lostSight: 1.2, replan: 1.5, pushAfter: 8, closeStep: 3, pushStop: 6, recycleAfter: 30,
+  // Stuck watchdog: an enemy on the move (advancing or running to cover, route still ahead of it) that has not shifted
+  // stallStep metres in stallTime seconds is grinding on a corner (its .34 m body against a route planned at .45 m
+  // clearance); it steps to the nearest navigable spot, takes a different slot and re-routes.
+  stallTime: 3, stallStep: 1,
+  arenaWallHeight: 1.2,   // the arena's brick walls in Ambush: over a standing eye (1.7 m) you see and fire; crouched you hide
 };
+// The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
+export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
 
 // The four areas (axis-aligned rectangles, x and z ranges in metres). Area 1 is open from the start.
 export const AREAS = [
@@ -49,16 +65,16 @@ export function waveSpec(n) {
     count: Math.min(4 + 2 * n, 40),                 // 6, 8, 10 ... capped at 40 (wave 18)
     aliveCap: Math.min(7, 3 + Math.ceil(n / 2)),    // 4, 4, 5, 5, 6, 6, 7 ... (7 enemy soldiers exist)
     spawnGap: Math.max(1.2, 4.5 - .3 * k),          // seconds between arrivals
-    lostTargetSearch: Math.max(2, 6 - .4 * k),      // how soon they move in when they lose sight of you
-    hideScale: Math.max(.5, 1 - .05 * k),           // how briefly they stay down behind cover
-    engageMinDist: Math.max(8, 16 - .8 * k),        // how close they are willing to take cover
+    fightRange: Math.max(14, 26 - k),               // they come this close before stopping to fire
+    pauseScale: Math.max(.5, 1 - .05 * k),          // their stops to fire and duck into cover get shorter
   };
 }
-// The enemy AI tunables for wave n: the normal ones, with the wave's aggression applied.
+// The enemy AI tunables for wave n: the normal ones (movement speeds, sensing), the Ambush attack values with the
+// wave's aggression applied, and corpse limits suited to a pool of seven soldiers.
 export function aiTuningFor(n, base) {
-  const w = waveSpec(n);
-  return {...base, reinforce: false, engageLeash: 200, lostTargetSearch: w.lostTargetSearch, engageMinDist: w.engageMinDist,
-    hideTime: [base.hideTime[0] * w.hideScale, base.hideTime[1] * w.hideScale], huntSpeed: base.relocateSpeed, corpseMax: 4, corpseLife: 20};
+  const w = waveSpec(n), s = r => [r[0] * w.pauseScale, r[1] * w.pauseScale];
+  return {...base, reinforce: false, engageLeash: 200, corpseMax: 4, corpseLife: 20, fightRange: w.fightRange,
+    fightTime: s(AMBUSH.fightTime), coverTime: s(AMBUSH.coverTime), fireTime: s(AMBUSH.fireTime)};
 }
 // Extracting after surviving wave w banks the points earned times this (x1 at the first offer, +0.25 per wave after).
 export const bankMultiplier = survived => survived < AMBUSH.decisionFrom ? 0 : 1 + AMBUSH.bankStep * (survived - AMBUSH.decisionFrom);
