@@ -49,14 +49,16 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
  let lastAnimation={};viewmodel.animate=p=>{lastAnimation={...p};originalAnimate(p);};
  return {player,camera,gun,viewmodel,weapon,remoteWeapon,remote,actors,solids,keys,move,frame,receive,networkTick,peer,setClass,setMode,reset,pause,goMenu,lock,start,renderer,visible,
    state:()=>({state,elapsed,yaw,pitch,aim,crouch,trigger,healing,jumpY,walk,hostPaused,stamina:typeof stamina==='undefined'?undefined:stamina,...lastAnimation}),
-   set(o){if('yaw'in o)yaw=o.yaw;if('aim'in o)aim=o.aim;if('crouch'in o)crouch=o.crouch;if('trigger'in o)trigger=o.trigger;if('healing'in o)healing=o.healing;if('hostPaused'in o)hostPaused=o.hostPaused;if('hp'in o)hp=o.hp;},
+   set(o){if('yaw'in o)yaw=o.yaw;if('pitch'in o)pitch=o.pitch;if('aim'in o)aim=o.aim;if('crouch'in o)crouch=o.crouch;if('trigger'in o)trigger=o.trigger;if('healing'in o)healing=o.healing;if('hostPaused'in o)hostPaused=o.hostPaused;if('hp'in o)hp=o.hp;},
    clearLane(){blocked=()=>false;},restoreWorld(){blocked=originalBlocked;},blocked:(x,z)=>blocked(x,z),groundY:(x,z)=>groundY(x,z),
    play(){setState('playing');document.pointerLockElement=renderer.domElement;hasPointerLock=true;},
    messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
    // typeof guards keep the harness able to load older builds for baseline comparisons.
    scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
    occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},resetNav:typeof navEdge!=='undefined'?()=>{navGrid=null;navEdge=null;navComp=null;coverCache=null;}:undefined,fx:typeof fx==='object'?fx:undefined,
-   ai:typeof enemyPlan==='function'?{director:()=>director,coverTable,coverQuery,safeSpot,segClear,pathTo,navigationGrid,navComp:()=>navComp,setStage:v=>{stage=v;},humanEyes,objectivePoint,target,extract,intel,finish,missionTick:(dt)=>missionTick(dt),aiRng:()=>aiRng}:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined};
+   ai:typeof enemyPlan==='function'?{director:()=>director,coverTable,coverQuery,safeSpot,segClear,pathTo,navigationGrid,navComp:()=>navComp,setStage:v=>{stage=v;},humanEyes,objectivePoint,target,extract,intel,finish,missionTick:(dt)=>missionTick(dt),aiRng:()=>aiRng}:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined,
+   // Build 09 Ambush internals (typeof-guarded so older builds still load).
+   amb:typeof amb==='object'?amb:undefined,ambush:typeof ambushTick==='function'?{tick:ambushTick,director:ambushDirector,interact:ambushInteract,decide:ambushDecide,near:ambushNear,prompt:ambushPrompt,spots:ambushSpots,spawnSpot:ambushSpawnSpot,startWave,waveCleared,hud:ambushHud,finish,gunId:()=>gunId,gunConfig,aiT,weapon:()=>weapon,hp:()=>hp,setHp:v=>{hp=v;}}:undefined};
  `)(...values);
  assert.equal(await api.viewmodel.ready,true,'actual rifle asset is available');
  api.press=(code,{repeat=false}={})=>{const ev={code,key:code,target:{tagName:'BODY'},repeat,preventDefault(){}};fire(docL,'keydown',ev);fire(winL,'keydown',ev);};

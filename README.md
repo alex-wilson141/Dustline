@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 08)
+# DUSTLINE — Operation Broken Signal (Build 09)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -6,6 +6,7 @@ A desktop browser first-person squad combat prototype in a fictional arid mounta
 
 - **Story:** recover the route log in the western field office with E; restore the relay by clearing its perimeter and holding for 25 seconds; reach the eastern courtyard and stay for 5 seconds.
 - **Skirmish:** clear the relay and hold it for 45 seconds.
+- **Ambush (solo):** survive escalating waves with Viper squad in the west district. There is no win, only how long you last. Kills earn points (headshots more): press E at a barricade to open the next area, or at a weapon crate to buy one of the four class rifles or refill it. Stay inside the striped line; five seconds outside ends the run. From wave 5, choose between waves: X extracts and banks your points, V stays for a bigger bank. Dying banks nothing. Not available during a co-op session.
 - **Private co-op (experimental):** two human players with AI squad support in the story mission. Each chooses a class. Both must reach extraction. A teammate's loss fails the operation; downed AI squadmates never do.
 
 ## Classes
@@ -59,6 +60,13 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Ambush mode (Build 09)
+
+- **Where:** the west district of Kohar Valley, using the existing houses, walls and the field office. You start in the courtyard west of the house; three sandbag barricades open the field office yard, the west lane and the south houses. Each area has one weapon crate.
+- **Waves:** each wave is larger and more aggressive than the last. Enemies arrive faster, move in sooner and take cover closer; their accuracy and damage are unchanged. They always walk in from out of sight beyond the line.
+- **Measured cost:** about 7 ms per frame in Safari on a MacBook Pro M1 at wave 20 with every area open.
+- **Setting:** stays fictional; future maps are not tied to real conflicts.
 
 ## Combat polish and map density (Build 08)
 
@@ -118,9 +126,10 @@ node tests/test-pausekeys-b07.mjs
 node tests/test-build08.mjs
 node tests/test-cache-deploy01.mjs
 node tests/test-engage-ai04.mjs
+node tests/test-ambush-b09.mjs
 ```
 
-These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning and 3 enemy-engagement checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
+These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
 
 After changing anything in `dist/`, run `node tools/stamp-build.mjs` to refresh the file fingerprints (the file-versioning check fails until you do).
 

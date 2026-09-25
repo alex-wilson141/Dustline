@@ -21,6 +21,14 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 09 (local, 2026-09-24): Ambush mode phase 1, solo wave survival in the west
+district (`dist/ambush.js` data and rules, `game.js` Ambush block). Four areas behind
+purchasable barricades, weapon crates with the four class rifles (the weapon id `gunId`
+is separate from the class only after a purchase), an out-of-bounds line with a 5 s
+countdown, and a timed extract/stay choice from wave 5. Waves scale count, alive cap,
+arrival rate and aggression only, never enemy accuracy or damage. Spawns must stay unseen,
+35 m+ away and 6 m+ outside the open arena; Ambush geometry exists only in Ambush.
+The setting stays fictional: maps must not be tied to real conflicts.
 Build 08 (local, 2026-09-24): death variants chosen per kill and sent to the guest
 (`dv`/`st`); enemy corpses shootable for blood only (never score, kills or mission) and
 sunk after `corpseLife`/beyond `corpseMax` (`gn` snapshot mask); reinforcement waves
@@ -82,15 +90,16 @@ node tests/test-pausekeys-b07.mjs
 node tests/test-build08.mjs
 node tests/test-cache-deploy01.mjs
 node tests/test-engage-ai04.mjs
+node tests/test-ambush-b09.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 08 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 09 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning and 3 enemy-engagement checks. These
+scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
