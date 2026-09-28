@@ -4,6 +4,8 @@ _Updated 2026-09-27. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 
 **Build:** 14, **published**. Play: https://alex-wilson141.github.io/Dustline/ · Repository: https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live automatically once the stamp check and all suites pass on GitHub; a failing check publishes nothing. The menu says BUILD 14.
 
+**Verified on the live site (H3):** the GitHub run passed all 17 suites and deployed; all 40 live files are byte-identical to local; every file is requested with its fingerprint; co-op connected between two browser tabs over the public URL; Safari opens the page. **Still to check by a person:** a mission played in Safari on the live URL, and co-op with a friend on another network (there is no relay server, so some networks cannot connect).
+
 **Publishing a future build:** change, run `node tools/stamp-build.mjs`, run the suites, commit, `git push`. Watch the run under the repository's Actions tab (about three minutes). Tell co-op friends to reload so both are on the same build.
 
 **User playtest of Build 13 (2026-09-27):** four signposts at once (waypoint lines, area list, minimap, masts) are clutter; the small M map is unreadable, its labels printed on top of each other; the masts look wrong in the valley. Goal: fewer and better signals, not none.
