@@ -46,9 +46,6 @@ export const AMBUSH = {
   // Build 12: a field dressing (+50 hp, H) can be bought at any crate for dressingBase points × the same wave scale as
   // magazines; the kit holds at most dressingMax.
   dressingBase: 150, dressingMax: 5,
-  // Build 13 signposting: a signal mast with a coloured panel stands at every barricade that can be bought now and at
-  // every crate in an open area, tall enough to be seen over the houses (4.6 m) from most of the opened areas (the HUD arrow covers the rest).
-  beaconHeight: 12,
 };
 // The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
 export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
@@ -58,7 +55,7 @@ export const AREAS = [
   {id: 1, name: 'Courtyard', x: [-40, -19], z: [2, 28]},
   {id: 2, name: 'Field office yard', x: [-40, -12], z: [-24, 2]},
   {id: 3, name: 'West lane', x: [-58, -40], z: [-24, 2]},
-  {id: 4, name: 'South houses', x: [-52, -12], z: [-54, -24]},
+  {id: 4, name: 'North houses', x: [-52, -12], z: [-54, -24]},
 ];
 // Purchasable barricades: a sandbag line along the border with a timber section at the purchase point. Buying
 // removes the whole line and opens `opens`; it can be bought from inside `from` once that area is open.
@@ -223,7 +220,7 @@ export function buildStation(st, groundY, mats) {
   return {group, solid: {x, z, w: .6, d: .35}};
 }
 
-// ---- Build 13: finding barricades and crates. Pure state first (the HUD, the map and the masts all read it), then the mast.
+// ---- Build 13/14: finding barricades and crates. Pure state first: the map and the in-world markings all read it.
 // State of every barricade, area and crate for a set of open areas and the ids of the barricades still standing:
 // a barricade is 'open' (bought), 'purchasable' (standing, and the area it is bought from is open) or 'locked'.
 export function ambushState(open, standing) {
@@ -235,32 +232,54 @@ export function ambushState(open, standing) {
     crates: STATIONS.map(s => ({weapon: s.weapon, at: s.at, area: s.area, price: s.price, open: open.has(s.area)})),
   };
 }
-// The nearest of `list` (entries with a position under `key`) to (x, z), with its distance; null when the list is empty.
-export function nearestTo(list, key, x, z) { let best = null; for (const e of list) { const d = Math.hypot(e[key][0] - x, e[key][1] - z); if (!best || d < best.dist) best = {entry: e, dist: d}; } return best; }
-// Compass bearing of (dx, dz): 0 = north (-z), 90 = east (+x), as on the HUD compass. Heading of a yaw likewise.
-export const bearingTo = (dx, dz) => (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360;
-export const headingOf = yaw => (((-yaw * 180 / Math.PI) % 360) + 360) % 360;
-// The arrow a player facing `heading` needs to reach something at `bearing`: up is straight ahead, right is to the right.
-export const ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
-export const arrowFor = (bearing, heading) => ARROWS[Math.round((((bearing - heading) % 360) + 360) % 360 / 45) % 8];
-// The two waypoint lines for a player at (x, z) facing `yaw`: the nearest barricade that can be bought now (or what
-// remains), and the nearest crate in an open area.
-export function waypoints(state, x, z, yaw, weaponName) {
-  const heading = headingOf(yaw), line = (label, p, tail) => `${label} ${arrowFor(bearingTo(p[0] - x, p[1] - z), heading)} ${Math.round(Math.hypot(p[0] - x, p[1] - z))} M · ${tail}`;
-  const gate = nearestTo(state.gates.filter(g => g.state === 'purchasable'), 'station', x, z), crate = nearestTo(state.crates.filter(c => c.open), 'at', x, z);
-  return {gate: gate?.entry ?? null, crate: crate?.entry ?? null,
-    gateText: gate ? line('BARRICADE', gate.entry.station, `${gate.entry.name.toUpperCase()} · ${gate.entry.price} PTS`) : state.gates.every(g => g.state === 'open') ? 'ALL AREAS OPEN' : '',
-    crateText: crate ? line('CRATE', crate.entry.at, weaponName(crate.entry.weapon)) : ''};
+// ---- Build 14: the full-screen map. One layout, worked out from the state alone, is what the map draws and what the tests
+// check: north (-z) is up, the whole arena fits, and every label gets a box that overlaps no other label or marker and lies
+// inside the canvas. Text is drawn with the box width as its limit, so a label can never spill out of its box.
+export const MAP = {w: 1000, h: 1600, pad: 70, bounds: {x: [-62, -8], z: [-58, 32]}, fontArea: 32, fontLabel: 28, fontState: 26, gap: 8, shown: .86, arrow: 40};
+// Width of `text` at `size` px, estimated generously for bold Arial capitals and digits (the draw also limits the width).
+export const textWidth = (text, size) => Math.ceil([...String(text)].reduce((w, ch) => w + (ch === ' ' ? .3 : ch === '·' ? .4 : /[0-9]/.test(ch) ? .6 : .74), 0) * size);
+const overlaps = (a, b, gap = 0) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+export function mapLayout(state, segs, player, weaponName) {
+  const {w, h, pad, bounds: {x: [x0, x1], z: [z0, z1]}} = MAP, scale = Math.min((w - 2 * pad) / (x1 - x0), (h - 2 * pad) / (z1 - z0));
+  const ox = (w - scale * (x1 - x0)) / 2, oy = (h - scale * (z1 - z0)) / 2, X = x => ox + (x - x0) * scale, Y = z => oy + (z - z0) * scale;
+  const areas = state.areas.map(a => ({id: a.id, name: a.name, open: a.open, rect: {x: X(a.x[0]), y: Y(a.z[0]), w: (a.x[1] - a.x[0]) * scale, h: (a.z[1] - a.z[0]) * scale}}));
+  const gates = state.gates.filter(g => g.state !== 'open').map(g => ({id: g.id, state: g.state, price: g.price, name: g.name, line: [X(g.a[0]), Y(g.a[1]), X(g.b[0]), Y(g.b[1])], at: [X(g.station[0]), Y(g.station[1])]}));
+  const crates = state.crates.map(c => ({weapon: c.weapon, open: c.open, price: c.price, at: [X(c.at[0]), Y(c.at[1])]}));
+  const edge = segs.map(([ax, az, bx, bz]) => [X(ax), Y(az), X(bx), Y(bz)]);
+  // Markers and barricade lines are obstacles for labels; a label may sit beside its own marker but never on any.
+  const blocks = [...gates.map(g => ({x: Math.min(g.line[0], g.line[2]) - 5, y: Math.min(g.line[1], g.line[3]) - 5, w: Math.abs(g.line[2] - g.line[0]) + 10, h: Math.abs(g.line[3] - g.line[1]) + 10})), ...gates.map(g => ({x: g.at[0] - 11, y: g.at[1] - 11, w: 22, h: 22})), ...crates.map(c => ({x: c.at[0] - 11, y: c.at[1] - 11, w: 22, h: 22}))];
+  const labels = [], free = box => box.x >= 8 && box.y >= 8 && box.x + box.w <= w - 8 && box.y + box.h <= h - 8 && !labels.some(l => overlaps(l, box, MAP.gap)) && !blocks.some(b => overlaps(b, box, 2));
+  const put = (kind, id, text, size, candidates) => { const tw = textWidth(text, size), th = Math.ceil(size * 1.25); for (const [cx, cy] of candidates(tw, th)) { const box = {x: Math.round(cx), y: Math.round(cy), w: tw, h: th}; if (free(box)) { labels.push({kind, id, text, size, ...box}); return true; } } labels.push({kind, id, text, size, x: 0, y: 0, w: tw, h: th, unplaced: true}); return false; };
+  const around = (px, py) => (tw, th) => { const out = []; for (const d of [18, 34, 54, 80, 110]) out.push([px + d, py - th / 2], [px - d - tw, py - th / 2], [px - tw / 2, py - d - th], [px - tw / 2, py + d], [px + d, py - d - th], [px - d - tw, py - d - th], [px + d, py + d], [px - d - tw, py + d]); return out; };
+  for (const a of areas) { const r = a.rect, inside = (tw, th) => [.5, .25, .75].flatMap(f => [14, 60, 110, 170].map(dy => [r.x + r.w * f - tw / 2, r.y + dy]));
+    put('area', a.id, a.name.toUpperCase(), MAP.fontArea, inside); const name = labels.at(-1);
+    put('state', a.id, a.open ? 'OPEN' : 'CLOSED', MAP.fontState, (tw, th) => [[name.x + name.w / 2 - tw / 2, name.y + name.h + 2], ...inside(tw, th)]); }
+  for (const g of gates) put('gate', g.id, `${g.price} PTS`, MAP.fontLabel, around(...g.at));
+  for (const c of crates) put('crate', c.weapon, `${weaponName(c.weapon)} · ${c.price}`, MAP.fontLabel, around(...c.at));
+  const dir = [-Math.sin(player.yaw), -Math.cos(player.yaw)], at = [X(player.x), Y(player.z)];
+  return {w, h, scale, origin: [ox, oy], areas, gates, crates, edge, labels, player: {at, dir, tip: [at[0] + dir[0] * MAP.arrow, at[1] + dir[1] * MAP.arrow]}, toMap: (x, z) => [X(x), Y(z)]};
 }
-// A signal mast: a thin metal pole with two crossed unlit panels at the top (seen from every side) and a cap, built from
-// the game's materials. Barricades carry the amber hazard colour, crates green. No collision: it stands in the barricade
-// or behind the crate. userData.top is the point that must be seen.
-export function buildBeacon(kind, id, [x, z], groundY, mats, height = AMBUSH.beaconHeight) {
-  const y = groundY(x, z), group = new THREE.Group(), panel = kind === 'gate' ? mats.tape : mats.crateFlag;
-  group.add(merged([boxAt(.1, height, .1, x, y + height / 2, z)], mats.metal));
-  group.add(merged([boxAt(1.7, 1.1, .05, x, y + height - .6, z), boxAt(.05, 1.1, 1.7, x, y + height - .6, z)], panel));
-  group.add(merged(kind === 'gate' ? [boxAt(1.74, .22, .07, x, y + height - .6, z), boxAt(.07, .22, 1.74, x, y + height - .6, z)] : [boxAt(.3, .3, .3, x, y + height + .1, z)], kind === 'gate' ? mats.tapeDark : mats.crateFlag));
-  group.children.forEach(m => { m.castShadow = false; m.receiveShadow = false; m.userData.beacon = true; });
-  group.userData = {beacon: true, kind, id, at: [x, z], top: [x, y + height - .6, z]};
+// The legend beside the map: short lines, one per area with its state and what opening it costs, and a second line for a
+// barricade that cannot be bought yet saying where it is bought from. Rifles and their prices are on the map itself.
+export function mapLegend(state) {
+  return state.areas.flatMap(a => { const g = state.gates.find(g => g.opens === a.id), name = a.name.toUpperCase();
+    return a.open ? [`${name} · OPEN`] : g.state === 'purchasable' ? [`${name} · CLOSED · ${g.price} PTS`] : [`${name} · CLOSED · ${g.price} PTS`, `   BOUGHT FROM THE ${g.fromName.toUpperCase()}`]; });
+}
+
+// ---- Build 14: in-world markings that belong in the village, in place of the Build 13 masts. A barricade's timber section
+// carries a band of amber paint on its top rail, a painted price board and an oil lantern on its middle post; a crate
+// carries a band of green paint, a painted board with its rifle's name and a lantern on a short post beside it. The lantern
+// is lit (unlit glass material, no light source) while the thing can be bought: a barricade whose area of purchase is open,
+// a crate whose area is open. `label` is the painted text; mats.label(text, kind) makes the board's material.
+export function buildMarking(kind, id, [x, z], along, groundY, mats, label, lit) {
+  const y = groundY(x, z), group = new THREE.Group(), paint = kind === 'gate' ? mats.tape : mats.crateFlag, gate = kind === 'gate';
+  const lx = gate ? x : x + .85, lz = z, top = gate ? 2.3 : 1.85, by = gate ? 1.72 : 1.08, bz = gate ? 0 : -.27, bw = gate ? 1.0 : .95, bh = .42;
+  group.add(merged([boxAt(.07, gate ? top - 1.5 : top, .07, lx, y + (gate ? 1.5 + (top - 1.5) / 2 : top / 2), lz), boxAt(.2, .04, .2, lx, y + top + .02, lz), boxAt(.2, .04, .2, lx, y + top + .3, lz), boxAt(.05, .1, .05, lx, y + top + .37, lz),
+    boxAt(gate && !along ? .05 : bw + .08, bh + .08, gate && !along ? bw + .08 : .05, x, y + by, z + bz), ...(gate ? [] : [boxAt(.05, .3, .05, x - .4, y + .9, z + bz), boxAt(.05, .3, .05, x + .4, y + .9, z + bz)])], mats.wood));
+  group.add(merged(gate ? [boxAt(along ? 3.62 : .16, .05, along ? .16 : 3.62, x, y + 1.385, z)] : [boxAt(1.13, .12, .63, x, y + .5, z)], paint));
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(.15, .24, .15), lit ? mats.lampLit : mats.lampOff); glass.position.set(lx, y + top + .16, lz); glass.userData.lantern = true; group.add(glass);
+  for (const side of [1, -1]) { const face = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), mats.label(label, kind)); face.position.set(x + (gate && !along ? side * .03 : 0), y + by, z + bz + (gate && !along ? 0 : side * .03)); face.rotation.y = (gate && !along ? Math.PI / 2 : 0) + (side < 0 ? Math.PI : 0); face.userData.board = true; group.add(face); }
+  group.children.forEach(m => { m.castShadow = false; m.userData.marking = true; });
+  group.userData = {marking: true, kind, id, at: [x, z], label, lit, lantern: [lx, y + top + .16, lz], height: top + .42};
   return group;
 }

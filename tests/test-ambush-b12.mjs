@@ -111,7 +111,7 @@ await check('the trade-off line: for every ordered pair of rifles it is the two 
 });
 
 await check('key hints show the bound keys: the dressing indicator in the vitals panel carries a keycap with the healing key and is not hidden behind the map; reload, squad order, extract/stay and crate hints all read the same key map; pressing the shown key does the action and another key does not', async () => {
-  const g = await ambush(), K = g.ambush.keys; assert.deepEqual(K, {reload: 'KeyR', aim: 'KeyF', crouch: 'KeyC', interact: 'KeyE', ammo: 'KeyB', dressingBuy: 'KeyN', heal: 'KeyH', squad: 'KeyQ', extract: 'KeyX', stay: 'KeyV'});
+  const g = await ambush(), K = g.ambush.keys; assert.deepEqual(K, {reload: 'KeyR', aim: 'KeyF', crouch: 'KeyC', interact: 'KeyE', ammo: 'KeyB', dressingBuy: 'KeyN', heal: 'KeyH', squad: 'KeyQ', extract: 'KeyX', stay: 'KeyV', map: 'KeyM'});
   g.set({hp: 60}); g.run(.3); assert.equal(g.el('medical').innerHTML, `<kbd>${letter(K.heal)}</kbd> 2 DRESSINGS`, 'the vitals panel shows the healing key on the dressing count');
   const css = fs.readFileSync(new URL('dist/style.css', projectRoot), 'utf8'); assert(!/#stance,#medical\{display:none/.test(css) && /#medical\{font-size/.test(css) && /^kbd\{|\nkbd\{/.test(css), 'the dressing line is shown in play and keycaps are styled');
   g.press('KeyJ'); assert.equal(g.state().healing, 0, 'an unbound key does nothing'); g.press(K.heal); assert(g.state().healing > 0, 'the shown key applies a dressing'); g.run(3.5); assert.equal(g.ambush.hp(), 110 > 100 ? 100 : 110);

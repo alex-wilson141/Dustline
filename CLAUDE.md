@@ -21,14 +21,19 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
-Build 13 (local, 2026-09-27): Ambush navigation. `ambushState(open, standing)` in `dist/ambush.js` is the one
-source for where barricades, areas and crates stand and whether each is open, purchasable or locked;
-the signal masts (`ambushBeacons`), the HUD waypoint lines (`waypoints`), the M map layer (`ambushMap`)
-and the area list all read it and must never keep their own copy. Masts, waypoints and the map layer
-exist only in Ambush. The solo difficulty curve (2 -> 9) is confirmed by the user's playtest (wave 8,
-99 kills, 11m10s): do not change it or any price without an explicit request (economy options are in
-the roadmap, E25). Filed: co-op with real players only in every mode (F.13); friends-only PvP (F.14),
-blocked until AI-03 is fixed.
+Build 14 (local, 2026-09-27): Ambush map and signposting rework. One signpost instead of four: M in Ambush
+opens the full-screen map (`ambushToggleMap`, `ambushDrawMap`), drawn only from `mapLayout()` in
+`dist/ambush.js`, whose labels must never overlap, cover a marker or leave the canvas (T24). In the
+world every standing barricade and every crate carries a marking from `buildMarking` (paint, painted
+board, lantern lit while it can be bought), re-made from the state by `ambushMarkings`. Do not bring
+back signal masts, HUD waypoint lines, a HUD area list or a minimap in Ambush. Story and Skirmish keep
+their M panel (`body.tactical`). Area 4 is "North houses" (north on the HUD compass).
+Build 13 (local, 2026-09-27): `ambushState(open, standing)` in `dist/ambush.js` is the one source for
+where barricades, areas and crates stand and whether each is open, purchasable or locked; everything
+that shows them reads it and must never keep its own copy. The solo difficulty curve (2 -> 9) is
+confirmed by the user's playtest (wave 8, 99 kills, 11m10s): do not change it or any price without an
+explicit request (economy options are in the roadmap, E25). Filed: co-op with real players only in
+every mode (F.13); friends-only PvP (F.14), blocked until AI-03 is fixed.
 Build 12 (local, 2026-09-25): Ambush solo and purchase clarity. **Ambush is permanently solo for AI purposes:
 no bot squad, ever** (`ambushSquad(false)` in `ambushReset` detaches the three squadmates, `reset()` puts
 them back at indices 0-2 for every other mode; future Ambush co-op means real players only). Solo cap
@@ -129,15 +134,16 @@ node tests/test-ambush-b10.mjs
 node tests/test-ambush-b11.mjs
 node tests/test-ambush-b12.mjs
 node tests/test-ambush-b13.mjs
+node tests/test-ambush-b14.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 13 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 14 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12 and 5 Build 13 checks. These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13 and 5 Build 14 checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

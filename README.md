@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 13)
+# DUSTLINE — Operation Broken Signal (Build 14)
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
@@ -34,7 +34,7 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - Q: cycle squad orders (advance, follow, hold)
 - P: pause and free the cursor without leaving full screen; P again resumes. Esc is the browser's own key: it frees the cursor and leaves full screen, and the game pauses and offers a FULLSCREEN button to go back
 - L: leave the mission and return to class selection
-- M: show or hide the tactical map, squad list and control guide
+- M: show or hide the tactical map, squad list and control guide (Ambush: the full-screen map)
 - F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
@@ -61,12 +61,12 @@ Graphics uses automatic resolution scaling by default; choose Performance to red
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
 
-## Ambush navigation (Build 13)
+## Ambush map and markings (Build 14)
 
-- **Signal masts:** a tall mast with an amber panel stands over every barricade you can buy now, and one with a green panel over every weapon crate in the areas you have opened. They are meant to be seen over the houses.
-- **Waypoint lines:** under the objective, one line points to the nearest barricade you can buy ("BARRICADE ↗ 34 M · WEST LANE · 1000 PTS") and one to the nearest crate. The arrow is relative to where you are facing.
-- **Map (M):** standing barricades are drawn with their price (amber if you can buy them now, grey if their area is not open yet), closed areas are shaded and named, crates are squares, and an area list sits beside the map.
-- **Four rifles, four crates:** CQB in the courtyard, carbine in the field office yard, DMR in the west lane, automatic rifle in the south houses. The crate of the rifle you hold sells none.
+- **One map:** press M in Ambush for a full-screen, north-up map of the whole arena: open and closed areas, standing barricades with their prices (amber if you can buy them now, grey if you cannot reach them yet), weapon crates with the rifle each sells, the arena edge, the houses, and a white arrow for where you are and where you face. Labels never overlap. The game keeps running while the map is open; M closes it.
+- **Markings in the world:** a barricade you can buy has amber paint on its timber section, a painted board with the price and a lit lantern. A crate has a green paint band, a board with its rifle's name and a lantern, lit once its area is open.
+- **Less on screen:** the Build 13 waypoint lines, area list and signal masts are gone, and Ambush has no minimap. Story and Skirmish keep their M panel.
+- **Four rifles, four crates:** CQB in the courtyard, carbine in the field office yard, DMR in the west lane, automatic rifle in the north houses. The crate of the rifle you hold sells none.
 - Prices, points and the difficulty curve are unchanged.
 
 ## Ambush solo and purchase clarity (Build 12)
@@ -92,7 +92,7 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 
 ## Ambush mode (Build 09)
 
-- **Where:** the west district of Kohar Valley, using the existing houses, walls and the field office. You start in the courtyard west of the house; three sandbag barricades open the field office yard, the west lane and the south houses. Each area has one weapon crate.
+- **Where:** the west district of Kohar Valley, using the existing houses, walls and the field office. You start in the courtyard west of the house; three sandbag barricades open the field office yard, the west lane and the north houses. Each area has one weapon crate.
 - **Waves:** each wave is larger and more aggressive than the last. Enemies arrive faster, move in sooner and take cover closer; their accuracy and damage are unchanged. They always walk in from out of sight beyond the line.
 - **Measured cost:** about 7 ms per frame in Safari on a MacBook Pro M1 at wave 20 with every area open.
 - **Setting:** stays fictional; future maps are not tied to real conflicts.
@@ -160,6 +160,7 @@ node tests/test-ambush-b10.mjs
 node tests/test-ambush-b11.mjs
 node tests/test-ambush-b12.mjs
 node tests/test-ambush-b13.mjs
+node tests/test-ambush-b14.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
