@@ -46,6 +46,9 @@ export const AMBUSH = {
   // Build 12: a field dressing (+50 hp, H) can be bought at any crate for dressingBase points × the same wave scale as
   // magazines; the kit holds at most dressingMax.
   dressingBase: 150, dressingMax: 5,
+  // Build 13 signposting: a signal mast with a coloured panel stands at every barricade that can be bought now and at
+  // every crate in an open area, tall enough to be seen over the houses (4.6 m) from most of the opened areas (the HUD arrow covers the rest).
+  beaconHeight: 12,
 };
 // The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
 export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
@@ -218,4 +221,46 @@ export function buildStation(st, groundY, mats) {
   group.add(merged([boxAt(1.1, .75, .6, x, y + .375, z), boxAt(1.16, .06, .66, x, y + .72, z)], mats.wood));
   group.add(merged([boxAt(.95, .07, .09, x, y + .8, z), boxAt(.26, .12, .08, x - .1, y + .86, z), boxAt(.07, .14, .07, x + .08, y + .74, z)], mats.metal));
   return {group, solid: {x, z, w: .6, d: .35}};
+}
+
+// ---- Build 13: finding barricades and crates. Pure state first (the HUD, the map and the masts all read it), then the mast.
+// State of every barricade, area and crate for a set of open areas and the ids of the barricades still standing:
+// a barricade is 'open' (bought), 'purchasable' (standing, and the area it is bought from is open) or 'locked'.
+export function ambushState(open, standing) {
+  const has = id => (standing.has ? standing.has(id) : standing.includes(id));
+  return {
+    gates: GATES.map(g => ({id: g.id, a: g.a, b: g.b, station: g.station, price: g.price, from: g.from, opens: g.opens, name: areaById(g.opens).name, fromName: areaById(g.from).name,
+      state: !has(g.id) ? 'open' : open.has(g.from) ? 'purchasable' : 'locked'})),
+    areas: AREAS.map(a => ({id: a.id, name: a.name, x: a.x, z: a.z, open: open.has(a.id)})),
+    crates: STATIONS.map(s => ({weapon: s.weapon, at: s.at, area: s.area, price: s.price, open: open.has(s.area)})),
+  };
+}
+// The nearest of `list` (entries with a position under `key`) to (x, z), with its distance; null when the list is empty.
+export function nearestTo(list, key, x, z) { let best = null; for (const e of list) { const d = Math.hypot(e[key][0] - x, e[key][1] - z); if (!best || d < best.dist) best = {entry: e, dist: d}; } return best; }
+// Compass bearing of (dx, dz): 0 = north (-z), 90 = east (+x), as on the HUD compass. Heading of a yaw likewise.
+export const bearingTo = (dx, dz) => (Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360;
+export const headingOf = yaw => (((-yaw * 180 / Math.PI) % 360) + 360) % 360;
+// The arrow a player facing `heading` needs to reach something at `bearing`: up is straight ahead, right is to the right.
+export const ARROWS = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+export const arrowFor = (bearing, heading) => ARROWS[Math.round((((bearing - heading) % 360) + 360) % 360 / 45) % 8];
+// The two waypoint lines for a player at (x, z) facing `yaw`: the nearest barricade that can be bought now (or what
+// remains), and the nearest crate in an open area.
+export function waypoints(state, x, z, yaw, weaponName) {
+  const heading = headingOf(yaw), line = (label, p, tail) => `${label} ${arrowFor(bearingTo(p[0] - x, p[1] - z), heading)} ${Math.round(Math.hypot(p[0] - x, p[1] - z))} M · ${tail}`;
+  const gate = nearestTo(state.gates.filter(g => g.state === 'purchasable'), 'station', x, z), crate = nearestTo(state.crates.filter(c => c.open), 'at', x, z);
+  return {gate: gate?.entry ?? null, crate: crate?.entry ?? null,
+    gateText: gate ? line('BARRICADE', gate.entry.station, `${gate.entry.name.toUpperCase()} · ${gate.entry.price} PTS`) : state.gates.every(g => g.state === 'open') ? 'ALL AREAS OPEN' : '',
+    crateText: crate ? line('CRATE', crate.entry.at, weaponName(crate.entry.weapon)) : ''};
+}
+// A signal mast: a thin metal pole with two crossed unlit panels at the top (seen from every side) and a cap, built from
+// the game's materials. Barricades carry the amber hazard colour, crates green. No collision: it stands in the barricade
+// or behind the crate. userData.top is the point that must be seen.
+export function buildBeacon(kind, id, [x, z], groundY, mats, height = AMBUSH.beaconHeight) {
+  const y = groundY(x, z), group = new THREE.Group(), panel = kind === 'gate' ? mats.tape : mats.crateFlag;
+  group.add(merged([boxAt(.1, height, .1, x, y + height / 2, z)], mats.metal));
+  group.add(merged([boxAt(1.7, 1.1, .05, x, y + height - .6, z), boxAt(.05, 1.1, 1.7, x, y + height - .6, z)], panel));
+  group.add(merged(kind === 'gate' ? [boxAt(1.74, .22, .07, x, y + height - .6, z), boxAt(.07, .22, 1.74, x, y + height - .6, z)] : [boxAt(.3, .3, .3, x, y + height + .1, z)], kind === 'gate' ? mats.tapeDark : mats.crateFlag));
+  group.children.forEach(m => { m.castShadow = false; m.receiveShadow = false; m.userData.beacon = true; });
+  group.userData = {beacon: true, kind, id, at: [x, z], top: [x, y + height - .6, z]};
+  return group;
 }
