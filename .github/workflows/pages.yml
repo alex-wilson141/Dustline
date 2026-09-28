@@ -1,0 +1,55 @@
+# Publishes the game to GitHub Pages on every push to main.
+# dist/ is the site root. The regression suites and the build-stamp check run first;
+# nothing is published if any of them fails, so a broken build never reaches players.
+name: Publish to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # some suites compare against earlier builds with `git show`
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build stamp is current
+        run: node tools/stamp-build.mjs --check
+      - name: Regression suites
+        run: |
+          set -e
+          for t in tests/test-*.mjs; do
+            echo "::group::$t"
+            node "$t" > /tmp/out.json
+            node -e "const r=JSON.parse(require('fs').readFileSync('/tmp/out.json','utf8'));console.log(r.passed+' checks passed')"
+            echo "::endgroup::"
+          done
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

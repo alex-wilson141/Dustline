@@ -39,7 +39,7 @@ await check('terrain walker equals three.js Mesh.raycast on 6,000 seeded rays (n
 
 // Build 06 is the "before" game (hitScan and visible raycast the terrain mesh directly).
 const tmp = new URL('tests/.b06-game.js', projectRoot);
-fs.writeFileSync(tmp, execSync('git show de92234:dist/game.js', {cwd: new URL('.', projectRoot)}));
+fs.writeFileSync(tmp, execSync('git show ce1d05c:dist/game.js', {cwd: new URL('.', projectRoot)}));
 let before;
 try { before = await createGame({sourcePath: tmp}); } finally { fs.rmSync(tmp, {force: true}); }
 const worlds = [before, after];

@@ -2,7 +2,9 @@
 
 _Updated 2026-09-27. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build:** 14, local only (Git, no remote; the public Site still runs its earlier build). Reload the page once after updating (the menu says BUILD 14).
+**Build:** 14, **published**. Play: https://alex-wilson141.github.io/Dustline/ · Repository: https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live automatically once the stamp check and all suites pass on GitHub; a failing check publishes nothing. The menu says BUILD 14.
+
+**Publishing a future build:** change, run `node tools/stamp-build.mjs`, run the suites, commit, `git push`. Watch the run under the repository's Actions tab (about three minutes). Tell co-op friends to reload so both are on the same build.
 
 **User playtest of Build 13 (2026-09-27):** four signposts at once (waypoint lines, area list, minimap, masts) are clutter; the small M map is unreadable, its labels printed on top of each other; the masts look wrong in the valley. Goal: fewer and better signals, not none.
 
@@ -63,4 +65,4 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Preserve story, four classes, weapon balance, enemy fire formulas, co-op and pointer controls.
 - `dist/` is source; stamp it after edits.
 - No desktop screen/audio recording.
-- Do not publish to the public Site without an explicit request.
+- Pushing to `main` publishes: never push a build the user has not asked to release. The earlier chatgpt.site deployment is separate and untouched.

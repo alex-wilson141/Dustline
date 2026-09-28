@@ -1,5 +1,7 @@
 # DUSTLINE — Operation Broken Signal (Build 14)
 
+**Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
+
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
 
 ## Modes
@@ -168,3 +170,7 @@ These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behavi
 After changing anything in `dist/`, run `node tools/stamp-build.mjs` to refresh the file fingerprints (the file-versioning check fails until you do).
 
 Read and update `DUSTLINE-ROADMAP.md` after each development task. It records verified changes, remaining playtests and the next bounded milestone.
+
+## Publishing
+
+Every push to `main` publishes the game to https://alex-wilson141.github.io/Dustline/ through GitHub Actions (`.github/workflows/pages.yml`). Before anything goes live the workflow checks that the build stamp is current and runs every regression suite; if one fails, nothing is published and the previous build stays online. `dist/` is the site root. After changing anything in `dist/`, run `node tools/stamp-build.mjs`, run the suites, commit and push. Players get the new build on their next page load; both co-op players should reload so they are on the same build.

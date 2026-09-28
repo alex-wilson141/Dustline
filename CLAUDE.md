@@ -57,7 +57,7 @@ progress, stuck watchdog (`stallTime`/`stallStep`, AMB-04), last-resort recycle 
 `recycleAfter` s unseen. Waves arrive from one bearing (`sectorSpread`). The four `ARENA_WALLS`
 are kept out of the static batch and lowered to `arenaWallHeight` (1.2 m) in Ambush only.
 Story/Skirmish enemy behaviour must stay trace-identical to `tests/fixtures/story-skirmish-ai-b09.json`
-(T20 replays it; re-record only from the Build 09 source `21abfb6` with `--record`). All Build 10
+(T20 replays it; re-record only from the Build 09 source `6560f7a` with `--record`). All Build 10
 tunables live in `AMBUSH` in `dist/ambush.js`. Never touch the shared movement/stuck code to fix an
 Ambush-only problem; keep fixes inside `ambushPlan`/`ambushDirector`.
 Build 09 (local, 2026-09-24): Ambush mode phase 1, solo wave survival in the west
@@ -151,12 +151,20 @@ headless results as a real gameplay or network playtest.
 
 ## Hosting and portability
 
-The existing public game is
-https://dustline-mountain-front.smart-heron-4139.chatgpt.site/ . Repository access
-does not grant permission or credentials to publish to that Site. Develop and
-preview locally first; configure a GitHub-based deployment separately if asked.
-Serve `dist/` as the site root. Assets are bundled; co-op setup uses Google STUN
-and has no TURN relay. The game has no account, database or save backend.
+The repository is https://github.com/alex-wilson141/Dustline (public, branch `main`, remote
+`origin`). The live game is https://alex-wilson141.github.io/Dustline/ , served by GitHub Pages
+from `dist/` as the site root. **Every push to `main` publishes**: `.github/workflows/pages.yml`
+runs `node tools/stamp-build.mjs --check` and every `tests/test-*.mjs` suite, and deploys only if
+all pass. So: never push a build the user has not asked to release, stamp before committing, and
+keep the suites green. The site lives under the path `/Dustline/`: keep every URL in `dist/`
+relative. Commits use the GitHub no-reply address (repo-local `user.email`); never put the user's
+personal email, local user name or absolute home paths in tracked files. Commit IDs were rewritten
+on 2026-09-27; the old-to-new table is in the roadmap (H2).
+
+The earlier public Site https://dustline-mountain-front.smart-heron-4139.chatgpt.site/ is a
+separate, older deployment; repository access does not publish to it. Assets are bundled; co-op
+setup uses Google STUN and has no TURN relay. The game has no account, database or save backend
+(the Ambush personal best is browser storage only).
 
 Historical `work/` checks mentioned in the roadmap belong to the original
 workspace and are not in this transfer. The two current regression suites above

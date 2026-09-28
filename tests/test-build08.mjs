@@ -40,7 +40,7 @@ let seed = 20260924; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>
 
 // Build 07 chose the variant from direction and zone only; loaded from git to report the same kills before and after.
 const tmp = new URL('dist/.b07-characters.js', projectRoot);
-fs.writeFileSync(tmp, execSync('git show 899ee2f:dist/characters.js', {cwd: new URL('.', projectRoot)}));
+fs.writeFileSync(tmp, execSync('git show e4b36bd:dist/characters.js', {cwd: new URL('.', projectRoot)}));
 let oldVariant; try { ({deathVariant: oldVariant} = await import(tmp.href)); } finally { fs.rmSync(tmp, {force: true}); }
 
 await check('death variants: 600 face-on, 600 engagement and 600 all-angle player kills plus 300 bot kills spread across the variants; the guest plays the host choice', async () => {

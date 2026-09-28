@@ -113,7 +113,7 @@ await check('repositioning: hits make an enemy in cover relocate (tunable reloca
 });
 
 await check('beatable: fire block and aiHit are unchanged from Build 06; at most attackTokens enemies shoot at one target', async () => {
-  const now = fs.readFileSync(new URL('dist/game.js', projectRoot), 'utf8'), b06 = execSync('git show de92234:dist/game.js', {cwd: new URL('.', projectRoot)}).toString();
+  const now = fs.readFileSync(new URL('dist/game.js', projectRoot), 'utf8'), b06 = execSync('git show ce1d05c:dist/game.js', {cwd: new URL('.', projectRoot)}).toString();
   const fireBlock = s => s.slice(s.indexOf("a.cool=.65+rand()*.95;"), s.indexOf("aiHit(enemy,eye,endpoint))return;"));
   const aiHit = s => s.slice(s.indexOf('function aiHit('), s.indexOf('\n', s.indexOf('function aiHit(')));
   assert.equal(fireBlock(now), fireBlock(b06), 'cadence, chance, distance and crouch factors unchanged'); assert.equal(aiHit(now), aiHit(b06), 'damage unchanged');

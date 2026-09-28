@@ -122,9 +122,9 @@ await check('a page from before DEPLOY-01 (Build 08, no import map) that fetches
   assert.deepEqual(run({url: `http://localhost:8765/build.js?v=${token}`}), {replace: [], threw: false}, 'stamped page (import map): nothing happens');
   assert.deepEqual(run({meta: true}), {replace: [], threw: false}, 'stamped page in a browser without import maps: no reload loop');
   assert.deepEqual(run({protocol: 'file:'}), {replace: [], threw: false}, 'not served over http: nothing happens');
-  // Every module that differs from Build 08 (bc6b11b) imports build.js, so no new file can run under the old page.
+  // Every module that differs from Build 08 (600a65a) imports build.js, so no new file can run under the old page.
   const changed = fs.readdirSync(dist).filter(f => f.endsWith('.js') && !f.startsWith('.') && f !== 'build.js').filter(f => {
-    try { return execSync(`git show bc6b11b:dist/${f}`, {cwd: new URL('.', projectRoot), stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 26}).toString() !== fs.readFileSync(path.join(dist, f), 'utf8'); } catch { return true; } });
+    try { return execSync(`git show 600a65a:dist/${f}`, {cwd: new URL('.', projectRoot), stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 26}).toString() !== fs.readFileSync(path.join(dist, f), 'utf8'); } catch { return true; } });
   assert(changed.length >= 4, `${changed.join(', ')} changed since Build 08`);
   for (const f of changed) assert(/(?:^|\n)\s*import\b[^;]*['"]\.\/build\.js['"]/.test(fs.readFileSync(path.join(dist, f), 'utf8')), `${f} changed since Build 08 and imports build.js`);
   report.changedSinceBuild08 = changed;
