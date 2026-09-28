@@ -1,5 +1,6 @@
 import * as THREE from './three.module.js';
 import { mergeGeometries } from './BufferGeometryUtils.js';
+import './build.js'; // DEPLOY-01 upgrade guard
 
 // Shared geometry and fabric maps keep a full squad inexpensive to draw.
 const sphere = new THREE.SphereGeometry(1, 12, 8);
@@ -9,11 +10,14 @@ const helmetGeometry = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Mat
 const markerGeometry = new THREE.OctahedronGeometry(.045);
 const fabricMaps = new Map();
 const palettes = new Map();
+// Build 16: the co-op teammate's marker is this many times the squad marker (a .045 m octahedron): .36 m wide, .54 m tall.
+export const MATE_MARKER = 4;
 
 function fabric(team) {
   if (fabricMaps.has(team)) return fabricMaps.get(team);
   const size = 64, pixels = new Uint8Array(size * size * 4);
-  const colors = team === 'ally'
+  // Build 16: 'mate' is the co-op teammate, in blue: a colour no enemy, squadmate or wall in the valley wears.
+  const colors = team === 'mate' ? [[52, 92, 150], [40, 72, 124], [72, 116, 172], [34, 58, 100]] : team === 'ally'
     ? [[128, 126, 103], [100, 111, 92], [151, 142, 115], [84, 90, 75]]
     : [[146, 132, 108], [120, 116, 97], [161, 146, 120], [102, 100, 83]];
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
@@ -41,13 +45,14 @@ function palette(team, materialFactory) {
   const make = materialFactory || ((color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .9, ...extra }));
   const p = {
     cloth: make('#ffffff', { map: fabric(team) }),
-    vest: make(team === 'ally' ? '#8c8266' : '#877a62', { roughness: .98 }),
+    vest: make(team === 'mate' ? '#27477a' : team === 'ally' ? '#8c8266' : '#877a62', { roughness: .98 }),
     rubber: make('#363932'),
     glove: make('#665e4a'),
     skin: make('#ae8666', { roughness: .82 }),
     metal: make('#333735', { roughness: .58, metalness: .5 }),
     glass: make('#252e2b', { roughness: .28, metalness: .32 }),
-    marker: new THREE.MeshBasicMaterial({ color: '#a4d7c9' }),
+    // The teammate's marker is unlit and drawn over everything, so it reads in shade, in a firefight and behind a wall.
+    marker: team === 'mate' ? new THREE.MeshBasicMaterial({ color: '#4db2ff', depthTest: false, depthWrite: false, transparent: true, opacity: .95 }) : new THREE.MeshBasicMaterial({ color: '#a4d7c9' }),
   };
   palettes.set(team, p);
   return p;
@@ -140,8 +145,8 @@ export function deathVariant({ x = 0, z = 1, zone = 'upper', height = null, side
 }
 
 /** A 1.8 m articulated visual. Outer placement belongs to the game; flinch and fall are animated here. */
-export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } = {}) {
-  const p = palette(team, materials.mat);
+export function makeSoldierVisual({ team = 'ally', index = 0, look = null, materials = {} } = {}) {
+  const p = palette(look || team, materials.mat);
   const group = new THREE.Group();
   const rig = new THREE.Group();
   group.add(rig);
@@ -193,8 +198,9 @@ export function makeSoldierVisual({ team = 'ally', index = 0, materials = {} } =
   mesh(rifle, cube, p.rubber, 0, -.118, -.22, .052, .17, .085).rotation.x = -.16;
 
   if (team === 'ally') {
-    const marker = mesh(group, markerGeometry, p.marker, 0, 2.0, 0);
+    const marker = look === 'mate' ? mesh(group, markerGeometry, p.marker, 0, 2.18, 0, MATE_MARKER, MATE_MARKER * 1.5, MATE_MARKER) : mesh(group, markerGeometry, p.marker, 0, 2.0, 0);
     marker.userData.isAllyMarker = true;
+    if (look === 'mate') { marker.userData.isMateMarker = true; marker.renderOrder = 20; group.userData.look = 'mate'; }
   }
   let stride = index * 1.79, movement = 0, low = 0, down = 0;
   let flinch = 0, flinchX = 0, flinchZ = 0, fall = null;

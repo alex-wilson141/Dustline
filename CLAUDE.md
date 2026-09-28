@@ -21,6 +21,21 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 16 (local, 2026-09-28): Ambush co-op, two real players (F.11). A networked mission is Story co-op (`mode==='coop'`) or
+an Ambush run started while connected (`amb.coop`); use `net()`, `hosting()`, `guesting()`, `ambCoop()`, never `mode==='coop'`
+alone, for anything that sends or receives. The host owns waves, spawns, barricades, both players' points (`amb` is the local
+player's, `amb.mate` the teammate's) and every hit; the guest sends `pose`, `shot`, `buy`, `vote` and applies `ambushApply`.
+User decisions, do not change without a request: points per player, barricades shared, crate purchases individual; one player
+down spectates and the run ends only when both are down. Built on top: extracting takes both choices (`ambushVote`), a downed
+player banks nothing, co-op waves use `waveSpec(n, 2)` (`AMBUSH.coop`) only while both are up. **Solo Ambush must stay identical
+to Build 15** (`abb41c9`; T26 replays it): every co-op branch must leave the solo path reading the same `player` object and
+drawing the same random numbers. Personal bests use two keys (`BEST_KEY`, `BEST_KEY_COOP`). The co-op teammate is
+`soldier('ally',3,'mate')`: blue, with an unlit marker drawn over everything, in every co-op mode. Friendly fire is on in co-op
+through one body box and one damage rule for both players (`friendlyHit`, `friendlyDamage`); the teammate's meshes are never in
+the hit test. AI-03 is fixed: enemies fire at the teammate with the host's chance, crouch factor and damage (T13 undoes exactly
+those substitutions and compares with Build 06). NET-04 is fixed: `disconnected` holds the session for `graceTime` and the
+mission is held on both pages while `peer.unstable`. A two-instance headless test, a two-tab test and a two-browser test on one
+machine cannot show what two networks or two people do: say so.
 Build 15 (local, 2026-09-28): COOP-01, the co-op handshake. Connection codes are
 `DUSTLINE:<H|A>:<length>:<payload>:<checksum>` (`makeCode`/`readCode` in `dist/network.js`); pasted
 codes go through `PeerSquad.submit`, which acts on the kind of code, not on the button; every
@@ -101,7 +116,7 @@ stairs or mantling without a separate request.
 Preserve Kohar Valley, Viper squad, the convoy route log, relay and extraction;
 the four classes; combat and reload behavior; bots; experimental co-op; and
 pointer capture, pause and leave controls. Only player kills count (KILL-01 is
-intentional). Co-op: the host is authoritative for hits and sends `impact`
+intentional; hitting a teammate never counts or pays). Co-op: the host is authoritative for hits and sends `impact`
 messages (zone, victim yaw and decal included); snapshots own HP but must not set
 death rotation. Both players must run the same build; change the menu build label
 whenever co-op messages change. Cosmetic effects use Math.random, never the seeded
@@ -143,15 +158,16 @@ node tests/test-ambush-b12.mjs
 node tests/test-ambush-b13.mjs
 node tests/test-ambush-b14.mjs
 node tests/test-coop-handshake.mjs
+node tests/test-ambush-coop-b16.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 15 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 16 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14 and 6 co-op handshake checks. These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake and 13 Ambush co-op checks (186 in 19 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
@@ -172,7 +188,7 @@ on 2026-09-27; the old-to-new table is in the roadmap (H2).
 The earlier public Site https://dustline-mountain-front.smart-heron-4139.chatgpt.site/ is a
 separate, older deployment; repository access does not publish to it. Assets are bundled; co-op
 setup uses Google STUN and has no TURN relay. The game has no account, database or save backend
-(the Ambush personal best is browser storage only).
+(the Ambush personal bests, solo and co-op, are browser storage only).
 
 Historical `work/` checks mentioned in the roadmap belong to the original
 workspace and are not in this transfer. The two current regression suites above

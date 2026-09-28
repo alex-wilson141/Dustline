@@ -33,13 +33,15 @@ function killInFront(g, head, source = 'local') {
   return e.hp <= 0;
 }
 
-await check('menu: Ambush is a third mode; it cannot be selected while a co-op session is connected; leaving it restores Story exactly (no Ambush geometry, collision or weapon left behind)', async () => {
+await check('menu: Ambush is a third mode; since Build 16 it can be selected while a co-op session is connected (two-player Ambush); leaving it restores Story exactly (no Ambush geometry, collision or weapon left behind)', async () => {
   const html = fs.readFileSync(new URL('dist/index.html', projectRoot), 'utf8'), src = fs.readFileSync(new URL('dist/game.js', projectRoot), 'utf8');
   assert.match(html, /data-mode="story"[^]*data-mode="skirmish"[^]*data-mode="ambush"[^]*data-mode="coop"/, 'tab order Story, Skirmish, Ambush, Private co-op');
-  assert(/ab\.disabled=!!peer\.connected/.test(src), 'the Ambush tab is disabled while connected');
+  // Build 16: Ambush can be chosen while a teammate is connected (two-player Ambush, T26); choosing it keeps the connection.
+  assert(/ab\.disabled=false/.test(src) && /next!=='coop'&&!\(next==='ambush'&&peer\.connected\)&&peer\.pc\)peer\.close\(\)/.test(src), 'the Ambush tab is open while connected and keeps the session');
   const base = await createGame(); base.prepare({clearLane: false}); const solids0 = base.solids.length, occ0 = base.occluders.length;
   const g = await createGame(); g.prepare({clearLane: false}); const storyTitle = g.el('brief-title').textContent;
-  g.peer.connected = true; g.setMode('ambush'); assert.equal(g.el('brief-title').textContent, storyTitle, 'refused while a co-op session is connected'); g.peer.connected = false;
+  // Build 16: with a teammate connected the tab opens two-player Ambush and says so; back to Story for the rest of this check.
+  g.peer.connected = true; g.setMode('ambush'); assert.equal(g.el('brief-title').textContent, 'Hold the west district.'); assert.match(g.el('brief-text').textContent, /^Ambush, two players/, 'two-player Ambush while a co-op session is connected'); g.peer.connected = false; g.setMode('story');
   g.setMode('ambush'); assert.equal(g.el('brief-title').textContent, 'Hold the west district.'); assert.equal(g.el('ambush-steps').hidden, false);
   g.reset(); assert.equal(g.amb.gates.size, 3); assert(g.solids.length > solids0 && g.occluders.length > occ0, 'Ambush adds barricades and crates');
   g.setClass('support'); g.reset(); g.amb.points = 1e4; g.player.set(STATIONS[0].at[0], 0, STATIONS[0].at[1] + 1.2); g.play(); g.frame(1); g.ambush.interact(); assert.equal(g.ambush.gunId(), 'medic');

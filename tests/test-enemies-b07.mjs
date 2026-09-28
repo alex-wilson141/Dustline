@@ -116,7 +116,14 @@ await check('beatable: fire block and aiHit are unchanged from Build 06; at most
   const now = fs.readFileSync(new URL('dist/game.js', projectRoot), 'utf8'), b06 = execSync('git show ce1d05c:dist/game.js', {cwd: new URL('.', projectRoot)}).toString();
   const fireBlock = s => s.slice(s.indexOf("a.cool=.65+rand()*.95;"), s.indexOf("aiHit(enemy,eye,endpoint))return;"));
   const aiHit = s => s.slice(s.indexOf('function aiHit('), s.indexOf('\n', s.indexOf('function aiHit(')));
-  assert.equal(fireBlock(now), fireBlock(b06), 'cadence, chance, distance and crouch factors unchanged'); assert.equal(aiHit(now), aiHit(b06), 'damage unchanged');
+  // Build 16 (AI-03, by request): the co-op teammate is a human like the host, so it is fired at with the host's chance,
+  // crouch factor and damage, and a killed human goes through humanDown (Story co-op still fails the operation there).
+  // Exactly those substitutions are undone here; with them undone the text must still be Build 06's, so the cadence, the
+  // chances, the distance factor and every damage value are otherwise unchanged.
+  const undo = (s, pairs) => pairs.reduce((t, [a, b]) => { assert.equal(t.split(a).length, 2, `Build 16 text present once: ${a.slice(0, 40)}`); return t.replace(a, b); }, s);
+  const fireNow = undo(fireBlock(now), [["const human=!enemy.a||enemy.a.remote;let chance=human?.22:.42;", "let chance=enemy.a?.42:.22;"], ["if(human&&(enemy.a?enemy.a.crouch:crouch))chance*=.65;", "if(crouch&&!enemy.a)chance*=.65;"]]);
+  const hitNow = undo(aiHit(now), [["enemy.a.remote?(rand()*10+12)*CLASSES[remoteClass].armor:24", "enemy.a.remote?(14+rand()*10)*CLASSES[remoteClass].armor:24"], ["{humanDown('mate');return state==='ended';}", "{finish(false,undefined,'teammate');return true;}"], ["{hp=0;humanDown('me');return state==='ended';}", "{hp=0;finish(false,undefined,'self');return true;}"]]);
+  assert.equal(fireNow, fireBlock(b06), 'cadence, chance, distance and crouch factors unchanged (the teammate now shares the host\'s)'); assert.equal(hitNow, aiHit(b06), 'damage unchanged (the teammate now shares the host\'s)');
   for (const tokens of [3, 1]) {
     ENEMY_AI.attackTokens = tokens;
     const g = await game(), en = enemies(g); ENEMY_AI.reinforce = false; ENEMY_AI.coverSearchRadius = 0; // no cover: everyone holds and wants to fire

@@ -1,18 +1,39 @@
 # NOW — DUSTLINE current state
 
-_Updated 2026-09-27. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
+_Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 15 is committed locally and NOT pushed** (co-op handshake fix, COOP-01). Pushing publishes; wait for the user's word. The live site still runs Build 14, whose co-op codes fail as reported.
+**Build 16 is committed locally and NOT pushed** (Ambush co-op). Pushing publishes; wait for the user's word. Both players must be on BUILD 16.
 
-**COOP-01 in short:** the message "Wrong connection code" meant an answer code where a host code was expected, or the reverse. Two ways the buttons led there: the host pressing JOIN WITH CODE with the answer, and COPY CODE copying a stale answer while a new host code was being prepared. It was code handling; the attempts never reached the network. Build 15: codes start with `DUSTLINE:H:` (host) or `DUSTLINE:A:` (answer), survive line breaks and spaces, and are checked for length and changes; either button takes either code; the box is emptied while a code is prepared; every wrong paste has its own message; a connection that fails after a correct exchange says it is the network. T25 (6 checks), 23/23 breakages caught, real two-tab exchange in a browser. **Not verified: two players on two networks.** If that fails with the network message, the remedy is a relay server (NET-01), which is infrastructure and not built.
+**User report (2026-09-28):** co-op connected on Build 15 over the public site, on two networks, with no relay. COOP-01 is confirmed; a TURN relay is not currently needed.
 
-**Retest after the push:** both reload until the menu says BUILD 15. Host: CREATE HOST CODE, wait for the code, COPY CODE, send. Teammate: paste, JOIN WITH CODE, COPY CODE, send back. Host: paste, ACCEPT ANSWER. Keep both pages open; do not reload between steps.
+**Live:** https://alex-wilson141.github.io/Dustline/ · repository https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live once the stamp check and all suites pass on GitHub. To publish: `node tools/stamp-build.mjs`, run the suites, commit, `git push`, watch the Actions tab (about three minutes), then both players reload.
 
-**Live build:** 14, **published**. Play: https://alex-wilson141.github.io/Dustline/ · Repository: https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live automatically once the stamp check and all suites pass on GitHub; a failing check publishes nothing. The menu says BUILD 14.
+**Build 16 in short: Ambush for two real players, never an AI squad.**
+- **How to start:** connect as before (PRIVATE CO-OP, exchange codes), then the host picks AMBUSH and presses DEPLOY BOTH PLAYERS. The guest's page follows.
+- **Who decides:** the host runs waves, spawns, barricades, both players' points and every hit. The guest sends its moves, shots, purchases and extract choice.
+- **Points:** per player. A barricade either player clears is open for both. Rifles, magazines and dressings come from the buyer's own points.
+- **Going down:** that player watches the teammate from behind and can do nothing else. The run ends when both are down.
+- **The line:** five seconds outside puts only that player down.
+- **Extract:** both must choose X. V by either player, or the timer, keeps both in. A downed player has no vote and banks nothing.
+- **Two-player balance (only while both are up):** half as many hostiles again per wave, half as many again alive at once (up to 12), arrivals a third faster. Prices, points per kill and enemy accuracy, damage, fire rate, range and aggression are the solo values. A lone survivor is back on the solo curve.
+- **Records:** solo and co-op bests are stored separately.
+- **Teammate:** blue uniform and vest, blue marker overhead drawn over everything. In Story co-op too.
+- **Friendly fire:** on in co-op, same damage whoever hosts.
+- **NET-04 fixed:** a short interruption holds the mission on both pages for up to 15 s instead of ending it. In Ambush a lasting loss leaves the host playing alone.
+- **AI-03 fixed:** enemies fire at the teammate exactly as at the host.
+- **Solo is untouched:** solo Ambush replays Build 15 sample for sample; Story and Skirmish replay the Build 09 trace.
 
-**Verified on the live site (H3):** the GitHub run passed all 17 suites and deployed; all 40 live files are byte-identical to local; every file is requested with its fingerprint; co-op connected between two browser tabs over the public URL; Safari opens the page. **Still to check by a person:** a mission played in Safari on the live URL, and co-op with a friend on another network (there is no relay server, so some networks cannot connect).
+**Safari (B12), two-player Ambush, wave 20, 12 alive:** guest 3.0 ms mean, p99 5–6 ms; host 3.5–3.7 ms mean, p99 6–7 ms, worst 15 ms. Budget 11 ms / 16.7 ms. Both pages on one machine.
 
-**Publishing a future build:** change, run `node tools/stamp-build.mjs`, run the suites, commit, `git push`. Watch the run under the repository's Actions tab (about three minutes). Tell co-op friends to reload so both are on the same build.
+**Checks:** 19 suites, 186 checks, all pass (headless). T26 is new (13 checks); 60 deliberate breakages caught.
+Not verified: two people playing Build 16; two networks; whether the teammate reads as one in a firefight; the spectator camera near walls; the two-player difficulty; real interruptions.
+
+**Decisions for the user (Build 16):**
+- Extract rule: both must choose (built). Alternatives: either player, or a majority vote with a timer.
+- A downed player banks nothing at extraction (built, as in solo). Alternative: the survivor's extraction banks for both.
+- Two-player waves: 1.5 × hostiles and alive cap. Too easy or too hard is for the playtest.
+- Friendly fire and the AI-03 fix also apply in Story co-op. Say if Story co-op should be left as it was.
+- Returning to the menu after a finished Ambush run keeps the connection. Say if it should close.
 
 **User playtest of Build 13 (2026-09-27):** four signposts at once (waypoint lines, area list, minimap, masts) are clutter; the small M map is unreadable, its labels printed on top of each other; the masts look wrong in the valley. Goal: fewer and better signals, not none.
 
@@ -35,23 +56,25 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** playtest Build 14 (checklist in the roadmap's "Recommended next task"), decide the economy, then M2.06 option 2 (hybrid ragdoll).
+**Next:** push Build 16 when the user says so and play Ambush together (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
-- F.14 friends-only PvP in private lobbies, including deathmatch. **Blocked by AI-03.**
-- M2.07 wallbanging; M3.10 distinct weapon models; M5.10 terrain height variation (E23); F.11 Ambush co-op (real players only); F.12 short join codes (after F.11).
+- F.14 friends-only PvP in private lobbies, including deathmatch. **Blocked by PVP-01** (AI-03 is fixed).
+- F.15 1v1 deathmatch in a private lobby, an alternative to co-op, never a replacement. **Blocked by PVP-01** (the host decides player-against-player shots); AI-03 is fixed.
+- M2.07 wallbanging; M3.10 distinct weapon models; M5.10 terrain height variation (E23); F.12 short join codes (Step A reported, E27).
 
 **Found, not fixed:**
 - AMB-06 residue: a few unseen enemies per 300 arrivals are withdrawn and re-sent at the north-west corner of the courtyard.
 - AMB-05: the announced spawn sector loosens when its side is walled off.
-- AI-03: co-op guest hit chance higher than the host's (a PvP blocker).
-- AI-06, AMB-01, AMB-02, AI-05, PORT-01, NAV-02, NET-04, HUD-01, TEST-07.
+- PVP-01: player-against-player shots are decided by the host, so timing favours the host (matters for friendly fire today; blocks PvP).
+- AI-06, AMB-01, AMB-02, AI-05, PORT-01, NAV-02, HUD-01, TEST-07.
 
 **Decisions on file:**
 - Ambush signposting is the full map plus markings on the objects: no masts, no HUD waypoint lines, no HUD area list, no minimap in Ambush.
 - The solo Ambush curve (2 → 9 alive) is confirmed by play.
-- Ambush is solo for AI purposes: no bot squad, ever; co-op means real players only (Ambush F.11, every mode F.13).
+- Ambush is solo for AI purposes: no bot squad, ever; co-op means real players only (Ambush F.11 done in Build 16, every mode F.13).
+- Ambush co-op: points per player, barricades shared, crate purchases individual; one player down does not end the run (user, 2026-09-28).
 - The setting stays fictional: environment variety is wanted, but no maps tied to real conflicts.
 - Free assets only (Rocketbox + Mixamo).
 - Keep the six prop materials.
@@ -63,10 +86,11 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Enemy fire formulas (cadence, hit chance, damage) and weapon stats.
 - The relay no-go rule during capture.
 - Ambush enemies always know where you are while they fight (siege design).
-- Story/Skirmish AI stays trace-identical (T20–T24); Ambush-only code never leaks across modes.
+- Story/Skirmish AI stays trace-identical (T20–T24); Ambush-only code never leaks across modes; solo Ambush stays identical to Build 15 (T26).
+- Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14 and coop-handshake. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake and ambush-coop-b16. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

@@ -46,6 +46,12 @@ export const AMBUSH = {
   // Build 12: a field dressing (+50 hp, H) can be bought at any crate for dressingBase points × the same wave scale as
   // magazines; the kit holds at most dressingMax.
   dressingBase: 150, dressingMax: 5,
+  // Build 16: Ambush co-op, two real players (never an AI squad). Only what scales with two rifles differs from solo, and
+  // only while both players are up: half as many hostiles again per wave (countScale, up to countCap), half as many again
+  // alive at once (capScale, up to aliveCeiling) and arrivals a third faster (gapScale, floor gapFloor). Prices, points per
+  // kill, enemy accuracy, damage, fire rate, fight range and aggression are the solo values. enemyPool leaves room for
+  // aliveCeiling alive, four bodies and two spare. A player who is down leaves the other on the solo curve.
+  coop: {countScale: 1.5, countCap: 60, capScale: 1.5, aliveCeiling: 12, gapScale: 2 / 3, gapFloor: .7, enemyPool: 18, startGap: 3},
 };
 // The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
 export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
@@ -102,8 +108,10 @@ export function weaponTradeoff(config, held) {
 }
 
 // Escalation by count, spawn pressure and aggression only. Enemy accuracy, damage and fire rate are never touched.
-export function waveSpec(n) {
+export function waveSpec(n, players = 1) {
   const k = Math.max(0, n - 1);
+  if (players > 1) { const s = waveSpec(n), c = AMBUSH.coop; // Build 16: two players up; the solo values below are never touched
+    return {...s, count: Math.min(Math.round(s.count * c.countScale), c.countCap), aliveCap: Math.min(c.aliveCeiling, Math.ceil(s.aliveCap * c.capScale)), spawnGap: Math.max(c.gapFloor, s.spawnGap * c.gapScale)}; }
   return {
     count: Math.min(4 + 2 * n, 40),                 // 6, 8, 10 ... capped at 40 (wave 18)
     aliveCap: Math.min(AMBUSH.aliveCeiling, 1 + Math.ceil(n / 2)), // 2, 2, 3, 3, 4, 4 ... 9 from wave 15 (Build 12, solo)
