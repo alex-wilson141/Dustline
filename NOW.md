@@ -2,7 +2,13 @@
 
 _Updated 2026-09-27. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build:** 14, **published**. Play: https://alex-wilson141.github.io/Dustline/ · Repository: https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live automatically once the stamp check and all suites pass on GitHub; a failing check publishes nothing. The menu says BUILD 14.
+**Build 15 is committed locally and NOT pushed** (co-op handshake fix, COOP-01). Pushing publishes; wait for the user's word. The live site still runs Build 14, whose co-op codes fail as reported.
+
+**COOP-01 in short:** the message "Wrong connection code" meant an answer code where a host code was expected, or the reverse. Two ways the buttons led there: the host pressing JOIN WITH CODE with the answer, and COPY CODE copying a stale answer while a new host code was being prepared. It was code handling; the attempts never reached the network. Build 15: codes start with `DUSTLINE:H:` (host) or `DUSTLINE:A:` (answer), survive line breaks and spaces, and are checked for length and changes; either button takes either code; the box is emptied while a code is prepared; every wrong paste has its own message; a connection that fails after a correct exchange says it is the network. T25 (6 checks), 23/23 breakages caught, real two-tab exchange in a browser. **Not verified: two players on two networks.** If that fails with the network message, the remedy is a relay server (NET-01), which is infrastructure and not built.
+
+**Retest after the push:** both reload until the menu says BUILD 15. Host: CREATE HOST CODE, wait for the code, COPY CODE, send. Teammate: paste, JOIN WITH CODE, COPY CODE, send back. Host: paste, ACCEPT ANSWER. Keep both pages open; do not reload between steps.
+
+**Live build:** 14, **published**. Play: https://alex-wilson141.github.io/Dustline/ · Repository: https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live automatically once the stamp check and all suites pass on GitHub; a failing check publishes nothing. The menu says BUILD 14.
 
 **Verified on the live site (H3):** the GitHub run passed all 17 suites and deployed; all 40 live files are byte-identical to local; every file is requested with its fingerprint; co-op connected between two browser tabs over the public URL; Safari opens the page. **Still to check by a person:** a mission played in Safari on the live URL, and co-op with a friend on another network (there is no relay server, so some networks cannot connect).
 
@@ -20,7 +26,7 @@ _Updated 2026-09-27. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - **Unchanged:** every price, the points, the difficulty curve, solo play, Story and Skirmish.
 - **Safari (B11):** with the full map open for all 1,800 measured frames: main-thread frame work 3.5 ms mean, p99 8–9 ms, worst 10 ms; rAF interval 16.7 ms mean, p99 18–19 ms at 60 Hz (Safari 18.5, M1, solo, wave 20, all areas open, 8.5 enemies alive on average). Within budget (11 ms / 16.7 ms). Real label widths measured in Safari: the widest is 97 % of its box, none spills. The map is shown at 441 × 705 px on the 1440 × 820 window; smallest lettering 11.5 px after the fonts were raised. Keep the display awake and Safari in front while measuring.
 
-**Checks:** T8 34, T9 24, T10 3, T11 10, T12 16, T13 12, T14 6, T15 11, T16 5, T17 6, T18 3, T19 9, T20 8, T21 6, T22 6, T23 3, T24 5 — all pass (headless, 167 checks). T23 was rewritten to what still applies. 33/33 deliberate breakages of the Build 14 code caught (32 on the first run; one check strengthened).
+**Checks:** T8 34, T9 24, T10 3, T11 10, T12 16, T13 12, T14 6, T15 11, T16 5, T17 6, T18 3, T19 9, T20 8, T21 6, T22 6, T23 3, T24 5, T25 6 — all pass (headless, 173 checks). T23 was rewritten to what still applies. 33/33 deliberate breakages of the Build 14 code caught (32 on the first run; one check strengthened).
 Not verified: whether the map and the markings read well to a person in play, and whether a new player finds every barricade and crate; real Safari localStorage; live WebRTC.
 
 **Decisions for the user:**
@@ -60,7 +66,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Story/Skirmish AI stays trace-identical (T20–T24); Ambush-only code never leaks across modes.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13 and ambush-b14. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14 and coop-handshake. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

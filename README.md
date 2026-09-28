@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 14)
+# DUSTLINE — Operation Broken Signal (Build 15)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -62,6 +62,14 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Connecting for co-op (Build 15)
+
+1. **Host:** choose Private co-op, press CREATE HOST CODE, wait for the code to appear, press COPY CODE and send the whole code to your teammate. It starts with `DUSTLINE:H:`.
+2. **Teammate:** paste it, press JOIN WITH CODE, then COPY CODE, and send the answer back. It starts with `DUSTLINE:A:`.
+3. **Host:** paste the answer and press ACCEPT ANSWER. Keep both pages open and do not reload in between.
+
+Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the game connects players directly and has no relay server. Both players must be on the same build.
 
 ## Ambush map and markings (Build 14)
 
@@ -163,6 +171,7 @@ node tests/test-ambush-b11.mjs
 node tests/test-ambush-b12.mjs
 node tests/test-ambush-b13.mjs
 node tests/test-ambush-b14.mjs
+node tests/test-coop-handshake.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.

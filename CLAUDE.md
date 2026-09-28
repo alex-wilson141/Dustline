@@ -21,6 +21,13 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 15 (local, 2026-09-28): COOP-01, the co-op handshake. Connection codes are
+`DUSTLINE:<H|A>:<length>:<payload>:<checksum>` (`makeCode`/`readCode` in `dist/network.js`); pasted
+codes go through `PeerSquad.submit`, which acts on the kind of code, not on the button; every
+rejection has its own reason and message (never a generic one), and a connection that fails after a
+correct exchange is reported as a network failure (no TURN relay, NET-01). Keep invisible characters
+in source as written-out escapes. A two-tab test on one machine cannot show a cross-network failure:
+say so whenever co-op is reported as verified.
 Build 14 (local, 2026-09-27): Ambush map and signposting rework. One signpost instead of four: M in Ambush
 opens the full-screen map (`ambushToggleMap`, `ambushDrawMap`), drawn only from `mapLayout()` in
 `dist/ambush.js`, whose labels must never overlap, cover a marker or leave the canvas (T24). In the
@@ -135,15 +142,16 @@ node tests/test-ambush-b11.mjs
 node tests/test-ambush-b12.mjs
 node tests/test-ambush-b13.mjs
 node tests/test-ambush-b14.mjs
+node tests/test-coop-handshake.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 14 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 15 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13 and 5 Build 14 checks. These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14 and 6 co-op handshake checks. These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
