@@ -1,7 +1,7 @@
 // Build 21 (T31): Kohar Valley as map data. Nothing visible may change, so the checks are of two kinds.
 // The same: the world the game builds from the map is the world Build 20 built from its code (ground, everything
 // standing, navigation, cover, routes, starts, objectives, enemy duties, reinforcements, the Ambush arena closed and
-// open), number for number, and every moved list still holds Build 20's values.
+// open), number for number (Build 20 is taken from its commit and run here, so the comparison holds on any machine), and every moved list still holds Build 20's values.
 // Governing: every value in the map is changed in turn and the game must change with it; a value that changes nothing
 // is either still read from somewhere else or never read at all, and both are named.
 // The recorded traces (Story and Skirmish against Build 09, solo Ambush against Build 15) are replayed by their own
@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import {execSync} from 'node:child_process';
 import {createGame, projectRoot} from './sprint-harness.mjs';
 import {fingerprint, reinforcements, patrols, firstDifference} from './map-fingerprint.mjs';
+import {oldBuild} from './old-build.mjs';
 
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {KOHAR} = await import(new URL('dist/map-kohar.js', projectRoot));
@@ -21,7 +22,9 @@ const propsModule = await import(new URL('dist/village-props.js', projectRoot));
 const {ENEMY_AI} = enemyModule;
 const SOURCE = process.env.DUSTLINE_GAME_SOURCE ? new URL('file://' + process.env.DUSTLINE_GAME_SOURCE) : undefined;
 const BUILD20 = '7a9bb82';
-const FIXTURE = JSON.parse(fs.readFileSync(new URL('fixtures/kohar-b20.json', import.meta.url), 'utf8'));
+// Build 20, whole, from its commit, run on this machine: what Kohar Valley was when it was written in the code.
+const OLD = await oldBuild(BUILD20), oldAI = await OLD.module('enemy-ai.js'), oldTHREE = await OLD.module('three.module.js');
+const FIXTURE = JSON.parse(JSON.stringify({...fingerprint(await OLD.createGame(), oldTHREE), reinforcements: reinforcements(await OLD.createGame(), oldAI.ENEMY_AI), tour: patrols(await OLD.createGame(), Object.keys(oldAI.PATROL_LOOPS), Object.values(oldAI.PATROL_LOOPS).flat())}));
 const results = [], report = {};
 // For the deliberate-breakage pass only: DUSTLINE_T31_ONLY names the checks to run (same, values, text, world, arena,
 // routes, yard) and DUSTLINE_T31_VALUES the values to change (the start of their path). A full run sets neither.
@@ -95,7 +98,7 @@ await check('same', 'Kohar Valley built from the map is the Kohar Valley of Buil
   assert.deepEqual(base.objectives.target.map(v => +v.toFixed(3)), [0, .024, -47]); assert.deepEqual(base.starts.story.player, [0, 0, 55]); assert.deepEqual(base.starts.coopGuest.player, [3, 0, 55]); assert.deepEqual(base.ambush.player.map(v => +v.toFixed(2)), [-30, +KOHAR.height(-30, 20).toFixed(2), 20]);
   assert.deepEqual(base.ambushOpen.bought, [['g12', true], ['g23', true], ['g24', true]]); assert.deepEqual(base.ambushOpen.open, [1, 2, 3, 4]); assert(base.reinforcements.stage0.arrivals > 0 && base.reinforcements.skirmish.arrivals > 0);
   assert.equal(firstDifference(base.afterAmbush.solids, base.solids), null, 'leaving Ambush leaves Kohar as it was');
-  report.identical = {comparedWith: `Build 20 (${BUILD20}), recorded before anything was moved`, parts: Object.keys(base).length, solids: base.solids.n, occluders: base.occluders.n, drawn: base.drawn.n, vertices: base.drawn.vertices, navigationCells: base.navGrid.cells, walkable: base.navGrid.walkable, coverPoints: base.cover.n, ambushSpots: base.ambush.spots.n, reinforcementArrivals: Object.fromEntries(Object.entries(base.reinforcements).map(([k, v]) => [k, v.arrivals]))};
+  report.identical = {comparedWith: `Build 20 (${BUILD20}), taken from its commit and run on this machine`, parts: Object.keys(base).length, solids: base.solids.n, occluders: base.occluders.n, drawn: base.drawn.n, vertices: base.drawn.vertices, navigationCells: base.navGrid.cells, walkable: base.navGrid.walkable, coverPoints: base.cover.n, ambushSpots: base.ambush.spots.n, reinforcementArrivals: Object.fromEntries(Object.entries(base.reinforcements).map(([k, v]) => [k, v.arrivals]))};
 });
 
 await check('values', 'every list and number in the map is the one Build 20 had in its code: the enemy posts and routes, the Ambush arena, the props, and each list that stood in game.js and environment.js, compared with the Build 20 sources themselves', async () => {

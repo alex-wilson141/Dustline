@@ -1,6 +1,6 @@
 // Build 21: what Kohar Valley is, measured from a running game and written as plain numbers, so that the same map loaded
-// from data can be compared with the map as it was hard-coded in Build 20 (tests/fixtures/kohar-b20.json, recorded from
-// commit 7a9bb82 before anything was moved). Nothing here reads the map description: only the world the game built.
+// from data can be compared with the map as it was hard-coded in Build 20 (commit 7a9bb82, before anything was
+// moved, run on the spot by tests/old-build.mjs). Nothing here reads the map description: only the world the game built.
 import crypto from 'node:crypto';
 
 const F = new Float64Array(1), B = new Uint8Array(F.buffer);

@@ -28,8 +28,10 @@ objective, enemy post and route and the Ambush arena is in the map (`dist/map-ko
 `game.js` reads the active map as `WORLD` (`EDGE`, `NAV_N`, `NAV_STEP`, `NAV_0`); `AREAS`, `GATES`, `STATIONS`, `ARENA_WALLS`,
 `MAP`, `ENEMY_SPAWNS`, `PATROL_LOOPS`, `LOOP_ASSIGN`, `REINFORCE_LOOPS`, `REINFORCE_POINTS` and `VILLAGE_PROPS` follow it
 (`onMap`). How things behave (speeds, damage, wave sizes, `AMBUSH`, `ENEMY_AI`) is not map data. **Kohar Valley must stay what
-Build 20 had**: T31 compares the built world with `tests/fixtures/kohar-b20.json` number for number; re-record that file only
-from the Build 20 commit `7a9bb82`. The world is built once at load: a map is chosen before that (`selectMap`), and changing
+Build 20 had**: T31 compares the built world number for number with Build 20 taken from its commit `7a9bb82` and run on the
+spot (`tests/old-build.mjs`). **Never make a suite depend on a record stored from one machine**: GitHub's runner is another
+machine, and the first push of Build 21 failed there on a byte-exact record made on the Mac. Compare with an older build run on
+the spot (`oldBuild`, `build09Trace`); a stored record may be reported (`storedRecordAgrees`), never required. The world is built once at load: a map is chosen before that (`selectMap`), and changing
 map inside a running page is not built (MAP-01; co-op will need it). Older builds that the suites load run against the
 current modules: keep `dressWorld` working without `world` and `AMBUSH.start` answering. **User decisions for the map project
 (E34):** the look slice is the next build; the new map is a hill town in terraces (working name Dehrun Terraces); stairs,

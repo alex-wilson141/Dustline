@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createGame, projectRoot} from './sprint-harness.mjs';
+import {build09Trace} from './old-build.mjs'; // Build 09 is run on this machine; the stored record is reported, not required
 
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
@@ -122,7 +123,7 @@ function aiTrace(g, seconds = 200) {
   return rows;
 }
 await check('Story and Skirmish enemy AI unchanged by Build 11: 200 s of the real AI replays the Build 09 trace sample for sample, with 7 enemies and the original collision and occluder counts', async () => {
-  const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
+  const fixture = await build09Trace(); report.storedRecordAgrees = fixture.storedRecordAgrees;
   for (const mode of ['story', 'skirmish']) {
     const g = await createGame(); g.prepare({clearLane: false}); g.setMode(mode); g.reset(); g.play(); g.restoreAI(); g.set({hp: 1e9}); g.el('blood').checked = false; for (const a of g.actors) a.animate = a.visual.animate;
     const rows = aiTrace(g); assert.equal(rows.length, fixture[mode].rows.length);

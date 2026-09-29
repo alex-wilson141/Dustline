@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createGame, projectRoot} from './sprint-harness.mjs';
+import {build09Trace} from './old-build.mjs'; // Build 09 is run on this machine; the stored record is reported, not required
 
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
@@ -44,7 +45,7 @@ await check('untouched, every mode is what it always was: three squadmates at in
   const g = await page(); assert.deepEqual({...g.squad.pref}, {story: true, skirmish: true, coop: true}, 'there is no Ambush choice to make');
   for (const [mode, n] of [['story', 3], ['skirmish', 3], ['ambush', 0], ['story', 3], ['ambush', 0], ['skirmish', 3]]) { g.setMode(mode); assert.equal(g.el('squad-ai').checked, n === 3, `${mode}: the box shows the default`); assert.equal(g.el('squad-ai').disabled, mode === 'ambush'); assert.equal(g.el('squad-label').hidden, mode === 'ambush', `${mode}: the box is ${mode === 'ambush' ? 'not offered' : 'offered'}`); assert.equal(g.el('squad-note').textContent, '', `${mode}: no note by default`); g.reset(); g.play();
     assert.equal(squad(g).length, n, `${mode}: ${n} squadmates`); assert.equal(g.squad.active(), n === 3); if (n) { assert.deepEqual(squad(g).map(a => g.actors.indexOf(a)), [0, 1, 2]); assert(squad(g).every(a => inScene(g, a) && a.hp === 100)); assert.equal(own(g).length, 10); } assert.equal(g.doc.body.classList.contains('solo'), n === 0, `${mode}: the squad panel is ${n ? 'shown' : 'hidden'}`); }
-  const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
+  const fixture = await build09Trace(); report.storedRecordAgrees = fixture.storedRecordAgrees;
   for (const mode of ['story', 'skirmish']) { const t = await page(); t.setMode(mode); t.reset(); t.play(); t.restoreAI(); t.set({hp: 1e9}); const rows = []; let clock = 0; t.frame(0); t.press('KeyW');
     for (let i = 0; i < 200 * 60; i++) { if (i === 18 * 60) t.release('KeyW'); t.frame(clock += 1000 / 60); if (i % 120 === 119) rows.push({t: Math.round((i + 1) / 60), p: [+t.player.x.toFixed(3), +t.player.z.toFixed(3)], kills: t.kills(), stage: t.getStage(), e: enemies(t).map(a => [+a.g.position.x.toFixed(3), +a.g.position.z.toFixed(3), a.hp, a.ai?.state ?? null, a.ai?.role ?? null, a.crouch ? 1 : 0, a.gone ? 1 : 0]), a: squad(t).map(a => [+a.g.position.x.toFixed(3), +a.g.position.z.toFixed(3), a.hp])}); }
     assert.equal(rows.length, fixture[mode].rows.length); for (let i = 0; i < rows.length; i++) assert.deepEqual(rows[i], fixture[mode].rows[i], `${mode} with the squad untouched: sample at ${rows[i].t} s differs from Build 09`); }

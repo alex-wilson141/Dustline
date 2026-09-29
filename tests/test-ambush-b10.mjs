@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import {createGame, projectRoot} from './sprint-harness.mjs';
+import {build09Trace} from './old-build.mjs'; // Build 09 is run on this machine; the stored record is reported, not required
 
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
@@ -217,8 +218,7 @@ await check('chest-high walls as occluders: a standing player sees and hits an e
 });
 
 await check('Story and Skirmish enemy AI unchanged: 200 s of the real AI replays the trace recorded from the Build 09 source sample for sample (positions to 1 mm, HP, states, roles, crouch); no enemy ever takes the Ambush role and the wave tuning still leaves every base AI value alone', async () => {
-  assert(fs.existsSync(FIXTURE), 'fixture tests/fixtures/story-skirmish-ai-b09.json present');
-  const fixture = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')); assert.match(fixture.sha256, /^[0-9a-f]{64}$/);
+  const fixture = await build09Trace(); report.storedRecordAgrees = fixture.storedRecordAgrees; assert(fixture.story.rows.length === 100 && fixture.skirmish.rows.length === 100, 'Build 09 ran here');
   for (const mode of ['story', 'skirmish']) {
     const now = await baselineScenario(mode);
     assert.equal(now.rows.length, fixture[mode].rows.length);
