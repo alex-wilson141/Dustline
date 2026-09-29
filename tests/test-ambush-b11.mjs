@@ -2,6 +2,7 @@
 // only in Ambush, magazines are a recurring purchase at a wave-scaled price, crate prompts show the rifle's real numbers,
 // the end-of-run summary keeps a personal best in browser storage, and Story / Skirmish replay the Build 09 trace.
 // Headless production code (real tickAI, hitScan, director); rendering, audio and transport mocked.
+// Build 19 added a third kit line to the crate prompt (the three throwables; checked in T29). This suite reads the lines it was written for.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createGame, projectRoot} from './sprint-harness.mjs';
@@ -24,7 +25,7 @@ async function game(mode = 'ambush') {
   for (const a of g.actors) a.animate = a.visual.animate;
   let clock = 0; g.frame(0); g.run = (s, each) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { g.frame(clock += 1000 / 60); if (each?.(clock / 1000) === false) break; } };
   g.goTo = (x, z) => { g.player.set(x, g.groundY(x, z), z); };
-  g.prompt = () => { g.frame(clock += 1000 / 60); g.ambush.tick(0); return g.el('interact').textContent; };
+  g.prompt = () => { g.frame(clock += 1000 / 60); g.ambush.tick(0); return g.el('interact').textContent.replace(/\n1 · FRAG[^\n]*$/, ''); };
   return g;
 }
 const ambush = async () => { const g = await game('ambush'); g.set({hp: 1e9}); return g; };

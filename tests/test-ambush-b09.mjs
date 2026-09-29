@@ -82,7 +82,7 @@ await check('purchases are gated on the balance and wired: the price shown is th
   g.set({yaw: Math.atan2(-d.x, -d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z))}); g.set({trigger: true}); for (let i = 0; i < 3 && e.hp === 100; i++) g.frame(3 + i * 200); g.set({trigger: false});
   assert.equal(100 - e.hp, CLASSES.medic.damage, 'CQB damage per body hit');
   // Ammunition (Build 11): E does nothing at the crate of the rifle you hold; B buys one magazine at the wave's price.
-  w.ammo = 0; w.reserve = 0; const mp = magazinePrice(CLASSES.medic, 1); g.amb.points = mp - 1; g.ambush.tick(0); assert.match(g.el('interact').textContent, new RegExp(`^YOUR MK4 CQB · RESERVE 0/120 · DRESSINGS 2/5\\nB · MAGAZINE \\(30 RDS\\) · ${mp} PTS \\(NEED 1 MORE\\)   N · FIELD DRESSING · 150 PTS \\(NEED 81 MORE\\)$`)); assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.buyAmmo(), false);
+  w.ammo = 0; w.reserve = 0; const mp = magazinePrice(CLASSES.medic, 1); g.amb.points = mp - 1; g.ambush.tick(0); assert.match(g.el('interact').textContent, new RegExp(`^YOUR MK4 CQB · RESERVE 0/120 · DRESSINGS 2/5\\nB · MAGAZINE \\(30 RDS\\) · ${mp} PTS \\(NEED 1 MORE\\)   N · FIELD DRESSING · 150 PTS \\(NEED 81 MORE\\)\n1 · FRAG · 300 PTS`)); /* Build 19 added the throwables line (T29) */ assert.equal(g.ambush.interact(), false); assert.equal(g.ambush.buyAmmo(), false);
   g.amb.points = mp; assert.equal(g.ambush.buyAmmo(), true); assert.deepEqual([w.ammo, w.reserve, g.amb.points], [0, 30, 0]);
   // A crate in a closed area cannot be used (you would be outside the arena).
   g.goTo(STATIONS[2].at[0], STATIONS[2].at[1] + 1.4); g.amb.points = 5000; assert.equal(g.ambush.near(), null);

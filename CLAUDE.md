@@ -13,6 +13,7 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/game.js`: input, movement, simulation, missions and co-op integration.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
+- `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
 - `tests/`: portable Node.js headless regression checks and historical evidence.
 - `tools/stamp-build.mjs`: stamps content hashes into `dist/index.html` (import map,
   stylesheet, start-up check) and `dist/build.js` (asset hashes). Run it after every
@@ -21,6 +22,17 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 19 (local, 2026-09-29): equipment. `dist/equipment.js` holds every number and pure rule (sidearm, knife, the three
+throwables, loadouts, prices); change them there. The weapon in hand is `hand()` / `handConfig()` (slot 0 rifle, 1 sidearm);
+never read `weapon` or `gunConfig()` for what is being fired, shown or bought for. Rifles must stay what they were:
+`hitDamage` returns a rifle's `damage` and 110 to the head at any range. Sight is `visible()` (walls and smoke); `clear()` is
+walls only and is for what smoke must not stop (blasts, the knife). **Nothing in the equipment may draw a seeded number or
+touch an enemy until a player uses an item**: Story and Skirmish replay the Build 09 trace and solo Ambush replays Build 15.
+Thrown items, clouds and blasts come from pools made once (8, 4, 3); a throw must never create a mesh, material or texture
+(T29 counts them). In co-op the host decides every hit, blast, blinding and count; the guest's knife, throw, draw and reload
+are judged by the guest's picture (`rewind`) or counted from when the guest began them (`sinceSent`), never from arrival. Blasts
+and flashes catch the teammate where it is now (`mateNow`). A deliberate-breakage run changes files in `dist/` for seconds at a
+time: after any interruption, compare `dist/` with the last commit before trusting it.
 Build 18 (local, 2026-09-28): Ambush fairness and cleanup. **Standing decisions: Ambush never has AI squadmates, in any
 configuration (the only teammate there is a real player); co-op must be fair between host and guest.** `squadWanted()` is
 false in Ambush whatever is stored or sent; do not add an Ambush key to `squadPref`. Anything that judges, pays, spawns, times
@@ -178,15 +190,16 @@ node tests/test-coop-handshake.mjs
 node tests/test-ambush-coop-b16.mjs
 node tests/test-squad-b17.mjs
 node tests/test-fair-b18.mjs
+node tests/test-equipment-b19.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 18 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 19 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle and 8 fairness checks (202 in 21 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness and 14 equipment checks (216 in 22 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

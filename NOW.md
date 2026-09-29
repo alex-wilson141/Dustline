@@ -1,10 +1,27 @@
 # NOW — DUSTLINE current state
 
-_Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
+_Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 16 is LIVE.** **Builds 17 and 18 are committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
+**Build 18 is LIVE** (pushed 2026-09-28; it carries Build 17). **Build 19 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
 
-**Nothing in co-op has been played by two people yet.** The blue teammate's readability at combat distance, the two-player difficulty and everything in Build 18 are unverified in play.
+**Nothing in co-op has been played by two people yet**, and nothing in Build 19 has been played by anyone: it rests on headless tests.
+
+**Build 19 in short: equipment.**
+- **Sidearm (Z):** every class carries an M9 beside its rifle. In hand in .45 s, 26 a hit, weaker past 12 m, 15 rounds. Rifles are unchanged.
+- **Knife (T):** without changing weapons. 2.3 m, 65 from the front, a kill from behind, once every .8 s.
+- **Throwables (G, hold to cook a frag; Tab changes the item):** fragmentation (170 within 2 m to nothing at 8 m, walls stop it, you are not spared), smoke (5 m, 14 s, nobody sees through it, enemies included), flash (blinds whoever is looking at it). Two of each at most.
+- **Per mode:** Story and Skirmish hand out 2 frag, 1 smoke, 1 flash and three sidearm magazines at every deployment. In Ambush you start with the sidearm and one spare magazine and buy the rest at crates: 1 frag 300, 2 smoke 200, 3 flash 250, and B buys a magazine for the weapon in your hand (sidearm 30). Prices rise with the wave like the others.
+- **Co-op:** the host decides everything; the guest's knife, throws, draws and reloads are judged by what the guest saw and counted from when the guest began them.
+- **Fault found by the new tests and fixed:** the crate prompt named the rifle when the sidearm was in hand.
+- **Safari:** NOT measured (B15): the bench window could not be brought in front. Simulation alone: 0.15 ms a frame with four smoke clouds. **The cost of drawing smoke is unknown; watch the frame rate inside a cloud.**
+- **Checks:** 22 suites, 216 checks, all pass (headless). T29 is new (14 checks); 97 deliberate breakages caught.
+- **This build was interrupted by a power loss** and resumed after a recovery check found the work intact.
+
+**Decisions for the user (Build 19):**
+- The keys: Z, T, G, Tab, and 1 2 3 at crates. All in one place (`KEYS`) if you want others.
+- The sidearm's damage (26) and the prices (300 / 200 / 250).
+- Whether your own grenade should hurt your teammate as much as it hurts you (it does).
+- Push Build 19, and when.
 
 **Standing decisions (user, 2026-09-28):**
 - **Ambush never has AI squadmates, in any configuration.** The only teammate there is ever a real player.
@@ -24,7 +41,6 @@ _Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - **Checks:** 21 suites, 202 checks, all pass (headless). T28 is new (8 checks).
 
 **Decisions for the user (Build 18):**
-- Push Build 18 (includes Build 17), and when.
 - The cap: 300 ms. Higher helps a guest on a slow connection and lets the host be hit further "around corners".
 - AI-07: fix it (enemies fire more, solo Ambush gets harder, traces re-recorded) or leave it.
 - Host leaving ends the guest's run: accept, or plan host migration.
@@ -80,7 +96,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** decide on pushing Build 18, play co-op Ambush together, then reviving a downed teammate (F.16) (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** play Build 19 solo (checklist in the roadmap), decide on pushing it, play co-op Ambush together, then reviving a downed teammate (F.16) (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
@@ -93,6 +109,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - AMB-06 residue: a few unseen enemies per 300 arrivals are withdrawn and re-sent at the north-west corner of the courtyard.
 - AMB-05: the announced spawn sector loosens when its side is walled off.
 - AI-07: dead enemies keep attack tokens (every mode).
+- EQ-02: the guest sees its own throw a moment late; the teammate's figure always shows a rifle; enemies do not react to grenades; smoke's drawing cost is unmeasured.
 - AI-06, AMB-01, AMB-02, AI-05, PORT-01, NAV-02, HUD-01, TEST-07.
 
 **Decisions on file:**
@@ -116,7 +133,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17 and fair-b18. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18 and equipment-b19. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

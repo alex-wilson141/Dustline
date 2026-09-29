@@ -2,6 +2,7 @@
 // their squad (Build 09 trace), rifles bought at a crate come with five magazines (within the rifle's reserve), field
 // dressings are bought with N at a wave-scaled price and capped, the crate prompt states the trade-off in plain words from
 // the live weapon data, and every HUD key hint shows the key that is really bound. Headless production code.
+// Build 19 added a third kit line to the crate prompt (the three throwables; checked in T29). This suite reads the lines it was written for.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createGame, projectRoot} from './sprint-harness.mjs';
@@ -22,7 +23,7 @@ async function game(mode = 'ambush') {
   for (const a of g.actors) a.animate = a.visual.animate;
   let clock = 0; g.frame(0); g.run = (s, each) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { g.frame(clock += 1000 / 60); if (each?.(clock / 1000) === false) break; } };
   g.goTo = (x, z) => { g.player.set(x, g.groundY(x, z), z); };
-  g.prompt = () => { g.frame(clock += 1000 / 60); g.ambush.tick(0); return g.el('interact').textContent; };
+  g.prompt = () => { g.frame(clock += 1000 / 60); g.ambush.tick(0); return g.el('interact').textContent.replace(/\n1 · FRAG[^\n]*$/, ''); };
   return g;
 }
 const ambush = async () => { const g = await game('ambush'); g.set({hp: 1e9}); return g; };
@@ -111,12 +112,12 @@ await check('the trade-off line: for every ordered pair of rifles it is the two 
 });
 
 await check('key hints show the bound keys: the dressing indicator in the vitals panel carries a keycap with the healing key and is not hidden behind the map; reload, squad order, extract/stay and crate hints all read the same key map; pressing the shown key does the action and another key does not', async () => {
-  const g = await ambush(), K = g.ambush.keys; assert.deepEqual(K, {reload: 'KeyR', aim: 'KeyF', crouch: 'KeyC', interact: 'KeyE', ammo: 'KeyB', dressingBuy: 'KeyN', heal: 'KeyH', squad: 'KeyQ', extract: 'KeyX', stay: 'KeyV', map: 'KeyM'});
+  const g = await ambush(), K = g.ambush.keys; assert.deepEqual(K, {reload: 'KeyR', aim: 'KeyF', crouch: 'KeyC', interact: 'KeyE', ammo: 'KeyB', dressingBuy: 'KeyN', heal: 'KeyH', squad: 'KeyQ', extract: 'KeyX', stay: 'KeyV', map: 'KeyM', swap: 'KeyZ', melee: 'KeyT', throw: 'KeyG', item: 'Tab', buyFrag: 'Digit1', buySmoke: 'Digit2', buyFlash: 'Digit3'});
   g.set({hp: 60}); g.run(.3); assert.equal(g.el('medical').innerHTML, `<kbd>${letter(K.heal)}</kbd> 2 DRESSINGS`, 'the vitals panel shows the healing key on the dressing count');
   const css = fs.readFileSync(new URL('dist/style.css', projectRoot), 'utf8'); assert(!/#stance,#medical\{display:none/.test(css) && /#medical\{font-size/.test(css) && /^kbd\{|\nkbd\{/.test(css), 'the dressing line is shown in play and keycaps are styled');
   g.press('KeyJ'); assert.equal(g.state().healing, 0, 'an unbound key does nothing'); g.press(K.heal); assert(g.state().healing > 0, 'the shown key applies a dressing'); g.run(3.5); assert.equal(g.ambush.hp(), 110 > 100 ? 100 : 110);
   assert.match(g.el('reload').textContent, new RegExp(`· ${letter(K.reload)} TO RELOAD$`)); assert.equal(g.el('order-key').textContent, letter(K.squad));
-  const html = fs.readFileSync(new URL('dist/index.html', projectRoot), 'utf8'); assert(/<kbd id="order-key">/.test(html) && /H Dressing/.test(html) && /B Magazine · N Dressing \(Ambush\)/.test(html));
+  const html = fs.readFileSync(new URL('dist/index.html', projectRoot), 'utf8'); assert(/<kbd id="order-key">/.test(html) && /H Dressing/.test(html) && /B Magazine · N Dressing/.test(html));
   const A = g.amb; A.phase = 'decision'; A.survived = 5; A.earned = 100; A.timer = 10; g.ambush.hud(); assert.match(g.el('decision-extract').textContent, new RegExp(`^${letter(K.extract)} · EXTRACT NOW`)); assert.match(g.el('decision-stay').textContent, new RegExp(`^${letter(K.stay)} · STAY`)); A.phase = 'break'; A.timer = 5;
   g.goTo(STATIONS[0].at[0], STATIONS[0].at[1] + 1.4); const p = g.prompt(); assert.match(p, new RegExp(`^${letter(K.interact)} · BUY`)); assert.match(p, new RegExp(`\n${letter(K.ammo)} · MAGAZINE .*   ${letter(K.dressingBuy)} · FIELD DRESSING`));
   const w = g.ambush.weapon(); w.reserve = 0; A.points = 1000; g.press(K.ammo); assert.deepEqual([w.reserve, A.points], [30, 930], 'the shown magazine key buys'); g.press(K.dressingBuy); assert.deepEqual([g.ambush.bandages(), A.points], [2, 780], 'the shown dressing key buys');

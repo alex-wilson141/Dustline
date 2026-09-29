@@ -1,5 +1,5 @@
 import * as THREE from './three.module.js';
-import {assetURL} from './build.js';
+import {assetURL} from './build.js'; // also the DEPLOY-01 upgrade guard
 export function makeViewmodel(gun,{mat}){
  const oldParts=[...gun.children].filter(o=>o.isMesh);const loader=new THREE.TextureLoader();
  const group=new THREE.Group();group.position.y=.08;gun.add(group);
@@ -23,5 +23,15 @@ export function makeViewmodel(gun,{mat}){
   left.position.set(-.025-tilt*.02,-.01-drop*.26,-.33+tilt*.29);left.rotation.x=-tilt*.3;left.rotation.z=.7-tilt*.65;
   right.position.set(.045,-.055,.055);if(moving&&!aiming){left.position.y+=Math.sin(time*8)*.003;right.position.y+=Math.sin(time*8)*.003;}
  }
- return {ready,configure,animate,resetMotion(){roll=pitchOffset=0;},get loaded(){return !!model;}};
+ // Build 19: the sidearm and the knife, from simple shapes (no asset exists for either). setSidearm swaps what is in hand.
+ const steel=mat('#2b2e2d',{metalness:.65,roughness:.4}),grip=mat('#1d1f1e',{roughness:.8}),part=(w,h,d,x,y,z,m,parent)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=false;parent.add(o);return o;};
+ const pistol=new THREE.Group();part(.03,.036,.2,0,.05,-.16,steel,pistol);part(.024,.018,.05,0,.03,-.27,steel,pistol);part(.028,.11,.046,0,-.02,-.075,grip,pistol).rotation.x=.22;part(.008,.014,.012,0,.075,-.25,steel,pistol);part(.02,.012,.012,0,.075,-.07,steel,pistol);pistol.position.set(.03,.0,.0);pistol.visible=false;gun.add(pistol);
+ const blade=new THREE.Group();part(.006,.034,.2,0,0,-.1,mat('#c9ccc8',{metalness:.8,roughness:.25}),blade);part(.022,.03,.1,0,0,.05,grip,blade);blade.visible=false;gun.add(blade);
+ const can=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),mat('#3c4b34',{roughness:.6}));can.castShadow=false;can.visible=false;gun.add(can);
+ let sidearmOn=false;const rifleAnimate=animate;
+ function setSidearm(on){sidearmOn=!!on;group.visible=!sidearmOn;pistol.visible=sidearmOn;}
+ function animateAll(p){rifleAnimate(p);if(sidearmOn){left.position.set(.0,-.075,-.06);left.rotation.set(0,0,.35);right.position.set(.035,-.07,-.05);}
+  const k=Math.max(0,Math.min(1,p.knife||0));blade.visible=k>0;if(k>0){const f=1-k;blade.position.set(-.34+f*.5,-.02-Math.sin(f*Math.PI)*.04,-.42);blade.rotation.set(.1,1.1-f*1.6,-.5);}
+  can.visible=!!p.holding;if(p.holding)can.position.set(-.2,.0,-.28);}
+ return {ready,configure,animate:animateAll,setSidearm,get sidearm(){return sidearmOn;},resetMotion(){roll=pitchOffset=0;},get loaded(){return !!model;}};
 }

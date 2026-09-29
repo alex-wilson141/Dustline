@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 18)
+# DUSTLINE — Operation Broken Signal (Build 19)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -62,6 +62,16 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Equipment (Build 19)
+
+- **Z · sidearm.** Every class carries an M9 beside its rifle. It is in your hand in under half a second, which is what it is for: when the rifle runs dry in a fight, change instead of reloading. 26 a hit up close, weaker past 12 m.
+- **T · knife.** Without changing weapons. It reaches 2.3 m; two thrusts from the front, one from behind.
+- **G · throw.** Hold to take the item in hand, release to throw. A fragmentation grenade's 3.5 s fuse runs from the moment you take it in hand: hold it to shorten its flight, not to the end. **Tab** changes the item.
+- **Fragmentation:** deadly within 2 m, nothing beyond 8 m, stopped by walls. It does not spare you or your teammate.
+- **Smoke:** a 5 m cloud for 14 seconds. Nobody sees through it, the enemy included.
+- **Flash:** blinds whoever is looking at it, for up to 4.5 seconds. Look away.
+- **Story and Skirmish** hand out two fragmentation grenades, one smoke and one flash at every deployment. **In Ambush** you buy them at the crates (1, 2, 3), and B buys a magazine for the weapon in your hand.
 
 ## Fair co-op (Build 18)
 
@@ -202,6 +212,7 @@ node tests/test-coop-handshake.mjs
 node tests/test-ambush-coop-b16.mjs
 node tests/test-squad-b17.mjs
 node tests/test-fair-b18.mjs
+node tests/test-equipment-b19.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
