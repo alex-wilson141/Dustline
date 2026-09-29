@@ -2,13 +2,28 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 19 is LIVE** (pushed 2026-09-29). **Build 20 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
+**Build 20 is LIVE** (pushed 2026-09-29, GitHub run 36607988021 passed). **Build 21 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
 
-**Step A reported (2026-09-29): second map with height (E33).** Report only; nothing built or downloaded. Recommended order: map as data, player height, enemy height, co-op height, look slice, layout, dressing, Ambush rooftop arena, Story last. Waiting for the user's decisions.
+**Build 21 in short: Kohar Valley as map data (map build 1 of 9). Nothing visible changed.**
+- **What moved:** every place, edge, grid size, start, objective, enemy post and route, and the Ambush arena, from the code into one description, `dist/map-kohar.js`. `dist/maps.js` holds the maps and the active one. Kohar Valley is map 1 and the only map.
+- **Proof it is the same:** the world built from the map is Build 20's, number for number (27 parts); every moved list equals the Build 20 sources; Story and Skirmish replay the Build 09 trace and solo Ambush replays Build 15.
+- **Proof the data governs:** 411 values changed one at a time, each changes the game; 84 more for the props. A second small map from the same kind of description is deployed and played in Story, Skirmish and Ambush.
+- **Safari (B17):** Build 21 3.2 to 3.6 ms a frame, Build 20 3.3 to 3.6 ms, p99 6 to 9; start-up 233 to 265 ms against 224 to 267 ms. No difference that can be measured.
+- **Checks:** 24 suites, 233 checks, all pass (headless). T31 is new (7 checks, about four minutes); 125 deliberate breakages caught.
+- **Not built (MAP-01):** changing map inside a running page. Co-op will need it, because a reload drops the connection.
+- **Found, not changed (MAP-02):** a few values in the props list and one patrol loop that nothing uses, as in Build 20.
+
+**Map project, the user's decisions (2026-09-29, E34):**
+- **Order:** map as data (done), **look slice next**, then player height, enemy height, co-op height, layout, dressing, Ambush arena with a rooftop start, Story operation.
+- **Setting:** a hill town built in terraces. Working name: **Dehrun Terraces** (the user may rename it).
+- **Mantling: yes.** The standing rule against stairs and mantling is lifted for the map project. Not built yet.
+- **Fall damage:** none up to 3 m, fatal at 12 m, the same for enemies.
+- **Assets:** CC0 preferred, credit-line assets allowed, nothing paid. The list is approved by the user before anything is downloaded.
+- **Real time (E35):** one developer-day of estimate has been about one hour of session. The remaining builds: about 30 to 40 hours in 10 to 13 sessions without Story.
 
 **First two-player playtest (user and a friend, 2026-09-29, live build).** Four findings: kicked from the lobby when a game ends; enemy bullets "10 each"; a precision-rifle "body shot" on a teammate did 99; no revive. Build 20 answers them.
 
-**Build 20 in short: co-op fixes and revive.**
+**Build 20 in short: co-op fixes and revive** (live).
 - **The session stays.** Nothing but DISCONNECT or a lost connection ends it. After a mission, L by either player brings both back to the same menu, still connected; the host deploys again without codes. It was broken in Story co-op (always) and by the mode tabs; Ambush kept the session only after a finished run.
 - **Skirmish for two** exists now. Before, choosing Skirmish while connected disconnected you.
 - **Revive:** a player whose health runs out in co-op is down, not dead. The teammate holds E within 2 m for 4 s; the downed player has 30 s and stands up with 40 health. The reviver cannot fire, stab or throw. The mission ends when both are down at once. Not revived in time: in Ambush dead for the run, in Story and Skirmish the operation fails.
@@ -23,7 +38,6 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - Revive: 4 s to revive, 30 s to wait, 40 health afterwards.
 - Should being hit interrupt a revive? It does not.
 - Friendly-fire damage itself (rifle damage × armor, 110 to the head) is unchanged. Lower it?
-- Push Build 20, and when.
 
 **Build 19 in short: equipment** (live).
 - **Sidearm (Z):** every class carries an M9 beside its rifle. In hand in .45 s, 26 a hit, weaker past 12 m, 15 rounds. Rifles are unchanged.
@@ -114,7 +128,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** decide on pushing Build 20 and play it together (checklist in the roadmap); then squad codes (F.12), so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** decide on pushing Build 21; then map build 2, the look slice (asset list for approval first). Play Build 20 together (checklist in the roadmap). Squad codes (F.12) remain filed, so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
@@ -126,6 +140,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - AMB-06 residue: a few unseen enemies per 300 arrivals are withdrawn and re-sent at the north-west corner of the courtyard.
 - AMB-05: the announced spawn sector loosens when its side is walled off.
 - AI-07: dead enemies keep attack tokens (every mode).
+- MAP-01: the map cannot be changed inside a running page (co-op will need it). MAP-02: a few map values nothing reads.
 - REV-02: the downed player does not see their own body; nothing points to a downed teammate but the distance in the line; B14 still unmeasured.
 - EQ-02: the guest sees its own throw a moment late; the teammate's figure always shows a rifle; enemies do not react to grenades; smoke's drawing cost is unmeasured.
 - AI-06, AMB-01, AMB-02, AI-05, PORT-01, NAV-02, HUD-01, TEST-07.
@@ -151,10 +166,12 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.
+- Every place, edge and grid size is in the map (`dist/map-kohar.js`); never write one in the code.
+- Kohar Valley must stay what Build 20 had (T31 compares it number for number).
 - Preserve story, four classes, weapon balance, enemy fire formulas, co-op and pointer controls.
 - `dist/` is source; stamp it after edits.
 - No desktop screen/audio recording.

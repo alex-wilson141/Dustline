@@ -1,8 +1,12 @@
-# DUSTLINE — Operation Broken Signal (Build 20)
+# DUSTLINE — Operation Broken Signal (Build 21)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
 A desktop browser first-person squad combat prototype in a fictional arid mountain valley. Photographed PBR building surfaces and environmental lighting, a detailed rifle model with moving magazine and charging handle, articulated soldiers, enterable buildings, interconnected side routes, four classes, story objectives and experimental two-player private co-op. Geometry remains simplified; this is not a photorealistic commercial game.
+
+## Maps (Build 21)
+
+Kohar Valley is described in `dist/map-kohar.js`: the ground, the edges, the navigation grid, what is built and where, the starts, the objectives, the enemy posts and routes and the Ambush arena. The game builds its world from the active map (`dist/maps.js`). Kohar Valley is the only map; nothing about it changed when it moved into data (`tests/test-mapdata-b21.mjs` compares it with Build 20 number for number). A second map is planned.
 
 ## Modes
 
@@ -221,6 +225,7 @@ node tests/test-squad-b17.mjs
 node tests/test-fair-b18.mjs
 node tests/test-equipment-b19.mjs
 node tests/test-revive-b20.mjs
+node tests/test-mapdata-b21.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.

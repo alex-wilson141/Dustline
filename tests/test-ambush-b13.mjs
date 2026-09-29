@@ -9,6 +9,7 @@ import {createGame, projectRoot} from './sprint-harness.mjs';
 const THREE = await import(new URL('dist/three.module.js', projectRoot));
 const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
 const {AMBUSH, AREAS, GATES, STATIONS, ambushState, inArena} = await import(new URL('dist/ambush.js', projectRoot));
+const START = (await import(new URL('dist/maps.js', projectRoot))).activeMap().ambush.start; // Build 21: the arena's start is map data
 const FIXTURE = new URL('fixtures/story-skirmish-ai-b09.json', import.meta.url);
 const results = [], report = {};
 async function check(name, fn) { await fn(); results.push(name); }
@@ -45,7 +46,7 @@ await check('the state function matches the barricade data, prices and what is r
 
 await check('all four rifles are for sale across the four areas, one crate per area; whichever class you play, the other three can be bought and your own crate sells none; every barricade purchase point and every crate can be walked to from the start once its area is open', async () => {
   assert.deepEqual(STATIONS.map(s => s.weapon).sort(), Object.keys(CLASSES).sort()); assert.deepEqual(STATIONS.map(s => s.area), [1, 2, 3, 4]); assert.deepEqual(GATES.map(t => t.opens).sort(), [2, 3, 4]);
-  const walkable = (g, point, r) => standPoints(g, point, r, g.amb.open).some(p => { const route = g.ai.pathTo(V(AMBUSH.start[0], 0, AMBUSH.start[1]), V(p[0], 0, p[1])), end = route.length ? route.at(-1) : V(AMBUSH.start[0], 0, AMBUSH.start[1]); return Math.hypot(end.x - p[0], end.z - p[1]) < 1.5; });
+  const walkable = (g, point, r) => standPoints(g, point, r, g.amb.open).some(p => { const route = g.ai.pathTo(V(START[0], 0, START[1]), V(p[0], 0, p[1])), end = route.length ? route.at(-1) : V(START[0], 0, START[1]); return Math.hypot(end.x - p[0], end.z - p[1]) < 1.5; });
   const bought = {};
   for (const cls of Object.keys(CLASSES)) { const g = await game(); g.setClass(cls); g.reset(); g.play(); g.set({hp: 1e9}); bought[cls] = [];
     for (const t of GATES) { assert(g.amb.open.has(t.from)); assert(walkable(g, t.station, 2.8), `${t.id} purchase point reachable on foot`); assert(g.buyGate(t.id)); }

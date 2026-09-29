@@ -4,10 +4,10 @@
 // built from the game's existing materials (no new assets), and only exists while Ambush is being played.
 import * as THREE from './three.module.js';
 import {mergeGeometries} from './BufferGeometryUtils.js';
+import {onMap} from './maps.js';
 import './build.js'; // DEPLOY-01 upgrade guard
 
 export const AMBUSH = {
-  start: [-30, 20],            // player start, in the courtyard (area 1)
   startPoints: 500, killPoints: 100, headshotBonus: 50,
   firstBreak: 10, breakTime: 12, afterStay: 5,
   // From the end of this wave on, each wave ends with a timed choice: extract (bank the run) or stay for the next wave.
@@ -53,31 +53,10 @@ export const AMBUSH = {
   // aliveCeiling alive, four bodies and two spare. A player who is down leaves the other on the solo curve.
   coop: {countScale: 1.5, countCap: 60, capScale: 1.5, aliveCeiling: 12, gapScale: 2 / 3, gapFloor: .7, enemyPool: 18, startGap: 3},
 };
-// The brick walls in and around the arena ([x, z, width, depth], 1.7 m tall elsewhere), lowered to arenaWallHeight in Ambush.
-export const ARENA_WALLS = [[-40, 14, .6, 24], [-40, 2, 12, .6], [-36, 27, 8, .6], [-48, -35, 18, .6]];
-
-// The four areas (axis-aligned rectangles, x and z ranges in metres). Area 1 is open from the start.
-export const AREAS = [
-  {id: 1, name: 'Courtyard', x: [-40, -19], z: [2, 28]},
-  {id: 2, name: 'Field office yard', x: [-40, -12], z: [-24, 2]},
-  {id: 3, name: 'West lane', x: [-58, -40], z: [-24, 2]},
-  {id: 4, name: 'North houses', x: [-52, -12], z: [-54, -24]},
-];
-// Purchasable barricades: a sandbag line along the border with a timber section at the purchase point. Buying
-// removes the whole line and opens `opens`; it can be bought from inside `from` once that area is open.
-export const GATES = [
-  {id: 'g12', from: 1, opens: 2, price: 750, a: [-34, 2], b: [-19, 2], station: [-26.5, 2]},
-  {id: 'g23', from: 2, opens: 3, price: 1000, a: [-40, -24], b: [-40, 2], station: [-40, -8]},
-  {id: 'g24', from: 2, opens: 4, price: 1250, a: [-40, -24], b: [-12, -24], station: [-26, -24]},
-];
-// One weapon crate per area, selling one of the four class rifles (unchanged weapon stats). Buying the weapon you
-// already hold refills its ammunition for half the price.
-export const STATIONS = [
-  {area: 1, weapon: 'medic', price: 500, at: [-36, 24]},
-  {area: 2, weapon: 'assault', price: 750, at: [-24, -1]},
-  {area: 3, weapon: 'marksman', price: 1000, at: [-50, -3]},
-  {area: 4, weapon: 'support', price: 1250, at: [-20, -46]},
-];
+// Build 21: the arena itself (its start, walls, areas, barricades, crates and what the map shows) belongs to the map
+// (dist/map-kohar.js, `ambush`); these names follow the active map. AMBUSH above holds the rules, which are the same
+// on every map.
+export let ARENA_WALLS, AREAS, GATES, STATIONS, MAP;
 // Build 11 economy. A magazine's price follows the damage it can deal (capacity × damage), so every rifle pays about the
 // same per potential kill, and it rises with the wave up to magWaveCap: CQB/carbine 70 → 175, DMR 100 → 250, automatic
 // rifle 160 → 400 points (wave 1 → wave 16+). Rounds are added to the reserve up to the rifle's reserve limit.
@@ -243,7 +222,11 @@ export function ambushState(open, standing) {
 // ---- Build 14: the full-screen map. One layout, worked out from the state alone, is what the map draws and what the tests
 // check: north (-z) is up, the whole arena fits, and every label gets a box that overlaps no other label or marker and lies
 // inside the canvas. Text is drawn with the box width as its limit, so a label can never spill out of its box.
-export const MAP = {w: 1000, h: 1600, pad: 70, bounds: {x: [-62, -8], z: [-58, 32]}, fontArea: 32, fontLabel: 28, fontState: 26, gap: 8, shown: .86, arrow: 40};
+const CHART = {w: 1000, h: 1600, pad: 70, fontArea: 32, fontLabel: 28, fontState: 26, gap: 8, shown: .86, arrow: 40};
+// The recorded Build 15 game that the trace suite replays asks the rules for the start: it is given the map's.
+Object.defineProperty(AMBUSH, 'start', {get: () => ARENA_START, enumerable: false});
+let ARENA_START;
+onMap(map => { ARENA_START = map.ambush.start; ({walls: ARENA_WALLS, areas: AREAS, gates: GATES, stations: STATIONS} = map.ambush); MAP = {...CHART, bounds: map.ambush.chart}; });
 // Width of `text` at `size` px, estimated generously for bold Arial capitals and digits (the draw also limits the width).
 export const textWidth = (text, size) => Math.ceil([...String(text)].reduce((w, ch) => w + (ch === ' ' ? .3 : ch === '·' ? .4 : /[0-9]/.test(ch) ? .6 : .74), 0) * size);
 const overlaps = (a, b, gap = 0) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;

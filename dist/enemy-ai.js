@@ -2,6 +2,7 @@
 // entries and the cover table.
 // game.js reads ENEMY_AI at call time (never copied at load), so every value here is live and testable.
 // Hit chance, damage and fire cadence are NOT here: they stay in game.js's unchanged fire block and aiHit.
+import {onMap} from './maps.js';
 import './build.js'; // DEPLOY-01: an older cached page that fetches this new file reloads instead of mixing builds
 
 export const ENEMY_AI = {
@@ -36,40 +37,9 @@ export const ENEMY_AI = {
   crouchDrop: .3,
 };
 
-// Fixed enemy spawns. (12,-17) sat inside the low wall at (11,-17) (AI-02); every spawn is also validated at runtime.
-export const ENEMY_SPAWNS = [[-13, 2], [12, -19], [-30, -26], [34, -26], [-6, -45], [8, -55], [-36, -45]];
-
-// Patrol loops (every leg checked with pathTo in Step A). Stage-0 loops stay 45 m+ from the player start.
-export const PATROL_LOOPS = {
-  MW: [[-32, 4], [-14, 4], [-14, -20], [-34, -20], [-40, -6]],
-  MC: [[-6, 8], [4, 2], [4, -8], [-4, -22], [-16, -8]],
-  ME: [[16, 12], [34, 12], [40, -18], [18, -22], [12, 2]],
-  RING: [[-18, -30], [18, -30], [22, -48], [24, -76], [-2, -80], [-24, -74], [-22, -48]],
-  SW: [[-30, -32], [-54, -38], [-56, -60], [-34, -62], [-28, -48]],
-  SE: [[32, -28], [56, -40], [58, -60], [34, -62], [38, -46]],
-  NW: [[-24, 26], [-48, 26], [-54, 44], [-28, 46]],
-  NE: [[24, 32], [48, 30], [52, 50], [30, 52]],
-};
-// Per original enemy (index 0-6). Two hold the relay; the rest patrol sectors.
-export const LOOP_ASSIGN = ['MC', 'ME', 'MW', 'SE', 'GARRISON', 'GARRISON', 'SW'];
-// Loops a reinforcement joins after its entry chain, by stage.
-export const REINFORCE_LOOPS = {0: ['MW', 'MC', 'SW'], 1: ['RING', 'SW', 'SE'], 2: ['ME', 'NE'], skirmish: ['RING', 'SW', 'SE']};
-
-// Reinforcement entry points: spawn point, then entry legs. Stages where each may be used.
-export const REINFORCE_POINTS = [
-  {chain: [[80, 10], [52, -4], [40, -18]], stages: [0, 1, 2]},
-  {chain: [[-80, -14], [-52, -20], [-40, -6]], stages: [0, 1, 2]},
-  {chain: [[-60, -84], [-48, -66], [-56, -60]], stages: [0, 1, 2]},
-  {chain: [[64, -84], [58, -60]], stages: [0, 1, 2]},
-  {chain: [[30, -86], [34, -62]], stages: [0, 1, 2]},
-  {chain: [[-24, -86], [-34, -62]], stages: [0, 1, 2]},
-  {chain: [[-80, 40], [-54, 44]], stages: [0, 1, 2]},
-  {chain: [[-52, -20], [-40, -6]], stages: [1, 2]},
-  {chain: [[52, -4], [40, -18]], stages: [0, 1, 2]},
-  {chain: [[-48, -44], [-54, -38]], stages: [0, 1, 2]},
-  {chain: [[12, -64], [24, -76]], stages: [0, 2]},
-  {chain: [[20, -8], [18, -22]], stages: [0, 1, 2]},
-];
+// Build 21: the enemy posts and routes belong to the map (dist/map-kohar.js, `enemies`); these names follow the active map.
+export let ENEMY_SPAWNS, PATROL_LOOPS, LOOP_ASSIGN, REINFORCE_LOOPS, REINFORCE_POINTS;
+onMap(map => { ({spawns: ENEMY_SPAWNS, loops: PATROL_LOOPS, assign: LOOP_ASSIGN, reinforceLoops: REINFORCE_LOOPS, reinforcePoints: REINFORCE_POINTS} = map.enemies); });
 
 // Separate seeded stream for AI decisions so the game's seeded rand() (spread, reset) is disturbed as little as possible.
 export function aiRandom(seed) {

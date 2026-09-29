@@ -14,6 +14,7 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
+- `dist/map-kohar.js`: Kohar Valley, map 1, as a description (Build 21). `dist/maps.js`: the maps and the active one.
 - `tests/`: portable Node.js headless regression checks and historical evidence.
 - `tools/stamp-build.mjs`: stamps content hashes into `dist/index.html` (import map,
   stylesheet, start-up check) and `dist/build.js` (asset hashes). Run it after every
@@ -22,6 +23,20 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 21 (local, 2026-09-29): Kohar Valley as map data, map build 1 of 9 (E33, E34). **Every place, edge, grid size, start,
+objective, enemy post and route and the Ambush arena is in the map (`dist/map-kohar.js`); never write one in the code.**
+`game.js` reads the active map as `WORLD` (`EDGE`, `NAV_N`, `NAV_STEP`, `NAV_0`); `AREAS`, `GATES`, `STATIONS`, `ARENA_WALLS`,
+`MAP`, `ENEMY_SPAWNS`, `PATROL_LOOPS`, `LOOP_ASSIGN`, `REINFORCE_LOOPS`, `REINFORCE_POINTS` and `VILLAGE_PROPS` follow it
+(`onMap`). How things behave (speeds, damage, wave sizes, `AMBUSH`, `ENEMY_AI`) is not map data. **Kohar Valley must stay what
+Build 20 had**: T31 compares the built world with `tests/fixtures/kohar-b20.json` number for number; re-record that file only
+from the Build 20 commit `7a9bb82`. The world is built once at load: a map is chosen before that (`selectMap`), and changing
+map inside a running page is not built (MAP-01; co-op will need it). Older builds that the suites load run against the
+current modules: keep `dressWorld` working without `world` and `AMBUSH.start` answering. **User decisions for the map project
+(E34):** the look slice is the next build; the new map is a hill town in terraces (working name Dehrun Terraces); stairs,
+ladders and mantling are requested (not built yet); fall damage none up to 3 m, fatal at 12 m, enemies alike; CC0 assets
+preferred, credit-line assets allowed, nothing paid, and the user approves the list before anything is downloaded. Kohar
+Valley's walls and props stay as tall as they are for movement when height arrives. Long test runs: keep the machine awake
+(`caffeinate -i`); it slept in the middle of one.
 Build 20 (local, 2026-09-29): co-op fixes and revive, after the user's first two-player playtest. **The session outlives the
 mission: nothing in the game may close the connection except the DISCONNECT button and a lost connection.** `goMenu()` and
 `setMode()` close nothing while connected; `lobby` takes the other player along to the menu once a mission is over, `left`
@@ -149,8 +164,9 @@ raycast only where a ray crosses it (PERF-02, proven identical); P pauses/resume
 without leaving fullscreen (Escape is the browser's key). Build 06 corrected combat
 feel; Build 04 removed sprint stamina entirely and the user accepted M1 in Safari.
 Never reintroduce exhaustion, recharge delays, stamina gates or a stamina HUD. Keep
-current class speeds, weapon balance and combat interruption rules. Do not add
-stairs or mantling without a separate request.
+current class speeds, weapon balance and combat interruption rules. Stairs, ladders
+and mantling are requested for the map project (user, 2026-09-29, E34) and belong to
+its height builds; do not add them to Kohar Valley.
 
 Preserve Kohar Valley, Viper squad, the convoy route log, relay and extraction;
 the four classes; combat and reload behavior; bots; experimental co-op; and
@@ -202,15 +218,16 @@ node tests/test-squad-b17.mjs
 node tests/test-fair-b18.mjs
 node tests/test-equipment-b19.mjs
 node tests/test-revive-b20.mjs
+node tests/test-mapdata-b21.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 20 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 21 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment and 10 session-and-revive checks (226 in 23 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive and 7 map-data checks (233 in 24 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
