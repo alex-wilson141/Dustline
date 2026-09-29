@@ -21,13 +21,21 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 17 (local, 2026-09-28): the AI squad is the player's choice, per mode (`squadPref` in `game.js`, the box `#squad-ai`).
+Untouched it is what each mode always had: on in Story, Skirmish and Story co-op, off in Ambush. `squadActive` is what the
+mission was deployed with; read it, never the box and never the mode, to decide whether squadmates exist. In co-op the host's
+choice governs (`squad` in the `mode` and `start` messages, `hostSquad` on the guest); the co-op teammate (`remote`) is a real
+player and is never attached, detached or replaced by this. `reset()` must keep attaching the squad before the actors are
+reset and detach afterwards: the reset draws seeded random numbers per actor, and solo Ambush must replay Build 15. Ambush with
+the squad on uses the two-player waves (`ambushScale()`), not a third curve; only the player's own kills count and pay. At a
+co-op extraction a downed player banks alongside the survivor (user decision); both down or a player who left banks nothing.
+This replaces the Build 12 rule "no bot squad in Ambush, ever" with "none unless the player ticks the box".
 Build 16 (local, 2026-09-28): Ambush co-op, two real players (F.11). A networked mission is Story co-op (`mode==='coop'`) or
 an Ambush run started while connected (`amb.coop`); use `net()`, `hosting()`, `guesting()`, `ambCoop()`, never `mode==='coop'`
 alone, for anything that sends or receives. The host owns waves, spawns, barricades, both players' points (`amb` is the local
 player's, `amb.mate` the teammate's) and every hit; the guest sends `pose`, `shot`, `buy`, `vote` and applies `ambushApply`.
 User decisions, do not change without a request: points per player, barricades shared, crate purchases individual; one player
-down spectates and the run ends only when both are down. Built on top: extracting takes both choices (`ambushVote`), a downed
-player banks nothing, co-op waves use `waveSpec(n, 2)` (`AMBUSH.coop`) only while both are up. **Solo Ambush must stay identical
+down spectates and the run ends only when both are down. Built on top: extracting takes both choices (`ambushVote`), co-op waves use `waveSpec(n, 2)` (`AMBUSH.coop`) only while both are up. **Solo Ambush must stay identical
 to Build 15** (`abb41c9`; T26 replays it): every co-op branch must leave the solo path reading the same `player` object and
 drawing the same random numbers. Personal bests use two keys (`BEST_KEY`, `BEST_KEY_COOP`). The co-op teammate is
 `soldier('ally',3,'mate')`: blue, with an unlit marker drawn over everything, in every co-op mode. Friendly fire is on in co-op
@@ -159,15 +167,16 @@ node tests/test-ambush-b13.mjs
 node tests/test-ambush-b14.mjs
 node tests/test-coop-handshake.mjs
 node tests/test-ambush-coop-b16.mjs
+node tests/test-squad-b17.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 16 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 17 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake and 13 Ambush co-op checks (186 in 19 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op and 8 squad-toggle checks (194 in 20 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

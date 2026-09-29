@@ -163,7 +163,7 @@ await check('one player going down does not end the run, from either side: that 
   report.death = 'spectate; run ends when both are down';
 });
 
-await check('the extract choice: extracting takes both players\' choice and either one staying keeps both in; the timer stays; a player who is down has no vote and the survivor decides alone; each player banks their own points and a downed player banks nothing; both pages resolve the same way', async () => {
+await check('the extract choice: extracting takes both players\' choice and either one staying keeps both in; the timer stays; a player who is down has no vote and the survivor decides alone; each player banks their own points and a downed player banks alongside the survivor who extracts (Build 17); both pages resolve the same way', async () => {
   const at5 = async (opts = {}) => { const p = await pair({ai: false, ...opts}), {host} = p, H = host.amb; clearField(host); Object.assign(H, {wave: 5, survived: 4, phase: 'wave', toSpawn: 0, earned: 2000, points: 900, kills: 18}); Object.assign(H.mate, {earned: 1200, points: 300, kills: 11}); host.restoreAI(); p.sync(); assert.equal(H.phase, 'decision', 'wave 5 cleared: the choice is offered'); assert.equal(p.guest.amb.phase, 'decision'); return p; };
   globalThis.localStorage = storage();
   // (a) One choice is not enough, from either side; the other page is told; the second choice extracts.
@@ -176,13 +176,15 @@ await check('the extract choice: extracting takes both players\' choice and eith
     for (const g of [host, guest]) { assert.equal(g.state().state, 'playing'); assert.equal(g.amb.phase, 'break', `${g.role}: staying (chosen by the ${stayer})`); assert.equal(g.amb.vote, null); } assert.equal(host.amb.mate.vote, null, 'choices are cleared'); near(host.amb.timer, AMBUSH.afterStay, .2, 'next wave after the stay pause'); assert.match(guest.el('notice').textContent, /^STAYING: SURVIVE WAVE 6 TO BANK ×1\.25$/); }
   // (c) The timer stays, with one choice to extract standing.
   { const p = await at5(), {host, guest} = p; guest.press(guest.ambush.keys.extract); p.run(AMBUSH.decisionTime + .5); for (const g of [host, guest]) { assert.equal(g.state().state, 'playing'); assert.notEqual(g.amb.phase, 'decision', `${g.role}: the timer stayed`); } }
-  // (d) A downed player has no vote; the survivor decides alone; the downed player banks nothing.
+  // (d) A downed player has no vote; the survivor decides alone; both bank.
   for (const downed of ['host', 'guest']) { const p = await at5({invulnerable: false}), {host, guest} = p, up = p[downed === 'host' ? 'guest' : 'host'], dn = p[downed]; host.coop.down(downed === 'host' ? 'me' : 'mate'); p.sync(); assert.equal(host.amb.phase, 'decision'); assert.equal(host.state().state, 'playing');
     dn.press(dn.ambush.keys.extract); p.sync(); assert.equal(host.state().state, 'playing', 'a downed player cannot extract the pair'); assert.equal(host.amb.phase, 'decision'); dn.press(dn.ambush.keys.stay); p.sync(); assert.equal(host.amb.phase, 'decision', 'nor keep it in');
     if (downed === 'guest') { host.receive({type: 'vote', x: true}); host.receive({type: 'vote', x: false}); assert.equal(host.amb.phase, 'decision', 'the host refuses a downed guest\'s vote'); assert.equal(host.state().state, 'playing'); }
     up.ambush.hud(); dn.ambush.hud(); assert.match(up.el('decision-timer').textContent, /^Your teammate is down: the choice is yours · /); assert.equal(dn.el('decision-extract').textContent, 'YOU ARE DOWN · YOUR TEAMMATE DECIDES');
     up.press(up.ambush.keys.extract); p.sync();
-    for (const g of [host, guest]) { assert.equal(g.state().state, 'ended', `${g.role}: the survivor extracted alone`); const lines = g.el('report').textContent.split('\n'); assert.match(lines[g === dn ? 1 : 2], /down · nothing banked\.$/, 'the downed player banks nothing'); assert.match(lines[g === dn ? 2 : 1], / banked \d+ \(\d+ × 1\.00\)\.$/, 'the survivor banks their own points'); } assert.equal(dn.amb.banked, 0); assert(up.amb.banked > 0); }
+    for (const g of [host, guest]) { assert.equal(g.state().state, 'ended', `${g.role}: the survivor extracted alone`); const lines = g.el('report').textContent.split('\n'); const [hostLine, guestLine] = g === host ? [lines[1], lines[2]] : [lines[2], lines[1]], who = l => l.split(':')[0]; assert.equal(hostLine, `${who(hostLine)}: 18 kills · 2000 points earned · ${downed === 'host' ? 'down · ' : ''}banked 2000 (2000 × 1.00).`, `${g.role}: the host's line`); assert.equal(guestLine, `${who(guestLine)}: 11 kills · 1200 points earned · ${downed === 'guest' ? 'down · ' : ''}banked 1200 (1200 × 1.00).`, `${g.role}: the guest's line`); }
+    // Build 17: the run was played together, so the survivor extracting banks for both, each their own points.
+    assert.deepEqual([host.amb.banked, host.amb.mate.banked, guest.amb.banked, guest.amb.mate.banked], [2000, 1200, 1200, 2000], 'a downed player banks alongside the survivor, on both pages'); }
   delete globalThis.localStorage; report.extract = 'both must choose to extract; one stay or the timer keeps both in; a downed player has no vote';
 });
 

@@ -2,9 +2,25 @@
 
 _Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 16 is committed locally and NOT pushed** (Ambush co-op). Pushing publishes; wait for the user's word. Both players must be on BUILD 16.
+**Build 16 is LIVE** (pushed 2026-09-28 at the user's request; the public page says BUILD 16). **Build 17 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
 
-**User report (2026-09-28):** co-op connected on Build 15 over the public site, on two networks, with no relay. COOP-01 is confirmed; a TURN relay is not currently needed.
+**Build 16 has not been playtested with a real second player.** The blue teammate's readability at combat distance and the two-player difficulty curve are both unverified.
+
+**User report (2026-09-28):** co-op connected on Build 15 over the public site, on two networks, with no relay. A TURN relay is not currently needed.
+
+**Build 17 in short: the AI squad is your choice.**
+- **The box:** "AI squad" beside Audio and Blood. One choice per mode. Untouched: on in Story, Skirmish and Story co-op, off in Ambush, as before.
+- **Co-op:** the host's choice governs; the guest's box shows it, greyed out. The real teammate is never a bot and never affected.
+- **Ambush with the squad:** the existing two-player waves, no third curve. Only your own kills count and pay, so the squad makes you safer and poorer.
+- **Story and Skirmish without the squad:** completable alone (checked headless), but you take about 57 % more damage standing at the relay. One amber line warns you. Mission design is unchanged.
+- **Extraction in co-op:** a downed player now banks alongside the survivor. Both down still banks nothing.
+- **Safari frame time with the squad: NOT measured** (B13): Safari was in use and the bench window did not stay in front.
+- **Checks:** 20 suites, 194 checks, all pass (headless). T27 is new (8 checks); 29 breakages caught.
+
+**Decisions for the user (Build 17):**
+- Ambush with a squad uses the two-player waves. If the squad carries the run, options: more hostiles for a squad (2 × solo), or leave it.
+- Solo Story: leave as is behind the warning, or add a solo setting (fewer reinforcements, lower alive cap).
+- Push Build 17, and when.
 
 **Live:** https://alex-wilson141.github.io/Dustline/ · repository https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live once the stamp check and all suites pass on GitHub. To publish: `node tools/stamp-build.mjs`, run the suites, commit, `git push`, watch the Actions tab (about three minutes), then both players reload.
 
@@ -14,7 +30,7 @@ _Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - **Points:** per player. A barricade either player clears is open for both. Rifles, magazines and dressings come from the buyer's own points.
 - **Going down:** that player watches the teammate from behind and can do nothing else. The run ends when both are down.
 - **The line:** five seconds outside puts only that player down.
-- **Extract:** both must choose X. V by either player, or the timer, keeps both in. A downed player has no vote and banks nothing.
+- **Extract:** both must choose X. V by either player, or the timer, keeps both in. A downed player has no vote (and, since Build 17, banks alongside the survivor).
 - **Two-player balance (only while both are up):** half as many hostiles again per wave, half as many again alive at once (up to 12), arrivals a third faster. Prices, points per kill and enemy accuracy, damage, fire rate, range and aggression are the solo values. A lone survivor is back on the solo curve.
 - **Records:** solo and co-op bests are stored separately.
 - **Teammate:** blue uniform and vest, blue marker overhead drawn over everything. In Story co-op too.
@@ -28,9 +44,8 @@ _Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 **Checks:** 19 suites, 186 checks, all pass (headless). T26 is new (13 checks); 60 deliberate breakages caught.
 Not verified: two people playing Build 16; two networks; whether the teammate reads as one in a firefight; the spectator camera near walls; the two-player difficulty; real interruptions.
 
-**Decisions for the user (Build 16):**
+**Decisions for the user (Build 16), still open:**
 - Extract rule: both must choose (built). Alternatives: either player, or a majority vote with a timer.
-- A downed player banks nothing at extraction (built, as in solo). Alternative: the survivor's extraction banks for both.
 - Two-player waves: 1.5 × hostiles and alive cap. Too easy or too hard is for the playtest.
 - Friendly fire and the AI-03 fix also apply in Story co-op. Say if Story co-op should be left as it was.
 - Returning to the menu after a finished Ambush run keeps the connection. Say if it should close.
@@ -56,7 +71,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** push Build 16 when the user says so and play Ambush together (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** play Build 16 together (it is live), decide on pushing Build 17 (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
@@ -73,7 +88,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 **Decisions on file:**
 - Ambush signposting is the full map plus markings on the objects: no masts, no HUD waypoint lines, no HUD area list, no minimap in Ambush.
 - The solo Ambush curve (2 → 9 alive) is confirmed by play.
-- Ambush is solo for AI purposes: no bot squad, ever; co-op means real players only (Ambush F.11 done in Build 16, every mode F.13).
+- The AI squad is the player's choice per mode since Build 17 (defaults: on in Story and Skirmish, off in Ambush); in co-op the host's choice governs; the co-op teammate is always a real player.
 - Ambush co-op: points per player, barricades shared, crate purchases individual; one player down does not end the run (user, 2026-09-28).
 - The setting stays fictional: environment variety is wanted, but no maps tied to real conflicts.
 - Free assets only (Rocketbox + Mixamo).
@@ -90,7 +105,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake and ambush-coop-b16. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16 and squad-b17. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

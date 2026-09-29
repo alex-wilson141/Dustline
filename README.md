@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 16)
+# DUSTLINE — Operation Broken Signal (Build 17)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -63,12 +63,20 @@ Graphics uses automatic resolution scaling by default; choose Performance to red
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
 
+## AI squad: your choice (Build 17)
+
+- **The box:** "AI squad" in the settings row, beside Audio and Blood. Each mode remembers its own choice. Untouched, Story and Skirmish have their three squadmates and Ambush has none, as before.
+- **Story or Skirmish without the squad:** the missions are built for four, and a line under the briefing says so. They can be completed alone, but nobody else draws fire.
+- **Ambush with the squad:** three squadmates start beside you and the waves are the larger two-player ones. Only your own kills earn points.
+- **Co-op:** the host's choice applies to both players, and the guest's box shows it. Your teammate is always the real player.
+- **Extracting in co-op:** a player who is down banks alongside the survivor who extracts.
+
 ## Ambush co-op (Build 16)
 
 - **Two real players, no AI squad.** Connect as below, then the host chooses AMBUSH and presses DEPLOY BOTH PLAYERS. Both players must be on Build 16.
 - **Points are yours.** Your kills earn your points. A barricade either of you clears is open for both. Rifles (E), magazines (B) and dressings (N) are bought from your own points, for yourself.
 - **Going down.** A player who is killed, or who stays five seconds outside the striped line, is down and watches the teammate. The run ends when both are down.
-- **Extracting** (from wave 5, between waves) takes both players pressing X. V by either player, or the timer, keeps both in. A player who is down has no vote and banks nothing.
+- **Extracting** (from wave 5, between waves) takes both players pressing X. V by either player, or the timer, keeps both in. A player who is down has no vote; since Build 17 that player banks alongside the survivor.
 - **Waves for two.** While both are up, waves are half as large again, with up to 12 hostiles alive at once. Prices, points and enemy accuracy and damage are the solo values. Solo Ambush is unchanged.
 - **Your teammate wears blue**, with a blue marker overhead that shows through walls. Your shots hurt your teammate, in Story co-op as well.
 - **Records.** Solo and co-op personal bests are kept separately, in this browser only.
@@ -184,6 +192,7 @@ node tests/test-ambush-b13.mjs
 node tests/test-ambush-b14.mjs
 node tests/test-coop-handshake.mjs
 node tests/test-ambush-coop-b16.mjs
+node tests/test-squad-b17.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
