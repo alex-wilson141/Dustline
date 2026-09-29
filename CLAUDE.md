@@ -15,6 +15,8 @@ Work on one requested milestone at a time; do not implement the entire backlog.
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
 - `dist/map-kohar.js`: Kohar Valley, map 1, as a description (Build 21). `dist/maps.js`: the maps and the active one.
+- `dist/map-dehrun.js`, `dist/terraces.js`, `dist/GLTFLoader.js`, `dist/assets/dehrun/`: Dehrun Terraces, map 2 (Build 22: one
+  street block, to look at). Fetched only for the address `?map=dehrun`.
 - `tests/`: portable Node.js headless regression checks and historical evidence.
 - `tools/stamp-build.mjs`: stamps content hashes into `dist/index.html` (import map,
   stylesheet, start-up check) and `dist/build.js` (asset hashes). Run it after every
@@ -23,6 +25,18 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 22 (local, 2026-09-29): the look slice of Dehrun Terraces, map build 2 of 9. **Kohar Valley must fetch nothing of the new
+map**: `map-dehrun.js`, `terraces.js` and `GLTFLoader.js` are never imported by a module the game loads with Kohar Valley (only
+`maps.js` fetches the description, by `import('./map-dehrun.js')`, for the address `?map=dehrun`); a later import must name its
+module in full so that the import map versions it. The kit holds no place: every position is in the map's `block`. A map may bring
+`build`, `terrain.surface` (the drawn ground, below what is built), its own light and `look` (a map to walk and look at: nobody
+else, no mission); where a map names none of these the game's old values stand, and Kohar Valley names none. Models are one
+`.glb` each with their pictures inside, asked for with `fetch(assetURL(...))` and handed to the loader as bytes; each kind of prop
+is one `InstancedMesh` per part. Ceilings for a block: 500 draw calls, 350,000 triangles, everything drawn (T32); the new map's
+assets stay under 30 MB unless the user raises the cap. No light source is added by the kit. **Safari: never take it without
+asking the user first and waiting for their word** (user, 2026-09-29: the Build 22 measurement took Safari from their work every
+few seconds and was stopped); a measurement must run as one blocking step, never from a background job. The block's Safari
+measurement is outstanding (B18).
 Build 21 (local, 2026-09-29): Kohar Valley as map data, map build 1 of 9 (E33, E34). **Every place, edge, grid size, start,
 objective, enemy post and route and the Ambush arena is in the map (`dist/map-kohar.js`); never write one in the code.**
 `game.js` reads the active map as `WORLD` (`EDGE`, `NAV_N`, `NAV_STEP`, `NAV_0`); `AREAS`, `GATES`, `STATIONS`, `ARENA_WALLS`,
@@ -221,15 +235,16 @@ node tests/test-fair-b18.mjs
 node tests/test-equipment-b19.mjs
 node tests/test-revive-b20.mjs
 node tests/test-mapdata-b21.mjs
+node tests/test-lookslice-b22.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 21 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 22 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive and 7 map-data checks (233 in 24 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data and 5 look-slice checks (238 in 25 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

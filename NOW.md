@@ -2,7 +2,24 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 21 is LIVE** (pushed 2026-09-29; GitHub run 36631040830 passed). Pushing publishes; wait for the user's word.
+**Build 21 is LIVE** (pushed 2026-09-29; GitHub run 36631040830 passed). **Build 22 is committed locally and NOT pushed**, with the held documentation commit `6bca1dc` under it. Pushing publishes; wait for the user's word.
+
+**Build 22 in short: the look slice of Dehrun Terraces (map build 2 of 9).**
+- **How to see it:** serve `dist/` and open `http://localhost:8765/?map=dehrun`, press WALK THE BLOCK. After a push: the live address with `?map=dehrun`. Without it, the game is Kohar Valley as before.
+- **What is there:** three terraces of a cobbled street climbing north by two flights of steps; eight houses of one to three storeys; an open furnished house, a shop and a workshop; retaining walls, yards, gates, awnings, balconies, wires, lamps; 71 props of 28 kinds. A clear sky with a low sun.
+- **What you can do:** walk the street, the steps and the yards; enter the three open ground floors. **What you cannot:** climb anything. Upper floors, outside stairs, balconies and roofs are geometry until height is built. Nobody else is there and there is no mission; your weapons work.
+- **Assets:** 28.7 MB added (cap 30), all CC0 from Poly Haven, approved by the user before download. The game is 45 MB; Kohar Valley still fetches 16.
+- **Cost:** 92 draw calls, about 305,000 triangles in view from the street (ceilings 500 and 350,000), in the desktop app's browser.
+- **Kohar Valley:** fetches nothing of the new map; its world is Build 20's, number for number.
+- **Safari (B18): OUTSTANDING.** The block is not measured. Two Kohar Valley runs of Build 22 completed: 3.1 to 3.4 ms a frame, p99 5 to 8. The measurement was stopped at the user's word: it took Safari from their work every few seconds. **Safari is not to be taken again in this session without asking first.**
+- **Checks:** 25 suites, 238 checks, all pass (headless). T32 is new (5 checks); 45 deliberate breakages caught.
+- **Found by the new suite, fixed:** E still took Kohar Valley's route log on the look map.
+
+**Decisions for the user (Build 22):**
+- Does the block look good enough to build the map this way? What is wrong with it, in your words?
+- When to measure in Safari (about ten minutes, Safari in front and untouched).
+- Push Build 22, and when.
+- The props are heavy (MAP-03): fewer props, lighter copies, or props only near the viewer.
 
 **The first push of Build 21 failed on GitHub and deployed nothing.** A fault in the new test, not in the game: it compared with a record stored from the Mac, byte for byte, and GitHub's machine differs in the last digits. Fixed in the tests only (TEST-08): six suites now compare with the older build taken from its commit and run on the spot. Rule: no suite may depend on a record stored from one machine.
 
@@ -130,7 +147,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** map build 2, the look slice (asset list for approval first). Play Build 20 together (checklist in the roadmap). Squad codes (F.12) remain filed, so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** the user's verdict on the look slice; the Safari measurement when the user says; then map build 3, player height. Play Build 20 together (checklist in the roadmap). Squad codes (F.12) remain filed, so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
@@ -142,6 +159,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - AMB-06 residue: a few unseen enemies per 300 arrivals are withdrawn and re-sent at the north-west corner of the courtyard.
 - AMB-05: the announced spawn sector loosens when its side is walled off.
 - AI-07: dead enemies keep attack tokens (every mode).
+- MAP-03: the look slice's props are heavy, everything in the block is always drawn, bullets pass through small props, no plants (eleven items in the roadmap). B18: the block is not measured in Safari.
 - MAP-01: the map cannot be changed inside a running page (co-op will need it). MAP-02: a few map values nothing reads.
 - REV-02: the downed player does not see their own body; nothing points to a downed teammate but the distance in the line; B14 still unmeasured.
 - EQ-02: the guest sees its own throw a moment late; the teammate's figure always shows a rifle; enemies do not react to grenades; smoke's drawing cost is unmeasured.
@@ -168,7 +186,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for lookslice-b22, mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

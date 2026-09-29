@@ -24,8 +24,9 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
  docEl.requestFullscreen=async()=>{calls.requestFullscreen++;doc.fullscreenElement=docEl;fire(docL,'fullscreenchange');};
  const win=globalThis.window={addEventListener:add(winL)};globalThis.innerWidth=1200;globalThis.innerHeight=750;globalThis.devicePixelRatio=1;globalThis.requestAnimationFrame=noop;
  // Asset URLs the game requests are recorded (DEPLOY-01 checks that each carries its content hash).
- const assetRequests=[];Three.TextureLoader.prototype.load=function(url){assetRequests.push(url);return new Three.Texture()};
- globalThis.fetch=async path=>(assetRequests.push(path),{ok:true,json:async()=>JSON.parse(fs.readFileSync(new URL('dist/'+path,projectRoot),'utf8'))});
+ const assetRequests=[];Three.TextureLoader.prototype.load=function(url,onLoad){if(String(url).startsWith('blob:')||String(url).startsWith('data:')){const t=new Three.Texture();if(onLoad)queueMicrotask(()=>onLoad(t));return t;}assetRequests.push(url);return new Three.Texture()}; // a model's own pictures (Build 22) are part of its file, not requests
+ globalThis.self??=globalThis;
+ globalThis.fetch=async path=>{assetRequests.push(path);const file=new URL('dist/'+String(path).split('?')[0],projectRoot);if(!fs.existsSync(file))return {ok:false,status:404};const data=fs.readFileSync(file);return {ok:true,status:200,json:async()=>JSON.parse(data.toString('utf8')),arrayBuffer:async()=>data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength)};};
  class Renderer{constructor(){this.domElement=element();const d=this.domElement;d.requestPointerLock=()=>{calls.requestPointerLock++;if(lockPolicy==='grant'){queueMicrotask(()=>{doc.pointerLockElement=d;fire(docL,'pointerlockchange');});return Promise.resolve();}if(lockPolicy==='deny'){queueMicrotask(()=>fire(docL,'pointerlockerror'));return Promise.reject(new Error('The user has exited the lock before this request was completed.'));}if(lockPolicy==='pending')return new Promise(noop);};this.shadowMap={};this.capabilities={getMaxAnisotropy:()=>8};this.info={render:{calls:0,triangles:0}}}setSize(){}setPixelRatio(){}render(){}}
  class RGBELoader{load(url){assetRequests.push(url);}}
  let source=fs.readFileSync(new URL(sourcePath,import.meta.url),'utf8');
@@ -54,7 +55,7 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
    play(){setState('playing');document.pointerLockElement=renderer.domElement;hasPointerLock=true;},
    messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
    // typeof guards keep the harness able to load older builds for baseline comparisons.
-   scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
+   built:typeof built==='undefined'?undefined:built,scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
    occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},resetNav:typeof navEdge!=='undefined'?()=>{navGrid=null;navEdge=null;navComp=null;coverCache=null;}:undefined,fx:typeof fx==='object'?fx:undefined,
    ai:typeof enemyPlan==='function'?{director:()=>director,coverTable,coverQuery,safeSpot,segClear,pathTo,navigationGrid,navComp:()=>navComp,setStage:v=>{stage=v;},humanEyes,objectivePoint,target,extract,intel,startPatrol:typeof startPatrol==='function'?startPatrol:undefined,finish,missionTick:(dt)=>missionTick(dt),aiRng:()=>aiRng}:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined,
    // Build 09 Ambush internals (typeof-guarded so older builds still load).

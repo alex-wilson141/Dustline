@@ -39,7 +39,10 @@ await check('every module URL is versioned: the import map covers every .js file
   for (const f of files) {
     const src = fs.readFileSync(path.join(dist, f), 'utf8');
     if (f === 'three.module.js') { assert(!/^\s*(import|export)\b[^;]*\bfrom\s*['"]/m.test(src), 'vendored three.js imports nothing'); continue; }
-    assert(!/\bimport\s*\(|new\s+(Shared)?Worker\s*\(|importScripts\s*\(/.test(src), `${f}: no dynamic imports or workers (they would need their own versioned URL)`);
+    assert(!/new\s+(Shared)?Worker\s*\(|importScripts\s*\(/.test(src), `${f}: no workers (they would need their own versioned URL)`);
+    // Build 22: a module may be fetched later (a map that is asked for), but only by a plain name written out in full that
+    // the import map versions like any other; a name worked out at run time would escape the fingerprint.
+    for (const m of src.matchAll(/\bimport\s*\(([^)]*)\)/g)) { const spec = m[1].trim().match(/^'(\.\/[\w.-]+\.js)'$/)?.[1]; assert(spec, `${f}: import(${m[1]}) names a module in full`); assert(importMap.imports[spec], `${f}: ${spec} is in the import map`); assert(fs.existsSync(path.join(dist, spec)), `${spec} exists`); imports++; }
     for (const [, spec] of src.matchAll(/(?:^|\n)\s*(?:(?:import|export)\b[^;'"]*?\bfrom|import)\s*['"]([^'"]+)['"]/g)) {
       imports++; assert(spec.startsWith('./') && !spec.includes('?'), `${f}: import ${spec} is a plain relative path`);
       assert(importMap.imports[spec], `${f}: ${spec} is in the import map`); assert(fs.existsSync(path.join(dist, spec)), `${spec} exists`);
@@ -61,7 +64,7 @@ await check('every asset URL is versioned: code requests assets only through ass
   walk('assets');
   assert.deepEqual(Object.keys(ASSET_VERSIONS).sort(), onDisk.sort(), 'one hash per bundled asset');
   for (const f of onDisk) assert.equal(ASSET_VERSIONS[f], crypto.createHash('sha256').update(fs.readFileSync(path.join(dist, f))).digest('hex').slice(0, 10), `${f} hash`);
-  for (const f of fs.readdirSync(dist).filter(f => f.endsWith('.js') && !f.startsWith('.') && f !== 'build.js' && f !== 'three.module.js')) {
+  for (const f of fs.readdirSync(dist).filter(f => f.endsWith('.js') && !f.startsWith('.') && f !== 'build.js' && f !== 'three.module.js' && f !== 'GLTFLoader.js')) { // the vendored loader names a path in an example in its comments; it fetches nothing itself (the kit hands it a model's bytes)
     const src = fs.readFileSync(path.join(dist, f), 'utf8');
     for (const m of src.matchAll(/['"`]assets\//g)) assert.equal(src.slice(m.index - 9, m.index), 'assetURL(', `${f}: asset path at ${m.index} goes through assetURL`);
   }
