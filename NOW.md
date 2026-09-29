@@ -2,11 +2,13 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 20 is LIVE** (pushed 2026-09-29, GitHub run 36607988021 passed). **Build 21 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
+**Build 21 is LIVE** (pushed 2026-09-29; GitHub run 36631040830 passed). Pushing publishes; wait for the user's word.
+
+**The first push of Build 21 failed on GitHub and deployed nothing.** A fault in the new test, not in the game: it compared with a record stored from the Mac, byte for byte, and GitHub's machine differs in the last digits. Fixed in the tests only (TEST-08): six suites now compare with the older build taken from its commit and run on the spot. Rule: no suite may depend on a record stored from one machine.
 
 **Build 21 in short: Kohar Valley as map data (map build 1 of 9). Nothing visible changed.**
 - **What moved:** every place, edge, grid size, start, objective, enemy post and route, and the Ambush arena, from the code into one description, `dist/map-kohar.js`. `dist/maps.js` holds the maps and the active one. Kohar Valley is map 1 and the only map.
-- **Proof it is the same:** the world built from the map is Build 20's, number for number (27 parts); every moved list equals the Build 20 sources; Story and Skirmish replay the Build 09 trace and solo Ambush replays Build 15.
+- **Proof it is the same:** the world built from the map is Build 20's, number for number (27 parts; Build 20 is run from its commit on the same machine); every moved list equals the Build 20 sources; Story and Skirmish replay the Build 09 trace and solo Ambush replays Build 15.
 - **Proof the data governs:** 411 values changed one at a time, each changes the game; 84 more for the props. A second small map from the same kind of description is deployed and played in Story, Skirmish and Ambush.
 - **Safari (B17):** Build 21 3.2 to 3.6 ms a frame, Build 20 3.3 to 3.6 ms, p99 6 to 9; start-up 233 to 265 ms against 224 to 267 ms. No difference that can be measured.
 - **Checks:** 24 suites, 233 checks, all pass (headless). T31 is new (7 checks, about four minutes); 125 deliberate breakages caught.
@@ -128,7 +130,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** decide on pushing Build 21; then map build 2, the look slice (asset list for approval first). Play Build 20 together (checklist in the roadmap). Squad codes (F.12) remain filed, so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** map build 2, the look slice (asset list for approval first). Play Build 20 together (checklist in the roadmap). Squad codes (F.12) remain filed, so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
