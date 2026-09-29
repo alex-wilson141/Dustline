@@ -4,6 +4,8 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 
 **Build 19 is LIVE** (pushed 2026-09-29). **Build 20 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
 
+**Step A reported (2026-09-29): second map with height (E33).** Report only; nothing built or downloaded. Recommended order: map as data, player height, enemy height, co-op height, look slice, layout, dressing, Ambush rooftop arena, Story last. Waiting for the user's decisions.
+
 **First two-player playtest (user and a friend, 2026-09-29, live build).** Four findings: kicked from the lobby when a game ends; enemy bullets "10 each"; a precision-rifle "body shot" on a teammate did 99; no revive. Build 20 answers them.
 
 **Build 20 in short: co-op fixes and revive.**
