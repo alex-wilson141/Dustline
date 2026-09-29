@@ -233,8 +233,8 @@ await check('friendly fire: a player\'s shots damage the teammate and resolve id
   // Killing the teammate: in Ambush the teammate is down and the run goes on, with no kill and no points for it.
   for (const shooter of ['host', 'guest']) { const {p, a, v} = await setup(shooter, {hpEach: 20}), {host, guest} = p; fireAt(a, v.player.clone().setY(v.player.y + 1.2)); p.sync();
     assert.equal(v.amb.down, true, `${shooter} shot the teammate down`); assert.equal(a.amb.down, false); assert.equal(host.state().state, 'playing'); assert.equal(guest.state().state, 'playing'); assert.deepEqual([host.amb.kills, host.amb.mate.kills, host.amb.points, host.amb.mate.points], [0, 0, AMBUSH.startPoints, AMBUSH.startPoints], 'no kill and no points for hitting a teammate'); assert.equal(host.kills(), 0); }
-  // In Story co-op the operation fails, as it does for any teammate death.
-  { const {p, a, v} = await setup('host', {mode: 'coop', hpEach: 20}), {host, guest} = p; fireAt(a, v.player.clone().setY(v.player.y + 1.2)); p.sync(); assert.equal(host.state().state, 'ended'); assert.equal(guest.state().state, 'ended'); assert.match(host.el('report').textContent, /^Your co-op teammate was killed/); }
+  // In Story co-op the teammate is down, as in Ambush (Build 20; until then the operation failed).
+  { const {p, a, v} = await setup('host', {mode: 'coop', hpEach: 20}), {host, guest} = p; fireAt(a, v.player.clone().setY(v.player.y + 1.2)); p.sync(); assert.equal(host.state().state, 'playing'); assert.equal(guest.state().state, 'playing'); assert.equal(host.fall.fallen.mate.down, true, 'Build 20: the teammate is down and can be revived'); assert.equal(guest.fall.fallen.me.down, true); }
   report.friendlyFire = table;
 });
 

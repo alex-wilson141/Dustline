@@ -37,7 +37,7 @@ await check('menu: Ambush is a third mode; since Build 16 it can be selected whi
   const html = fs.readFileSync(new URL('dist/index.html', projectRoot), 'utf8'), src = fs.readFileSync(new URL('dist/game.js', projectRoot), 'utf8');
   assert.match(html, /data-mode="story"[^]*data-mode="skirmish"[^]*data-mode="ambush"[^]*data-mode="coop"/, 'tab order Story, Skirmish, Ambush, Private co-op');
   // Build 16: Ambush can be chosen while a teammate is connected (two-player Ambush, T26); choosing it keeps the connection.
-  assert(/ab\.disabled=false/.test(src) && /next!=='coop'&&!\(next==='ambush'&&peer\.connected\)&&peer\.pc\)peer\.close\(\)/.test(src), 'the Ambush tab is open while connected and keeps the session');
+  assert(/ab\.disabled=false/.test(src) && src.includes("if(peer.connected){if(peer.role==='guest'&&!told)") && src.includes("else if(next!=='coop'&&peer.pc)peer.close();"), 'the Ambush tab is open while connected and no tab ends a session (Build 20)');
   const base = await createGame(); base.prepare({clearLane: false}); const solids0 = base.solids.length, occ0 = base.occluders.length;
   const g = await createGame(); g.prepare({clearLane: false}); const storyTitle = g.el('brief-title').textContent;
   // Build 16: with a teammate connected the tab opens two-player Ambush and says so; back to Story for the rest of this check.

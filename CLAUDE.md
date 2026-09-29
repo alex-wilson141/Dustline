@@ -22,6 +22,16 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 20 (local, 2026-09-29): co-op fixes and revive, after the user's first two-player playtest. **The session outlives the
+mission: nothing in the game may close the connection except the DISCONNECT button and a lost connection.** `goMenu()` and
+`setMode()` close nothing while connected; `lobby` takes the other player along to the menu once a mission is over, `left`
+says a guest left one in progress. Co-op modes are `LINKABLE` (`coop` = Story co-op, `skirmish` when deployed while connected,
+`ambush` when deployed while connected); `net()` covers all three. **In co-op a player whose health runs out is down, not
+dead** (`humanDown`, `fallen`, `REVIVE`: 4 s to revive, 30 s to wait, 2 m, 40 health); the host keeps the clocks (`fallTick`)
+and sends them in every snapshot (`fall`); the mission ends when both are down at once, and in Story and Skirmish when a
+downed player is not revived in time. Alone, going down ends the mission as it always did. A player's hit shape is a body and
+a head (`BODY`, `boxEntry`); do not widen the head. Enemy damage to players (12 to 22 times armor) is intended and unchanged.
+To measure in Safari, bring it to the front with `open -a Safari`; AppleScript's `activate` does not do it.
 Build 19 (local, 2026-09-29): equipment. `dist/equipment.js` holds every number and pure rule (sidearm, knife, the three
 throwables, loadouts, prices); change them there. The weapon in hand is `hand()` / `handConfig()` (slot 0 rifle, 1 sidearm);
 never read `weapon` or `gunConfig()` for what is being fired, shown or bought for. Rifles must stay what they were:
@@ -191,15 +201,16 @@ node tests/test-ambush-coop-b16.mjs
 node tests/test-squad-b17.mjs
 node tests/test-fair-b18.mjs
 node tests/test-equipment-b19.mjs
+node tests/test-revive-b20.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 19 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 20 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness and 14 equipment checks (216 in 22 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment and 10 session-and-revive checks (226 in 23 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

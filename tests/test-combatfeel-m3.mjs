@@ -250,13 +250,18 @@ await check('mission failure text names who was killed; the guest gets its own p
   assert.equal(solo.state().state, 'ended'); assert.match(solo.el('report').textContent, /^You were killed\./);
   const host = await game('host'); host.set({hp: 1});
   host.aiHit({pos: host.player, a: null}, new THREE.Vector3(0, 1.4, 40), host.player.clone().add(new THREE.Vector3(0, 1.4, 0)));
-  assert.match(host.el('report').textContent, /^You were killed\./);
-  assert.match(host.messages.find(m => m.type === 'end').reason, /^Your co-op teammate was killed\./, 'guest is told the host died');
+  // Build 20: in co-op a player whose health runs out is down and can be revived; the operation fails when both are down at
+  // once, or when a downed player is not revived in time. The text still names who, from each player's point of view.
+  assert.equal(host.state().state, 'playing', 'the host is down, the operation goes on'); assert.equal(host.messages.some(m => m.type === 'end'), false);
+  host.remote.hp = 1; host.remote.g.visible = true; host.aiHit({pos: host.remote.g.position, a: host.remote}, new THREE.Vector3(0, 1.4, 40), host.remote.g.position.clone().add(new THREE.Vector3(0, 1.25, 0)));
+  assert.equal(host.state().state, 'ended'); assert.match(host.el('report').textContent, /^Both of you went down\./);
+  assert.match(host.messages.find(m => m.type === 'end').reason, /^Both of you went down\./, 'the guest is told the same');
   const host2 = await game('host'); host2.remote.hp = 1; host2.remote.g.visible = true;
   host2.aiHit({pos: host2.remote.g.position, a: host2.remote}, new THREE.Vector3(0, 1.4, 40), host2.remote.g.position.clone().add(new THREE.Vector3(0, 1.25, 0)));
-  assert.match(host2.el('report').textContent, /^Your co-op teammate was killed\./);
-  const end = host2.messages.find(m => m.type === 'end'); assert.match(end.reason, /^You were killed\./, 'guest is told it died');
-  const guest = await game('guest'); guest.receive(end); assert.match(guest.el('report').textContent, /^You were killed\./);
+  assert.equal(host2.state().state, 'playing', 'the teammate is down, the operation goes on'); let clock = 1e6; host2.set({hp: 1e9}); host2.frame(clock); for (let i = 0; i < 60 * 31 && host2.state().state === 'playing'; i++) { host2.set({hp: 1e9}); host2.frame(clock += 1000 / 60); }
+  assert.equal(host2.state().state, 'ended', 'not revived in thirty seconds: the operation fails'); assert.match(host2.el('report').textContent, /^Your teammate went down and was not revived in time\./);
+  const end = host2.messages.find(m => m.type === 'end'); assert.match(end.reason, /^You went down and were not revived in time\./, 'guest is told from its own point of view');
+  const guest = await game('guest'); guest.receive(end); assert.match(guest.el('report').textContent, /^You went down and were not revived in time\./);
 });
 
 await check('review gaps: headshot rule pinned at 1.45 m; head flag carried through the real hit path; zoom keeps blood in proportion', async () => {

@@ -2,18 +2,35 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 18 is LIVE** (pushed 2026-09-28; it carries Build 17). **Build 19 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
+**Build 19 is LIVE** (pushed 2026-09-29). **Build 20 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
 
-**Nothing in co-op has been played by two people yet**, and nothing in Build 19 has been played by anyone: it rests on headless tests.
+**First two-player playtest (user and a friend, 2026-09-29, live build).** Four findings: kicked from the lobby when a game ends; enemy bullets "10 each"; a precision-rifle "body shot" on a teammate did 99; no revive. Build 20 answers them.
 
-**Build 19 in short: equipment.**
+**Build 20 in short: co-op fixes and revive.**
+- **The session stays.** Nothing but DISCONNECT or a lost connection ends it. After a mission, L by either player brings both back to the same menu, still connected; the host deploys again without codes. It was broken in Story co-op (always) and by the mode tabs; Ambush kept the session only after a finished run.
+- **Skirmish for two** exists now. Before, choosing Skirmish while connected disconnected you.
+- **Revive:** a player whose health runs out in co-op is down, not dead. The teammate holds E within 2 m for 4 s; the downed player has 30 s and stands up with 40 health. The reviver cannot fire, stab or throw. The mission ends when both are down at once. Not revived in time: in Ambush dead for the run, in Story and Skirmish the operation fails.
+- **Friendly fire, the head:** a player's head is now as narrow as an enemy's. The 99 was a head hit on a Marksman (110 × 0.9), counted because the shape was shoulder-wide to the top. A body hit on a Marksman is 70.2.
+- **Enemy damage: unchanged, as intended.** 12 to 22 a hit before armor: 8.6 to 20.9 by class, 7 to 9 hits to kill.
+- **Safari (B16), measured at last:** 3.2 to 3.6 ms a frame at wave 20 with no throwables, with four smoke clouds around, and standing inside smoke; p99 6 to 8 ms; 60 Hz held. Smoke costs nothing measurable.
+- **Faults the new tests found, fixed:** the host leaving an Ambush run told the guest both players went down; a guest who had left was pulled to the end screen.
+- **Checks:** 23 suites, 226 checks, all pass (headless). T30 is new (10 checks); 55 deliberate breakages caught.
+- **Not verified:** any of it between two homes. The connection in the tests is a stand-in.
+
+**Decisions for the user (Build 20):**
+- Revive: 4 s to revive, 30 s to wait, 40 health afterwards.
+- Should being hit interrupt a revive? It does not.
+- Friendly-fire damage itself (rifle damage × armor, 110 to the head) is unchanged. Lower it?
+- Push Build 20, and when.
+
+**Build 19 in short: equipment** (live).
 - **Sidearm (Z):** every class carries an M9 beside its rifle. In hand in .45 s, 26 a hit, weaker past 12 m, 15 rounds. Rifles are unchanged.
 - **Knife (T):** without changing weapons. 2.3 m, 65 from the front, a kill from behind, once every .8 s.
 - **Throwables (G, hold to cook a frag; Tab changes the item):** fragmentation (170 within 2 m to nothing at 8 m, walls stop it, you are not spared), smoke (5 m, 14 s, nobody sees through it, enemies included), flash (blinds whoever is looking at it). Two of each at most.
 - **Per mode:** Story and Skirmish hand out 2 frag, 1 smoke, 1 flash and three sidearm magazines at every deployment. In Ambush you start with the sidearm and one spare magazine and buy the rest at crates: 1 frag 300, 2 smoke 200, 3 flash 250, and B buys a magazine for the weapon in your hand (sidearm 30). Prices rise with the wave like the others.
 - **Co-op:** the host decides everything; the guest's knife, throws, draws and reloads are judged by what the guest saw and counted from when the guest began them.
 - **Fault found by the new tests and fixed:** the crate prompt named the rifle when the sidearm was in hand.
-- **Safari:** NOT measured (B15): the bench window could not be brought in front. Simulation alone: 0.15 ms a frame with four smoke clouds. **The cost of drawing smoke is unknown; watch the frame rate inside a cloud.**
+- **Safari:** measured in Build 20 (B16): smoke costs nothing measurable.
 - **Checks:** 22 suites, 216 checks, all pass (headless). T29 is new (14 checks); 97 deliberate breakages caught.
 - **This build was interrupted by a power loss** and resumed after a recovery check found the work intact.
 
@@ -21,7 +38,6 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - The keys: Z, T, G, Tab, and 1 2 3 at crates. All in one place (`KEYS`) if you want others.
 - The sidearm's damage (26) and the prices (300 / 200 / 250).
 - Whether your own grenade should hurt your teammate as much as it hurts you (it does).
-- Push Build 19, and when.
 
 **Standing decisions (user, 2026-09-28):**
 - **Ambush never has AI squadmates, in any configuration.** The only teammate there is ever a real player.
@@ -96,12 +112,11 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** play Build 19 solo (checklist in the roadmap), decide on pushing it, play co-op Ambush together, then reviving a downed teammate (F.16) (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** decide on pushing Build 20 and play it together (checklist in the roadmap); then squad codes (F.12), so that connecting once takes a four-letter code (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
 - F.14 friends-only PvP in private lobbies, including deathmatch. PVP-01 and AI-03 are fixed.
-- **F.16 reviving a downed teammate in co-op Ambush** (a few seconds standing over them, exposed): the next co-op feature the user wants.
 - F.15 1v1 deathmatch in a private lobby, an alternative to co-op, never a replacement. PVP-01 and AI-03 are fixed; what remains is listed in the roadmap.
 - M2.07 wallbanging; M3.10 distinct weapon models; M5.10 terrain height variation (E23); F.12 short join codes (Step A reported, E27).
 
@@ -109,6 +124,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - AMB-06 residue: a few unseen enemies per 300 arrivals are withdrawn and re-sent at the north-west corner of the courtyard.
 - AMB-05: the announced spawn sector loosens when its side is walled off.
 - AI-07: dead enemies keep attack tokens (every mode).
+- REV-02: the downed player does not see their own body; nothing points to a downed teammate but the distance in the line; B14 still unmeasured.
 - EQ-02: the guest sees its own throw a moment late; the teammate's figure always shows a rifle; enemies do not react to grenades; smoke's drawing cost is unmeasured.
 - AI-06, AMB-01, AMB-02, AI-05, PORT-01, NAV-02, HUD-01, TEST-07.
 
@@ -133,7 +149,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18 and equipment-b19. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

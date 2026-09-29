@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 19)
+# DUSTLINE — Operation Broken Signal (Build 20)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -62,6 +62,13 @@ The rifle variants are fictional loadouts based on one M4A1 model. Character fac
 Graphics uses automatic resolution scaling by default; choose Performance to reduce resolution and disable shadows. Static scenery is batched, shadows are cached, and AI perception is staggered.
 
 Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`. Three.js r169 is MIT licensed (`dist/THREE-LICENSE.txt`).
+
+## Co-op: one connection, and revive (Build 20)
+
+- **Connect once.** When a mission ends, L brings both of you back to the menu, still connected. The host chooses STORY, SKIRMISH or AMBUSH and deploys again; no new codes. Only DISCONNECT, or a lost connection, ends the session.
+- **Down is not dead.** In co-op a player whose health runs out is down for 30 seconds. Stand within 2 m and hold E for 4 seconds to bring them back with 40 health. While you revive you cannot fire, stab or throw.
+- **The mission ends when both of you are down at once.** A player who is not revived in time is out: in Ambush for the rest of the run, in Story and Skirmish the operation fails.
+- **Your shots still hurt your teammate**: the rifle's damage less their armor, and far more to the head, which is now as small a target as an enemy's.
 
 ## Equipment (Build 19)
 
@@ -213,6 +220,7 @@ node tests/test-ambush-coop-b16.mjs
 node tests/test-squad-b17.mjs
 node tests/test-fair-b18.mjs
 node tests/test-equipment-b19.mjs
+node tests/test-revive-b20.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
