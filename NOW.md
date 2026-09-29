@@ -2,27 +2,36 @@
 
 _Updated 2026-09-28. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 16 is LIVE** (pushed 2026-09-28 at the user's request; the public page says BUILD 16). **Build 17 is committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
+**Build 16 is LIVE.** **Builds 17 and 18 are committed locally and NOT pushed.** Pushing publishes; wait for the user's word.
 
-**Build 16 has not been playtested with a real second player.** The blue teammate's readability at combat distance and the two-player difficulty curve are both unverified.
+**Nothing in co-op has been played by two people yet.** The blue teammate's readability at combat distance, the two-player difficulty and everything in Build 18 are unverified in play.
 
-**User report (2026-09-28):** co-op connected on Build 15 over the public site, on two networks, with no relay. A TURN relay is not currently needed.
+**Standing decisions (user, 2026-09-28):**
+- **Ambush never has AI squadmates, in any configuration.** The only teammate there is ever a real player.
+- **Co-op must be fair between host and guest.** Neither may gain from which machine hosts.
 
-**Build 17 in short: the AI squad is your choice.**
-- **The box:** "AI squad" beside Audio and Blood. One choice per mode. Untouched: on in Story, Skirmish and Story co-op, off in Ambush, as before.
-- **Co-op:** the host's choice governs; the guest's box shows it, greyed out. The real teammate is never a bot and never affected.
-- **Ambush with the squad:** the existing two-player waves, no third curve. Only your own kills count and pay, so the squad makes you safer and poorer.
-- **Story and Skirmish without the squad:** completable alone (checked headless), but you take about 57 % more damage standing at the relay. One amber line warns you. Mission design is unchanged.
-- **Extraction in co-op:** a downed player now banks alongside the survivor. Both down still banks nothing.
-- **Safari frame time with the squad: NOT measured** (B13): Safari was in use and the bench window did not stay in front.
-- **Checks:** 20 suites, 194 checks, all pass (headless). T27 is new (8 checks); 29 breakages caught.
+**Build 18 in short: Ambush fairness and cleanup.**
+- **Ambush squad option removed.** The AI squad box stays for Story, Skirmish and Story co-op; in Ambush it is not shown. The three open items that came with it are confirmed gone (SQUAD-02).
+- **Shots (PVP-01):** every shot is judged against what its shooter was looking at. Cap: 300 ms, which covers about 105 ms each way. A claimed firing position more than 1.7 m off is replaced by the host's.
+- **Guest's rifle, reload and dressing:** as fast as the host's on a delayed or jittery connection.
+- **Sight:** enemies look for the guest at the height they use for the host, standing or crouched.
+- **Arrivals:** each wave is dealt equally to the two players at any distance apart; never more than one apart in tests from 3 m to 70 m.
+- **Pause and start:** either player's P holds the mission for both; the run waits until the guest is in.
+- **Spectator camera:** stops short of walls, roofs and props.
+- **Not equal and not changed:** if the host leaves, the guest's run ends (needs host migration); only the host deploys; the guest sees its own health a snapshot later.
+- **Found, not fixed (AI-07):** dead enemies keep their attack tokens, so living enemies sometimes stand without firing. Every mode, both players alike. Fixing it changes solo difficulty and the traces.
+- **Safari:** **NOT measured** (B13, B14). The bench window could not be brought in front of Safari's other window, so it never drew a frame. The Build 17 squad configuration it was meant to measure no longer exists. Host simulation alone, in Node: 0.16 ms mean per frame at wave 20.
+- **Checks:** 21 suites, 202 checks, all pass (headless). T28 is new (8 checks).
 
-**Decisions for the user (Build 17):**
-- Ambush with a squad uses the two-player waves. If the squad carries the run, options: more hostiles for a squad (2 × solo), or leave it.
-- Solo Story: leave as is behind the warning, or add a solo setting (fewer reinforcements, lower alive cap).
-- Push Build 17, and when.
+**Decisions for the user (Build 18):**
+- Push Build 18 (includes Build 17), and when.
+- The cap: 300 ms. Higher helps a guest on a slow connection and lets the host be hit further "around corners".
+- AI-07: fix it (enemies fire more, solo Ambush gets harder, traces re-recorded) or leave it.
+- Host leaving ends the guest's run: accept, or plan host migration.
 
 **Live:** https://alex-wilson141.github.io/Dustline/ · repository https://github.com/alex-wilson141/Dustline (public). Every push to `main` goes live once the stamp check and all suites pass on GitHub. To publish: `node tools/stamp-build.mjs`, run the suites, commit, `git push`, watch the Actions tab (about three minutes), then both players reload.
+
+**Build 17 in short: the AI squad is your choice in Story, Skirmish and Story co-op** (the Ambush part was removed in Build 18). Untouched: on. In co-op the host's choice governs. Alone you take about 57 % more damage at the relay; one line warns you. At a co-op extraction a downed player banks alongside the survivor.
 
 **Build 16 in short: Ambush for two real players, never an AI squad.**
 - **How to start:** connect as before (PRIVATE CO-OP, exchange codes), then the host picks AMBUSH and presses DEPLOY BOTH PLAYERS. The guest's page follows.
@@ -71,24 +80,26 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Keep "North houses" or return to the old name.
 - Are the markings enough without any HUD pointer?
 
-**Next:** play Build 16 together (it is live), decide on pushing Build 17 (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
+**Next:** decide on pushing Build 18, play co-op Ambush together, then reviving a downed teammate (F.16) (checklist in the roadmap's "Recommended next task"). Then the Build 14 playtest and the economy decision, then squad codes (F.12) or M2.06 option 2 (hybrid ragdoll).
 
 **Filed, not started:**
 - F.13 co-op means real players only in every mode including Story; Story missions are built for four, so fewer players will be harder; a difficulty option may be needed.
-- F.14 friends-only PvP in private lobbies, including deathmatch. **Blocked by PVP-01** (AI-03 is fixed).
-- F.15 1v1 deathmatch in a private lobby, an alternative to co-op, never a replacement. **Blocked by PVP-01** (the host decides player-against-player shots); AI-03 is fixed.
+- F.14 friends-only PvP in private lobbies, including deathmatch. PVP-01 and AI-03 are fixed.
+- **F.16 reviving a downed teammate in co-op Ambush** (a few seconds standing over them, exposed): the next co-op feature the user wants.
+- F.15 1v1 deathmatch in a private lobby, an alternative to co-op, never a replacement. PVP-01 and AI-03 are fixed; what remains is listed in the roadmap.
 - M2.07 wallbanging; M3.10 distinct weapon models; M5.10 terrain height variation (E23); F.12 short join codes (Step A reported, E27).
 
 **Found, not fixed:**
 - AMB-06 residue: a few unseen enemies per 300 arrivals are withdrawn and re-sent at the north-west corner of the courtyard.
 - AMB-05: the announced spawn sector loosens when its side is walled off.
-- PVP-01: player-against-player shots are decided by the host, so timing favours the host (matters for friendly fire today; blocks PvP).
+- AI-07: dead enemies keep attack tokens (every mode).
 - AI-06, AMB-01, AMB-02, AI-05, PORT-01, NAV-02, HUD-01, TEST-07.
 
 **Decisions on file:**
 - Ambush signposting is the full map plus markings on the objects: no masts, no HUD waypoint lines, no HUD area list, no minimap in Ambush.
 - The solo Ambush curve (2 → 9 alive) is confirmed by play.
-- The AI squad is the player's choice per mode since Build 17 (defaults: on in Story and Skirmish, off in Ambush); in co-op the host's choice governs; the co-op teammate is always a real player.
+- Ambush never has AI squadmates (standing). The AI squad is the player's choice in Story, Skirmish and Story co-op; in co-op the host's choice governs; the co-op teammate is always a real player.
+- Co-op is fair between host and guest (standing): anything that judges, pays, spawns or times must treat both alike.
 - Ambush co-op: points per player, barricades shared, crate purchases individual; one player down does not end the run (user, 2026-09-28).
 - The setting stays fictional: environment variety is wanted, but no maps tied to real conflicts.
 - Free assets only (Rocketbox + Mixamo).
@@ -105,7 +116,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16 and squad-b17. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17 and fair-b18. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.
