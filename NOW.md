@@ -1,8 +1,22 @@
 # NOW — DUSTLINE current state
 
-_Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
+_Updated 2026-09-30. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 24 is committed locally and NOT pushed** (map build 3 of 9, player height). **Build 23 is LIVE.** Pushing publishes; wait for the user's word.
+**Build 25 is committed locally and NOT pushed** (map build 4 of 9: kit interiors and the customs house). **Build 24 is LIVE** (pushed 2026-09-30; GitHub run 36664250631 passed; token `2d9723fd9b63`). **The user plays locally and says when a build is to be published: do not push. Do not take Safari: give bench URLs.**
+
+**Build 25 in short: the kit builds interiors, and the customs house stands on a square south of the block** (`http://localhost:8765/?map=dehrun`, WALK THE BLOCK).
+- **How to reach it:** you start on the lowest terrace facing north; turn round and walk south down the street through the gate (it stands open now) onto the square. The customs house is the big building in front of you: 26 × 18 m, three storeys, a roof. Doors on all four sides (west and east doors open into the corridor; north and south doors into the halls). Inside: a corridor east–west on every floor, rooms off it (24 in all), the **west stair** at the corridor's west end on the north side (up: the left flight, the landing, back on the right flight; you come out into the corridor of the floor above), the **east stair** at the east end on the south side. Both go from the ground to the roof and come out through small stair heads with a door. On the roof: parapet .6 m (Space pulls you onto it; stepping off is a 10.4 m fall that costs about three quarters of your health, and you cannot step off where you would land under a window sill or against a door frame), two tanks. Down again by either stair.
+- **The kit:** rooms as rectangles per storey, partitions along their shared edges with doors (leaves swung open), corridors are rooms too, dog-leg stairs with a half landing and a railing of posts under a sloping handrail, stair heads on the roof, furniture on every floor (light models only). Doors in the customs house: 1.3 m (E41); the block's doors stay 1.05 m.
+- **What changed in movement (all maps with a space, i.e. Dehrun):** stairs are walked *down* tread by tread (before, the body fell from tread to tread); a body against a wall or under a sill can slide out; a body that lands overlapping something is pushed clear; the body does not step off into a gap narrower than itself; seams between slabs are no holes; over a hole narrower than itself the body rests on what is under its sides; posts and rails are no ledges; tanks stop you.
+- **Checks:** 28 suites, 260 checks, all pass (headless). T35 is new (8 checks: the building, every floor, every room, both stairs both ways, the roof and its edges, a flood of 39,101 places with a way back from each, 43 doorways at the enemies' width, the block unchanged). Kohar Valley identical (T31, the three traces). Build 24's kit and description replayed from its commit: the new kit makes the same boxes from the old description. Breakage pass: see the roadmap's change log.
+- **Safari (B21): awaiting the user.** Bench pages (server on 8770 from a scratch copy; never in `dist/`): `http://localhost:8770/b25/?bench=1&case=none` · `http://localhost:8770/b25/?map=dehrun&bench=look&case=start` · `http://localhost:8770/b25/?map=dehrun&bench=look&case=climb` · `http://localhost:8770/b25/?map=dehrun&bench=look&case=arena`. Headless: 87 draw calls, 491,000 triangles with everything drawn (ceilings 700 / 700,000).
+- **Found, not fixed (E41, MAP-05):** the block's 1.05 m doors leave .89 m between their frame posts, 1 cm less than a .45 m body needs (one number to change, your word); a .45 m body cannot begin a .35 m-tread stair under the player's stepping rule (enemies need their own stair rule, map build 5); open door leaves stop nobody.
+
+**Decisions for the user (Build 25):**
+- Is the customs house big enough and right for Ambush? (My judgement: yes for the size and the ways through it; the layout build will need to decide where the barricades and crates go — corridor doors and stair openings are the natural gates.)
+- The block's doors: widen to 1.2 or 1.3 m (changes the block) or leave.
+- Next build: enemy height and navigation (recommended, with the customs house as the proving ground), or the layout.
+
 
 **Build 24 in short: height on the look-slice block** (`http://localhost:8765/?map=dehrun`, WALK THE BLOCK; Kohar Valley is untouched: no space, its flat lines are the same text, the three traces pass).
 - **What to try:** walk up both flights and watch your feet take the treads. Jump (Space) on the spot: .7 m. Into the open house (left, middle terrace), up the stair on the far wall to the upper room, the ladder by the east wall to the roof; walk to the parapet, press Space to pull yourself onto it, step off and fall to the street (about a quarter of your health). Back onto a ladder by walking backwards over its top; Space lets go. The counter of the shop: Space pulls you onto it, crouch (C) under the shutter to get in. The south window of the open house (from the yard behind it): Space pulls you onto the sill, walk in. The workshop (left, lowest terrace): its shutter is half down, crouch to get under it and try to stand up. Walk off the balcony over the street. Press M: the map says what you stand on and how high.
@@ -16,7 +30,6 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - The fall curve (none to 3 m, fatal at 12, gentle start) and the jump (.7 m).
 - No firing on ladders: keep?
 - Next build: the kit's interiors and the arena (recommended), or enemy height first.
-- Push Build 24, and when.
 
 **Build 23 is LIVE** (Builds 22 and 23 pushed together on 2026-09-30 UTC; GitHub run 36652816925 passed; the live page says BUILD 23, token `7f8e1ae1dd02`). The block is at the live address with `?map=dehrun`. Pushing publishes; wait for the user's word.
 

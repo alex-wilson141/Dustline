@@ -25,6 +25,24 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 25 (local, 2026-09-30): kit interiors and the customs house (house K), map build 4 of 9. **The kit builds a storey's
+`rooms` (rectangles that tile the inside; a corridor among them) into partitions along every shared edge, with the storey's
+`doors` (points on those edges; leaves swung open, 1.3 m in K) and a plain `open` way into each stair; a `stair` climbs a storey
+in two flights and a half landing (treads .35 by the storey's sixteenth; a tread shorter than the body's radius is reached two at
+a time and blocks) with a railing of posts between the flights, cuts the floor above by itself and, with a `head`, comes out on the
+roof through a small house with a door.** Never describe a well for a stair by hand; never put a window where a flight runs
+against the wall. The house's tanks stand in a body's way (`tankBoxes`, in the space only). `dist/space.js` gained five rules,
+all reaching the block too: a box's footprint includes its edges (a seam is no hole); a walking body over a hole narrower than
+itself rests on what is within its lean (`floor(..., feet)`; a falling body lands on what is straight under it); a body keeps its
+feet down any step no higher than it can step up (stairs are walked down tread by tread); a move that only lessens an existing
+overlap is allowed (`passable`: a body against a wall or under a sill slides out, never further in); a body that lands overlapping
+something is pushed clear (`settle`), and it does not step off into a gap narrower than itself (the drop is refused where no push
+frees it); a box narrower than `stance` (.2 m: a post, a rail, a beam end) stops a body but holds none up (`thin`). A map may aim its sun (`sun.target`; Kohar has none). The
+customs house stands on a walled square south of the block's gate (which stands open: a gate `ajar` past .6 bars nothing in 2D);
+houses S1/S2 and one field wall moved beyond it. T35 replays Build 24's kit and description from `8e92bf3` and requires the new
+kit to make the very same boxes from the old description. Found, not fixed (E41): the block's 1.05 m doors leave .89 m between
+their frame posts, less than a .45 m body needs; a .45 m body cannot begin a .35 m-tread stair under the player's stepping rule
+(the enemies' own stair rule is map build 5's).
 Build 24 (local, 2026-09-30): player height on Dehrun Terraces, map build 3 of 9. **A map that brings a `space` (the kit builds one from
 its boxes: `dist/space.js`) gives the body a real height; Kohar Valley brings none and runs its flat lines, which T34 checks as
 unchanged text: never edit the `else` branch of the movement, the camera jump or `blocked` for a height feature.** The body:
@@ -259,15 +277,16 @@ node tests/test-mapdata-b21.mjs
 node tests/test-lookslice-b22.mjs
 node tests/test-kit-b23.mjs
 node tests/test-height-b24.mjs
+node tests/test-arena-b25.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 24 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 25 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit and 8 height checks (252 in 27 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height and 8 arena checks (260 in 28 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

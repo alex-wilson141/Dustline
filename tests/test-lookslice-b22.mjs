@@ -49,7 +49,7 @@ await check('kohar', 'Kohar Valley fetches nothing of the new map: the modules i
   const game = SOURCE ? fs.readFileSync(SOURCE, 'utf8') : read('game.js'), {KOHAR} = await import(new URL('dist/map-kohar.js', projectRoot));
   for (const t of ['WORLD.sky.environment??.35', 'WORLD.sky.background??.75', 'WORLD.sky.ambient??1.6', 'WORLD.sun.colour??0xffe6c2', 'WORLD.sun.power??3.6', 'WORLD.terrain.surface||groundY', 'LOOK=WORLD.look||null']) assert(game.includes(t), `the game keeps ${t}`);
   for (const k of ['environment', 'background', 'ambient']) assert(!(k in KOHAR.sky)); for (const k of ['colour', 'power']) assert(!(k in KOHAR.sun)); assert(!('surface' in KOHAR.terrain) && !('look' in KOHAR) && !('build' in KOHAR) && !('block' in KOHAR));
-  assert.match(read('index.html'), /BUILD 24/);
+  assert.match(read('index.html'), /BUILD 25/);
   report.kohar = {modulesLoaded: graph.length, assetsAskedFor: asked.length, drawn: d, note: 'that its world is Build 20\'s, number for number, is checked by T31 on this same build'};
 });
 
@@ -94,7 +94,7 @@ await check('served', 'every file of the new map is served: a web server over di
 
 await check('ceilings', 'the block stays under the ceilings with every model in place: draw calls under 700 and triangles under 700,000 (raised after B19), counted over everything that is drawn; each kind of prop is drawn once per part however many stand there', async () => {
   const g = await dehrun(), d = drawn(g), props = DEHRUN.block.props.length;
-  assert(d.calls <= CEILING.draws, `${d.calls} draw calls`); assert(d.triangles <= CEILING.triangles, `${d.triangles} triangles`); assert(d.calls > 40 && d.triangles > 150000, 'the block is there'); assert(d.triangles < 400000, 'the block itself has not grown past what was measured in B19 without a new measurement');
+  assert(d.calls <= CEILING.draws, `${d.calls} draw calls`); assert(d.triangles <= CEILING.triangles, `${d.triangles} triangles`); assert(d.calls > 40 && d.triangles > 150000, 'the block is there'); assert(d.triangles < 600000, 'the map has not grown past what was measured in B19 and B20 by more than the customs house added in Build 25 (its measurement is B21)');
   assert.equal(d.propKinds, kinds.length); const parts = []; g.scene.traverse(o => { if (o.userData.prop) parts.push(o); }); assert(parts.every(o => o.isInstancedMesh && o.count === DEHRUN.block.props.filter(p => p[0] === o.userData.prop).length), 'one drawing per part for all of a kind'); assert(parts.length < props, `${parts.length} drawings for ${props} props`);
   assert.equal(Math.round(g.built.stats.propTriangles), Math.round(parts.reduce((s, o) => s + (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count, 0)));
   assert.equal(g.scene.children.filter(o => o.isLight).length, 3, 'no light source is added (sky, sun, the lamp in the open house)');
@@ -115,12 +115,12 @@ await check('walk', 'the block can be walked as its description says: the viewer
   assert(free(-4.37, 5) && free(-3.4, 5) && free(-5.4, 5), 'through the door of the open house'); assert(!free(10.83, 10), 'not through the shop\'s window'); assert(!free(-4.37, 7.2), 'not through its wall');
   assert(free(4.37, 7.1), 'through the door of the shop'); assert(!free(4.37, 10.9), 'not over its counter'); assert(free(-5.37, 28.5), 'into the workshop');
   for (const h of DEHRUN.block.houses.filter(h => !h.enter)) assert(!free((h.x[0] + h.x[1]) / 2, (h.z[0] + h.z[1]) / 2), `${h.id} is closed`);
-  assert(!free(0, 44.2) && !free(0, -30.2) && !free(-24, 30) && !free(24, -10), 'the block is closed all round'); assert(!free(10, 16.7) && !free(-10, -6.3), 'the retaining walls hold'); assert(!free(1.85, 18.5), 'the sides of the steps hold');
+  assert(free(0, 44.2) && !free(0, 80.2) && !free(0, -30.2) && !free(-24, 30) && !free(24, -10) && !free(-22, 60) && !free(22, 70), 'the block and the square are closed all round; the gate between them stands open (Build 25)'); assert(!free(10, 16.7) && !free(-10, -6.3), 'the retaining walls hold'); assert(!free(1.85, 18.5), 'the sides of the steps hold');
   // Nothing is asked of the viewer: beside the place where Kohar Valley's route log would lie, no prompt appears and E does nothing.
   g.player.set(-8, g.groundY(-8, 6), 6); const before = g.el('radiotext').textContent; let prompts = 0; run(1, () => { if (g.el('interact').textContent) prompts++; }); g.press('KeyE'); g.release('KeyE'); run(.2);
   assert.equal(prompts, 0, 'no prompt'); assert.equal(g.getStage(), 0); assert.equal(g.el('radiotext').textContent, before); assert.equal(g.kills(), 0);
   // The ground that is drawn lies under everything that is built: nowhere in the block does it reach the ground that is walked on.
-  for (let x = -23; x <= 23; x += 1.5) for (let z = -29; z <= 43; z += 1.5) assert(g.terrainAt(x, z) <= g.groundY(x, z) - .25, `the drawn ground comes through at ${x}, ${z}`);
+  for (let x = -23; x <= 23; x += 1.5) for (let z = -29; z <= 79; z += 1.5) assert(g.terrainAt(x, z) <= g.groundY(x, z) - .25, `the drawn ground comes through at ${x}, ${z}`);
   const p = g.ai.pathTo(new THREE.Vector3(0, 0, 37), new THREE.Vector3(0, 0, -24)); assert(p.length > 20 && Math.hypot(p.at(-1).x, p.at(-1).z + 24) < 3, 'a way from the start to the top');
   report.walk = {start: DEHRUN.starts.player, reached: [+g.player.x.toFixed(1), +g.player.z.toFixed(1)], levels: L, open: DEHRUN.block.houses.filter(h => h.enter).map(h => h.id), closed: DEHRUN.block.houses.filter(h => !h.enter).map(h => h.id), cannot: 'upper floors, outside stairs, balconies and roofs: height is not built'};
 });

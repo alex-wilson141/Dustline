@@ -39,12 +39,14 @@ await check('openings', 'windows and doors are made, not holes: every window of 
   const windows = openings(B.houses, o => o.kind === 'window'), doors = openings(B.houses, o => o.kind === 'door'), count = s => list.filter(b => b.surface === s).length;
   assert(windows.length >= 30 && doors.length >= 9, `${windows.length} windows, ${doors.length} doors`);
   assert.equal(count('pane') + count('clear'), windows.length, 'one pane of glass a window'); assert(count('clear') >= 5 && count('pane') >= 20);
-  const barred = windows.filter(o => o.bars).length; const shops = openings(B.houses, o => o.kind === 'shop').length; assert.equal(count('bars'), barred * 6 + doors.length + shops * 2, 'four bars and two rails a barred window, a handle a door, two guides a rolling shutter');
+  // Build 25: the doors inside a house (on its partitions) and the doors of its stair heads have handles too.
+  const inner = B.houses.reduce((n, h) => n + h.storeys.reduce((m, s) => m + (s.doors || []).filter(d => (d.kind || 'door') === 'door' && d.door !== false).length, 0) + (h.stairs || []).filter(s => s.head).length, 0);
+  const barred = windows.filter(o => o.bars).length; const shops = openings(B.houses, o => o.kind === 'shop').length; assert.equal(count('bars'), barred * 6 + doors.length + inner + shops * 2, 'four bars and two rails a barred window, a handle a door (inside doors and roof doors too), two guides a rolling shutter');
   // A pane stands inside the wall's thickness, not on its face: for each pane a wall box holds it.
   for (const p of list.filter(b => b.surface === 'pane' || b.surface === 'clear')) { const thin = p.size.indexOf(Math.min(...p.size)); assert(p.size[thin] < .02); }
   const far = openings(B.beyond.houses, o => o.kind === 'window'); assert(far.length >= 30); assert(B.beyond.houses.every(h => h.plain), 'houses beyond the walls are plain');
   for (const m of ['pane', 'clear']) assert(g.built.materials[m].roughness < .1 && g.built.materials[m].envMapIntensity > 1, `${m} glints`); assert(g.built.materials.clear.transparent && g.built.materials.clear.opacity < .5 && !g.built.materials.pane.transparent);
-  report.openings = {windows: windows.length, doors: doors.length, barred, beyondTheWalls: far.length};
+  report.openings = {windows: windows.length, doors: doors.length, insideDoors: inner, barred, beyondTheWalls: far.length};
 });
 
 await check('awnings', 'an awning is cloth: woven and striped in a colour the block already has, sagging between its rail and its pole, with a hem, and carried by posts that stand on the ground or by brackets from the wall', async () => {
@@ -73,7 +75,7 @@ await check('light', 'the sun in the sky stands where the light comes from: the 
   const f = fs.readFileSync(new URL(`dist/assets/${DEHRUN.sky.asset}`, projectRoot)), head = f.indexOf('\n\n'), line = f.indexOf('\n', head + 2), [, H, , W] = f.subarray(head + 2, line).toString('latin1').split(' ').map(Number), d = f.subarray(line + 1);
   let pos = 0, best = [0, 0, 0]; for (let y = 0; y < H; y++) { assert(d[pos] === 2 && d[pos + 1] === 2); pos += 4; const ch = []; for (let c = 0; c < 4; c++) { const row = new Uint8Array(W); let n = 0; while (n < W) { let k = d[pos++]; if (k > 128) { row.fill(d[pos++], n, n + k - 128); n += k - 128; } else { row.set(d.subarray(pos, pos + k), n); pos += k; n += k; } } ch.push(row); }
     for (let x = 0; x < W; x++) if (ch[3][x]) { const v = (ch[0][x] + ch[1][x] + ch[2][x]) * 2 ** (ch[3][x] - 136); if (v > best[0]) best = [v, x, y]; } }
-  const round = ((best[1] + .5) / W - .5) * 2 * Math.PI, up = (.5 - (best[2] + .5) / H) * Math.PI, sun = new THREE.Vector3(...DEHRUN.sun.at).normalize(), lightRound = Math.atan2(sun.z, sun.x), lightUp = Math.asin(sun.y);
+  const round = ((best[1] + .5) / W - .5) * 2 * Math.PI, up = (.5 - (best[2] + .5) / H) * Math.PI, sun = new THREE.Vector3(...DEHRUN.sun.at).sub(new THREE.Vector3(...(DEHRUN.sun.target || [0, 0, 0]))).normalize(), lightRound = Math.atan2(sun.z, sun.x), lightUp = Math.asin(sun.y);
   // Seen in the browser (Build 23): with the sky turned by t, its sun stands at its own angle + t - half a turn.
   const skyRound = round + DEHRUN.sky.turn - Math.PI, off = Math.abs(Math.atan2(Math.sin(skyRound - lightRound), Math.cos(skyRound - lightRound))) * 180 / Math.PI;
   assert(off < 5, `${off.toFixed(1)} degrees round from the light`); assert(Math.abs(up - lightUp) * 180 / Math.PI < 12, `${((lightUp - up) * 180 / Math.PI).toFixed(1)} degrees higher than in the picture`);

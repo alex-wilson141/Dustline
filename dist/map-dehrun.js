@@ -1,12 +1,13 @@
 // Build 22: Dehrun Terraces, map 2 (working name), as a description the game loads: a hill town built in terraces,
 // fictional like everything in DUSTLINE. This build holds one street block of it, the look slice: three terraces of a
 // street that climbs north by two flights of steps, eight houses, yards, and what stands in them.
+// Build 25: south of the block's gate, a walled square with the customs house in it (house K): the building meant to
+// be the Ambush arena, three storeys of rooms and corridors, two stairs and a roof, with a street all round it.
 // It is loaded only when it is asked for (dist/maps.js); Kohar Valley never fetches this file, the kit or a single
 // asset of this map.
 // Like map-kohar.js it says where everything is; dist/terraces.js is the kit that builds it and holds no place.
-// Height is not built yet (map build 3). What can be walked is what `height` says: the street and its yards, the steps
-// (as a ramp), and the ground floors of the houses marked `enter`. Upper floors, outside stairs, balconies and roofs are
-// geometry only.
+// Since Build 24 a body walks what the kit built (dist/space.js): stairs, ladders, floors and roofs; `height` is the
+// ground under it all.
 import {buildTerraces} from './terraces.js';
 import './build.js'; // DEPLOY-01 upgrade guard
 
@@ -16,10 +17,10 @@ const clamp = v => Math.min(1, Math.max(0, v)), smooth = v => { const t = clamp(
 // Where a body stands: the terraces, and the steps as ramps.
 const height = (x, z) => { let h = 0; for (const e of EDGES) h += Math.abs(x) <= LANE ? RISE * clamp((e + RUN - z) / RUN) : z < e ? RISE : 0; return h; };
 // The ground that is drawn: under the block it lies below everything that is built; around it, the hill.
-const BLOCK = {x: 23.9, z: [-29.9, 43.9]};
+const BLOCK = {x: 23.9, z: [-29.9, 80.4]};
 // Around the block the hill follows the terraces from a little below, so that it never rises through a yard.
 const surface = (x, z) => { if (Math.abs(x) <= BLOCK.x && z >= BLOCK.z[0] && z <= BLOCK.z[1]) return -1.3;
-  const far = Math.max(0, Math.abs(x) - 26, z - 46, -32 - z), roll = Math.min(1, far / 30);
+  const far = Math.max(0, Math.abs(x) - 26, z - 82, -32 - z), roll = Math.min(1, far / 30);
   return RISE * smooth((EDGES[0] - 1 - z) / 10) + RISE * smooth((EDGES[1] - 1 - z) / 10) - .3 + .09 * Math.max(0, -32 - z) + .06 * Math.max(0, Math.abs(x) - 28) + roll * (.9 * Math.sin(x * .07 + 1) * Math.cos(z * .06) + .4 * Math.sin(z * .17)); };
 
 // The sun: where the light comes from (south-west, 27 degrees up), and the sky turned so that the sun in its picture
@@ -28,6 +29,12 @@ const SUN_ROUND = 2.33, SUN_UP = .47, SKY_SUN = .629, SUN = [Math.cos(SUN_ROUND)
 
 const W = 'window', D = 'door';
 const win = (at, o = {}) => ({kind: W, at, width: 1.1, sill: .9, head: 2.05, ...o}), door = (at, o = {}) => ({kind: D, at, width: 1.05, head: 2.1, ...o});
+// Build 25: the customs house's doors are 1.3 m wide, for enemies as much as for the player (an enemy asks for .45 m
+// either side of its line; see the roadmap, E41). A room is a rectangle; the storeys' rooms tile the inside of the house.
+const wide = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.3, leaf: 'planks', open: 1.7, ...o}), room = (id, x, z) => ({id, x, z});
+const K = {x: [-13, 13], z: [53, 71], in: {x: [-12.6, 12.6], z: [53.4, 70.6]}, corridor: [60.3, 62.5], stairW: {x: [-12.6, -9.8], z: [56, 60.3]}, stairE: {x: [9.8, 12.6], z: [62.5, 66.8]}};
+const kRooms = (north, south) => [room('stair W', K.stairW.x, K.stairW.z), room('closet W', K.stairW.x, [K.in.z[0], K.stairW.z[0]]), ...north, room('corridor', K.in.x, K.corridor), ...south, room('stair E', K.stairE.x, K.stairE.z), room('closet E', K.stairE.x, [K.stairE.z[1], K.in.z[1]])];
+const nRoom = (id, x) => room(id, x, [K.in.z[0], K.corridor[0]]), sRoom = (id, x, z = [K.corridor[1], K.in.z[1]]) => room(id, x, z);
 
 // Beyond the walls: the rest of the town and its fields, to be seen and not reached. A house stands on the hill where
 // it is put; a field wall follows the hill in lengths of eight metres.
@@ -39,24 +46,24 @@ const fieldWall = (z, from, to) => { const out = []; for (let a = from; a < to; 
 export const DEHRUN = {
   id: 'dehrun', name: 'Dehrun Terraces',
   // A map to walk and look at: no mission, nobody else. The words the game shows there.
-  look: {lamp: 2.4, title: 'DEHRUN TERRACES', line: 'Look slice: walk the block', note: 'NO MISSION · NOBODY ELSE HERE', button: 'WALK THE BLOCK →', brief: 'A street in the hill town.', text: 'One street block of Dehrun Terraces, to look at. Walk the street and its steps, the yards and the ground floors with an open door. Upper floors, outside stairs and roofs cannot be climbed yet.', radio: 'Dehrun Terraces, look slice. Nobody else is here. The street climbs north; the house on the left of the middle terrace and the shop across from it are open.'},
+  look: {lamp: 2.4, title: 'DEHRUN TERRACES', line: 'Look slice: the block and the customs house', note: 'NO MISSION · NOBODY ELSE HERE', button: 'WALK THE BLOCK →', brief: 'A street in the hill town, and the customs house.', text: 'One street block of Dehrun Terraces and, through the gate at the south end of the street, the square with the customs house: three storeys of rooms and corridors, two stairs, a roof. Walk in by any of its four doors; the stairs come out on the roof.', radio: 'Dehrun Terraces, look slice. Nobody else is here. The street climbs north; behind you, through the south gate, stands the customs house. Its doors are open and both stairs go up to the roof.'},
   height,
   terrain: {size: 400, segments: 100, surface},
   // A clear sky with a low sun: `background` and `environment` are how bright the sky is drawn and how much it lights,
   // `ambient` the light from all around; the sun's `colour` and `power`.
   sky: {asset: 'dehrun/syferfontein_18d_clear_puresky_1k.hdr', colour: '#c4c0b2', fog: '#cdbfa3', fogDensity: .0021, background: 1.25, environment: .8, ambient: 1.85, turn: SKY_TURN},
-  sun: {at: SUN.map(v => v * 70), reach: 52, near: 1, far: 220, colour: '#ffdcae', power: 3.5},
+  sun: {at: [SUN[0] * 70, SUN[1] * 70, SUN[2] * 70 + 25], target: [0, 0, 25], reach: 60, near: 1, far: 220, colour: '#ffdcae', power: 3.5},   // Build 25: aimed at the middle of the block and the square, which is longer now
   ridge: {sectors: 220, bands: 26, inner: 150, step: 20},
-  edges: {x: [-23.6, 23.6], z: [-29.6, 43.6]},
-  nav: {origin: -46, step: 2, cells: 46},
-  reach: {x: 30, z: 50},
+  edges: {x: [-23.6, 23.6], z: [-29.6, 79.6]},
+  nav: {origin: -46, step: 2, cells: 64},
+  reach: {x: 30, z: 90},
   // Heights on the M map are given above this (the lowest terrace).
   levels: {base: 0},
   // Nothing of Kohar Valley's village stands here.
   buildings: [], lowWalls: [], sandbags: [], poles: [], brickWalls: [], stalls: [], crates: [], trucks: [], trees: [], props: [],
   rocks: {count: 0, x: [-20, 20], z: [-20, 20], clear: 0}, shrubs: {count: 0, x: [-20, 20], z: [-20, 20], clear: 0},
   pebbles: {count: 1, x: [-60, -59], z: [-60, -59]},
-  dust: {count: 140, x: [-22, 22], y: [.3, 9], z: [-28, 42]},
+  dust: {count: 160, x: [-22, 22], y: [.3, 9], z: [-28, 78]},
   wire: [[-4.2, 7.6, 4.2], [0, 6.9, 5.4], [4.2, 5.1, 6.6]],
   // The game's objectives have places on every map; here they are out of the way and not shown.
   relay: [-15.6, -25.2],
@@ -70,7 +77,7 @@ export const DEHRUN = {
     reinforceLoops: {0: ['UP'], 1: ['RING'], 2: ['UP'], skirmish: ['RING']},
     reinforcePoints: [{chain: [[0, -27], [0, -20]], stages: [0, 1, 2]}],
   },
-  ambush: {start: [0, 30], firstArea: 1, walls: [], areas: [{id: 1, name: 'Lower street', x: [-23, 23], z: [20, 43]}], gates: [], stations: [], chart: {x: [-24, 24], z: [-30, 44]}, spots: {x: [-22, 22], z: [-28, 42], step: 4}},
+  ambush: {start: [0, 30], firstArea: 1, walls: [], areas: [{id: 1, name: 'Lower street', x: [-23, 23], z: [20, 79]}], gates: [], stations: [], chart: {x: [-24, 24], z: [-30, 81]}, spots: {x: [-22, 22], z: [-28, 78], step: 4}},
 
   build: ctx => buildTerraces(ctx, DEHRUN),
 
@@ -88,6 +95,10 @@ export const DEHRUN = {
       {x: [-5, -3], z: [-22.6, -9.4], level: 3.2, surface: 'slab', deep: .3, lift: .018}, {x: [3, 4.5], z: [-20.6, -8.4], level: 3.2, surface: 'slab', deep: .3, lift: .018}, {x: [-5.4, -3], z: [-5.6, 1], level: 1.6, surface: 'slab', deep: .3, lift: .018}, {x: [13.2, 14.5], z: [36.2, 43.4], level: 0, surface: 'slab', deep: .3, lift: .018},
       {x: [-5.5, 5.5], z: [-28.5, -22.5], level: 3.2, surface: 'slab', deep: .3, lift: .012},
       {x: [-.35, .35], z: [20, 44], level: 0, surface: 'slab', deep: .3, lift: .01}, {x: [-.35, .35], z: [-3, 17], level: 1.6, surface: 'slab', deep: .3, lift: .01}, {x: [-.35, .35], z: [-22.5, -6], level: 3.2, surface: 'slab', deep: .3, lift: .01},
+      // Build 25: the square south of the gate, cobbled, with paving round the customs house and the street's line across it.
+      {x: [-22.3, 22.3], z: [44.3, 80.3], level: 0, surface: 'cobble'},
+      {x: [-14.6, 14.6], z: [51.4, 53], level: 0, surface: 'slab', deep: .3, lift: .018}, {x: [-14.6, 14.6], z: [71, 72.6], level: 0, surface: 'slab', deep: .3, lift: .018}, {x: [-14.6, -13], z: [53, 71], level: 0, surface: 'slab', deep: .3, lift: .018}, {x: [13, 14.6], z: [53, 71], level: 0, surface: 'slab', deep: .3, lift: .018},
+      {x: [-.35, .35], z: [44.3, 51.4], level: 0, surface: 'slab', deep: .3, lift: .01}, {x: [-.35, .35], z: [72.6, 80], level: 0, surface: 'slab', deep: .3, lift: .01},
     ],
     // Retaining walls of dry stone with a parapet on the upper side, and the walls around the block.
     walls: [
@@ -101,9 +112,13 @@ export const DEHRUN = {
       {axis: 'x', at: 20.6, from: -14, to: -5.2, base: 0, height: 1.1, thick: .4, surface: 'drystone', coping: 'slab'}, {axis: 'z', at: -14, from: 20.6, to: 24, base: 0, height: 1.1, thick: .4, surface: 'drystone', coping: 'slab'},
       {axis: 'z', at: 13.2, from: -1, to: 5.6, base: 1.6, height: 1.2, thick: .4, surface: 'drystone', coping: 'slab'},
       {axis: 'x', at: -24.2, from: 8, to: 14, base: 3.2, height: 1, thick: .4, surface: 'drystone', coping: 'slab'},
+      // Build 25: the walls round the square, with a gate at its south end.
+      {axis: 'z', at: -22, from: 44.2, to: 80, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: 22, from: 44.2, to: 80, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'},
+      {axis: 'x', at: 80, from: -22, to: -6, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, {axis: 'x', at: 80, from: 6, to: 22, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'},
     ],
     arches: [
-      {axis: 'x', at: 44, from: -5, to: 5, width: 3.2, base: 0, height: 3.9, clear: 2.9, thick: .5, surface: 'masonry', gate: 'planks', ajar: .12, out: -1},
+      {axis: 'x', at: 44, from: -5, to: 5, width: 3.2, base: 0, height: 3.9, clear: 2.9, thick: .5, surface: 'masonry', gate: 'planks', ajar: 1.3, out: -1},   // Build 25: the gate stands open onto the square
+      {axis: 'x', at: 80, from: -6, to: 6, width: 3.2, base: 0, height: 3.9, clear: 2.9, thick: .5, surface: 'masonry', gate: 'planks', ajar: .1, out: 1},
       {axis: 'x', at: -30, from: -5, to: 5, width: 3, base: 3.2, height: 3.9, clear: 2.8, thick: .5, surface: 'masonry', gate: 'blue', ajar: .2, out: 1},
     ],
     steps: [
@@ -141,6 +156,28 @@ export const DEHRUN = {
       // H: a low house by the south gate.
       {id: 'H', x: [14.5, 22], z: [36.5, 43], base: 0, beamEnds: ['west'], roof: {parapet: .45}, storeys: [
         {height: 2.9, surface: 'ochre', west: [door(38.2, {leaf: 'planks', awning: ['#7c5a48', 1.2, 'brackets']}), win(41, {open: [2.75, 1.2]})], north: [win(18)]}]},
+      // K (Build 25): the customs house on the square, 26 by 18 m, three storeys and a roof; the building meant to be the
+      // Ambush arena (E38). A corridor runs east-west through every storey; two stairs, in the north-west and the
+      // south-east corners, climb from the ground to the roof and come out through stair heads. Doors on all four
+      // sides. Every door and doorway in it is 1.3 m wide.
+      {id: 'K', x: K.x, z: K.z, base: 0, thick: .4, enter: true, beamEnds: ['north', 'south'], roof: {parapet: .6, tanks: [[-6, 66.5], [5, 56]]}, door: {width: 1.3, head: 2.2},
+        stairs: [{axis: 'z', x: K.stairW.x, z: [K.stairW.z[1], K.stairW.z[0]], storeys: [0, 1, 2], head: {}}, {axis: 'z', x: K.stairE.x, z: [K.stairE.z[0], K.stairE.z[1]], storeys: [0, 1, 2], head: {}}],
+        storeys: [
+        {height: 3.4, surface: 'masonry', room: true, floor: 'slab',
+          rooms: kRooms([nRoom('north-west room', [-9.8, -3]), nRoom('north hall', [-3, 4.5]), nRoom('north-east room', [4.5, 12.6])], [sRoom('south-west room', [-12.6, -5]), sRoom('south hall', [-5, 4]), sRoom('store', [4, 9.8], [62.5, 66.1]), sRoom('south-east room', [4, 9.8], [66.1, 70.6])]),
+          doors: [{at: [-6.4, 60.3]}, {at: [.75, 60.3]}, {at: [8.5, 60.3]}, {at: [-8.8, 62.5]}, {at: [-.5, 62.5]}, {at: [6.9, 62.5]}, {at: [6.9, 66.1]}, {at: [9.8, 68.3]}, {at: [-9.8, 55]}, {at: [4, 68.3]}, {at: [-3, 57]}],
+          west: [wide(61.4), win(55, {bars: true}), win(65, {bars: true}), win(68.5, {bars: true})], east: [wide(61.4), win(56, {bars: true}), win(59, {bars: true}), win(68.5, {bars: true})],
+          north: [wide(.75), win(-11.2, {bars: true}), win(-7, {bars: true}), win(3, {bars: true}), win(7, {bars: true}), win(11, {bars: true})], south: [wide(-.5), win(-10, {bars: true}), win(-7, {bars: true}), win(2, {bars: true}), win(7, {bars: true}), win(11.2, {bars: true})]},
+        {height: 3.2, surface: 'plaster', band: 'white', room: true,
+          rooms: kRooms([nRoom('north-west room', [-9.8, -2]), nRoom('north room', [-2, 5]), nRoom('north-east room', [5, 12.6])], [sRoom('south-west room', [-12.6, -6]), sRoom('south room', [-6, 4]), sRoom('store', [4, 9.8], [62.5, 66.1]), sRoom('south-east room', [4, 9.8], [66.1, 70.6])]),
+          doors: [{at: [-6, 60.3]}, {at: [1.5, 60.3]}, {at: [9, 60.3]}, {at: [-2, 56]}, {at: [-9, 62.5]}, {at: [-1, 62.5]}, {at: [7, 62.5]}, {at: [7, 66.1]}, {at: [4, 68.5]}, {at: [-9.8, 55]}, {at: [9.8, 68.5]}],
+          west: [win(55, {sill: .8}), win(64.5, {sill: .8}), win(68.5, {sill: .8, open: [2.75, 1.2]})], east: [win(56, {sill: .8}), win(59, {sill: .8, open: [1.1, 2.75]}), win(68.5, {sill: .8})],
+          north: [win(-11.2, {sill: .8}), win(-6.5, {sill: .8}), win(-3, {sill: .8}), win(0, {sill: .8, open: [2.75, 1.4]}), win(3, {sill: .8}), win(8, {sill: .8}), win(11, {sill: .8})], south: [win(-10.5, {sill: .8}), win(-7.5, {sill: .8}), win(-3, {sill: .8, open: [1.3, 2.75]}), win(1, {sill: .8}), win(7, {sill: .8}), win(11.2, {sill: .8})]},
+        {height: 3.2, surface: 'white', band: 'ochre', room: true,
+          rooms: kRooms([nRoom('loft', [-9.8, 12.6])], [sRoom('south-west room', [-12.6, -4]), sRoom('south room', [-4, 4]), sRoom('south-east room', [4, 9.8])]),
+          doors: [{at: [-5, 60.3]}, {at: [7, 60.3]}, {at: [-8, 62.5]}, {at: [0, 62.5]}, {at: [7, 62.5]}, {at: [4, 67]}, {at: [-4, 67]}, {at: [-9.8, 55]}, {at: [9.8, 68.5]}],
+          west: [win(55, {sill: .8}), win(65, {sill: .8}), win(68.5, {sill: .8})], east: [win(56, {sill: .8, open: [2.75, 1]}), win(59, {sill: .8}), win(68.5, {sill: .8})],
+          north: [win(-11.2, {sill: .8}), win(-7, {sill: .8}), win(-2.5, {sill: .8}), win(2, {sill: .8}), win(6.5, {sill: .8, open: [1.2, 2.75]}), win(11, {sill: .8})], south: [win(-10, {sill: .8}), win(-6, {sill: .8}), win(-1.5, {sill: .8}), win(1.5, {sill: .8}), win(7, {sill: .8, open: [2.75, 1.3]}), win(11.2, {sill: .8})]}]},
     ],
     balconies: [
       {axis: 'z', at: -4.2, from: 3.4, to: 11.8, y: 4.6, out: 1}, {axis: 'z', at: -5, from: -18.6, to: -13.4, y: 9, out: 1, depth: 1}, {axis: 'z', at: 4.5, from: -17.2, to: -11.8, y: 6.2, out: -1},
@@ -178,9 +215,9 @@ export const DEHRUN = {
         far('E1', [29, 37], [24, 33], [[3, 'ochre'], [2.8, 'plaster', 'white']], {west: [26.5, 30.5], south: [33]}), far('E2', [28.5, 36], [-2, 8], [[3, 'masonry'], [2.8, 'white']], {west: [0.5, 5.5]}),
         far('E3', [30, 39], [-24, -14], [[3, 'plaster'], [2.8, 'plaster', 'white'], [2.7, 'white']], {west: [-21.5, -16.5], south: [34.5]}), far('N1', [-15, -6], [-46, -37], [[3, 'masonry'], [2.8, 'plaster', 'white']], {south: [-12.5, -8.5], east: [-41.5]}),
         far('N2', [7, 16], [-48, -39], [[3, 'ochre'], [2.8, 'white'], [2.7, 'white', 'ochre']], {south: [9.5, 13.5], west: [-43.5]}), far('N3', [-4, 4], [-60, -52], [[3, 'plaster'], [2.8, 'white']], {south: [-1.5, 1.5]}),
-        far('S1', [-17, -8], [49, 57], [[3, 'plaster'], [2.8, 'white', 'ochre']], {north: [-14.5, -10.5]}), far('S2', [9, 18], [50, 58], [[3, 'ochre']], {north: [11.5, 15.5]}),
+        far('S1', [-17, -8], [86, 94], [[3, 'plaster'], [2.8, 'white', 'ochre']], {north: [-14.5, -10.5]}), far('S2', [9, 18], [87, 95], [[3, 'ochre']], {north: [11.5, 15.5]}),   // Build 25: moved south, beyond the square
       ],
-      walls: [...fieldWall(-34, -70, -17), ...fieldWall(-34, 18, 70), ...fieldWall(-52, -80, -6), ...fieldWall(-52, 6, 80), ...fieldWall(-66, -90, 90), ...fieldWall(-82, -100, 100), ...fieldWall(14, 40, 80), ...fieldWall(14, -80, -42), ...fieldWall(64, -60, 60)],
+      walls: [...fieldWall(-34, -70, -17), ...fieldWall(-34, 18, 70), ...fieldWall(-52, -80, -6), ...fieldWall(-52, 6, 80), ...fieldWall(-66, -90, 90), ...fieldWall(-82, -100, 100), ...fieldWall(14, 40, 80), ...fieldWall(14, -80, -42), ...fieldWall(64, -60, -28), ...fieldWall(64, 28, 60), ...fieldWall(98, -60, 60)],
     },
     wires: [{between: [[-4.2, 7.3, 11], [4.3, 4.6, 12.5]], sag: .6}, {between: [[5, 5.6, 25], [-5.2, 2.7, 26]], sag: .7}, {between: [[-5, 11.6, -12], [4.5, 8.8, -11]], sag: .8}, {between: [[-4.2, 4.5, 3], [-5.4, 4.2, .4]], sag: .2}],
     // Lamp glow [x, y, z, size]: by the hanging lanterns and the wall lamps.
@@ -215,6 +252,21 @@ export const DEHRUN = {
       ['painted_wooden_bench', -4.4, -16, 90], ['planter_pot_clay', -4.5, -14.4, 0, 0, 2.2], ['painted_wooden_stool', -4.4, -11.6, 30], ['industrial_wall_lamp', -4.98, -11.8, 90, 2.6],
       ['wooden_crate_01', 3.9, -18.6, 5], ['wine_barrel_01', 3.95, -12.6], ['propane_tank', 4, -19.6],
       ['wooden_bucket_01', -15.4, -24.8, 0], ['barrel_03', 17.6, -28.4], ['cement_bag', 15.4, -28.6, 30],
+      // Build 25: the customs house, storey by storey (the lift is the storey's floor: 3.4, 6.6, and the roof at 9.83).
+      // Light models only: the whole map is to stay under 700,000 triangles (a lantern alone is 8,300).
+      ['painted_wooden_table', 1, 56, 90], ['painted_wooden_chair_01', .2, 56, 90], ['painted_wooden_chair_01', 1.9, 56.2, -80],
+      ['wooden_table_02', -6.5, 54.5], ['painted_wooden_stool', -7.5, 55.2], ['ceramic_pot', -9.3, 59.8], ['wooden_crate_02', 12.32, 54.2], ['wooden_crate_01', 12.32, 54.2, 90, .47], ['barrel_03', 11.9, 59.6], ['cement_bag', 6, 54, 30],
+      ['wooden_lantern_01', -6, 61.4, 0, 2.3], ['barrel_03', -11.9, 69.8], ['barrel_03', -11.2, 70], ['cement_bag', -11.8, 63.3, 10],
+      ['painted_wooden_bench', -4.4, 66, 90], ['painted_wooden_bench', 3.4, 65, -90], ['painted_wooden_shelves', 9.66, 63.6, -90], ['painted_wooden_shelves', 9.66, 64.4, -90], ['wooden_crate_02', 4.8, 65.5, 90],
+      ['barrel_03', 9.2, 70, 15], ['barrel_03', 4.6, 70, 40],
+      ['painted_wooden_table', -6, 55.5, 0, 3.4], ['painted_wooden_chair_01', -6.8, 54.5, 190, 3.4], ['painted_wooden_chair_01', -5.2, 56.6, 10, 3.4],
+      ['vintage_day_bed', 3.2, 53.94, 0, 3.4], ['painted_wooden_stool', 1, 54.5, 20, 3.4], ['painted_wooden_cabinet', 11.85, 55, 0, 3.78], ['painted_wooden_shelves', 12.56, 58, -90, 3.4],
+      ['wooden_table_02', -9, 69.6, 90, 3.4], ['painted_wooden_stool', -8, 68.5, 0, 3.4], ['ceramic_pot', -12.2, 63.2, 40, 3.4], ['painted_wooden_bench', -5.5, 66, 90, 3.4], ['planter_pot_clay', -1, 70, 0, 3.4, 2],
+      ['wooden_crate_02', 5.2, 65.4, 90, 3.4], ['barrel_03', 9.3, 70, 10, 3.4], ['barrel_03', 8.5, 70.1, 50, 3.4], ['wooden_lantern_01', 0, 61.4, 0, 5.7],
+      ['wooden_crate_02', 12.32, 54.1, 0, 6.6], ['wooden_crate_01', 12.32, 54.1, 90, 7.07], ['barrel_03', 8, 54, 0, 6.6], ['barrel_03', 8.7, 54.3, 60, 6.6], ['cement_bag', 2, 54, 30, 6.6], ['cement_bag', 2.1, 54.1, -20, 6.78], ['propane_tank', -8.5, 54, 0, 6.6],
+      ['vintage_day_bed', -8, 70.06, 180, 6.6], ['painted_wooden_table', 0, 66.5, 0, 6.6], ['painted_wooden_chair_01', -.8, 65.5, 190, 6.6], ['painted_wooden_chair_01', .7, 67.5, 5, 6.6], ['wooden_lantern_01', 0, 66.5, 30, 8.6],
+      ['painted_wooden_shelves', 9.66, 68, -90, 6.6], ['planter_pot_clay', 6, 70.1, 0, 6.6, 1.3],
+      ['barrel_03', -3, 69, 0, 9.83], ['cement_bag', 3, 68.6, 20, 9.83], ['cement_bag', 3.1, 68.7, -30, 10.01],
     ],
   },
 };
