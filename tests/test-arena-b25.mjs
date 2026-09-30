@@ -37,11 +37,13 @@ async function body() { maps.selectMap('dehrun'); let g; try { g = await page();
 const FACING = {north: 0, south: Math.PI, east: -Math.PI / 2, west: Math.PI / 2};
 // The way through the building, as the user is told it: in at the west door, up the west stair storey by storey, out
 // onto the roof, over to the east stair head, down the east stair and out at the east door.
-const WEST = {entry: [-11.9, 61.0], A: [-11.9, 56.35], landing: [-10.5, 56.35], B: [-10.5, 61.0]}, EAST = {front: [11.9, 61.6], entry: [11.9, 63.2], B: [11.9, 66.4], landing: [10.5, 66.4], A: [10.5, 61.7]};
+// Build 27: the corridor and the stair wells moved when the customs house was widened; the points follow the description.
+const CZ = K.storeys[0].rooms.find(r => r.id === 'corridor').z, SW = K.stairs[0], SE = K.stairs[1], farW = Math.min(...SW.z), farE = Math.max(...SE.z);
+const WEST = {entry: [-11.9, CZ[0] + .7], A: [-11.9, farW + .35], landing: [-10.5, farW + .35], B: [-10.5, CZ[0] + .7]}, EAST = {front: [11.9, CZ[1] - .7], entry: [11.9, CZ[1] + .7], B: [11.9, farE - .35], landing: [10.5, farE - .35], A: [10.5, CZ[1] - .7]};
 const upWest = () => [['to the west stair', ...WEST.entry], ['up its first flight', ...WEST.A], ['across the landing', ...WEST.landing], ['up its second flight', ...WEST.B]];
 const downEast = () => [['in front of the east stair', ...EAST.front], ['into it', ...EAST.entry], ['down its top flight', ...EAST.B], ['across the landing', ...EAST.landing], ['down its lower flight', ...EAST.A]];
-const ROUTE = {toWestDoor: [['out of the gate', 0, 46], ['round the north-west corner', -17, 50], ['along the west side', -17, 61.4], ['in at the west door', -13.5, 61.4], ['the corridor', -11.2, 61.4]],
-  fromEastDoor: [['the corridor', 12, 61.4], ['out at the east door', 13.5, 61.4], ['the street', 17, 61.4], ['round the north-east corner', 17, 50], ['back through the gate', 0, 46], ['the start', 0, 37]]};
+const ROUTE = {toWestDoor: [['out of the gate', 0, 46], ['round the north-west corner', -17, 50], ['along the west side', -17, 61.3], ['in at the west door', -13.5, 61.3], ['the corridor', -11.2, 61.3]],
+  fromEastDoor: [['the corridor', 12, 61.3], ['out at the east door', 13.5, 61.3], ['the street', 17, 61.3], ['round the north-east corner', 17, 50], ['back through the gate', 0, 46], ['the start', 0, 37]]};
 
 await check('arena', 'the customs house stands as commissioned (E38): 26 by 18 m, three storeys and a roof, a corridor and rooms on every storey (the rooms tile the storey and every room has a door or a stair), two stairs from the ground to the roof with heads, doors to the street on all four sides, every door and doorway 1.3 m wide', async () => {
   near(K.x[1] - K.x[0], 26, .01, 'length'); near(K.z[1] - K.z[0], 18, .01, 'depth'); assert.equal(K.storeys.length, 3); assert(K.enter); assert(K.roof.parapet >= .5, 'a parapet');
@@ -53,7 +55,7 @@ await check('arena', 'the customs house stands as commissioned (E38): 26 by 18 m
     const onEdge = (r, [x, z]) => (Math.abs(x - r.x[0]) < .01 || Math.abs(x - r.x[1]) < .01) && z > r.z[0] && z < r.z[1] || (Math.abs(z - r.z[0]) < .01 || Math.abs(z - r.z[1]) < .01) && x > r.x[0] && x < r.x[1];
     for (const r of S.rooms) { const stair = K.stairs.some(s => Math.abs(s.x[0] - r.x[0]) < .01 && Math.abs(s.x[1] - r.x[1]) < .01 && Math.min(...s.z) >= r.z[0] - .01 && Math.max(...s.z) <= r.z[1] + .01); if (r.id === 'corridor' || stair) continue;
       assert(S.doors.some(d => onEdge(r, d.at)), `${r.id} on storey ${n} has a door`); rooms.push(`${n}: ${r.id}`); }
-    for (const d of S.doors) assert((d.width ?? K.door.width) >= 1.3, 'a door inside is 1.3 m wide'); });
+    for (const d of S.doors) assert((d.width ?? K.door.width) >= 1.3, 'a door inside is 1.3 m wide (Build 27: the corridor doorways 1.6)'); });
   const sides = ['north', 'south', 'east', 'west'].filter(f => (K.storeys[0][f] || []).some(o => o.kind === 'door')); assert.deepEqual(sides.sort(), ['east', 'north', 'south', 'west'], 'a door to the street on every side');
   for (const f of sides) for (const o of K.storeys[0][f].filter(o => o.kind === 'door')) assert(o.width >= 1.3 && o.head >= 2.2, `the ${f} door is 1.3 m wide`);
   for (const s of K.stairs) assert((s.head.door || 1.3) >= 1.3, 'the roof door is 1.3 m wide');
@@ -65,7 +67,7 @@ await check('floors', 'every floor is reached on foot from the street: from the 
   g.walk(ROUTE.toWestDoor, each); near(g.player.y, FLOORS[0], .02, 'the ground floor'); stood.push(g.height.on());
   for (const [n, y] of [[1, FLOORS[1]], [2, FLOORS[2]], [3, ROOF]]) { g.walk(upWest(), each); near(g.player.y, y, .02, `floor ${n}`); stood.push(g.height.on()); assert.equal(g.height.grounded(), true); }
   assert.deepEqual(stood, ['floor', 'floor', 'floor', 'roof']);
-  g.walk([['out of the west stair head', -10.5, 62], ['across the roof', 0, 65]], each); near(g.player.y, ROOF, .02, 'the roof');
+  g.walk([['out of the west stair head', -10.5, CZ[0] + 1.7], ['across the roof', 0, 65]], each); near(g.player.y, ROOF, .02, 'the roof');
   for (const y of [FLOORS[2], FLOORS[1], FLOORS[0]]) { g.walk(downEast(), each); near(g.player.y, y, .02, 'the floor below'); }
   g.walk(ROUTE.fromEastDoor, each); near(g.player.y, 0, .02, 'the street'); assert.equal(crouched, 0, 'never crouched'); assert.equal(g.coop.hp(), 100, 'never hurt');
   report.floors = {floors: FLOORS, roof: ROOF, route: 'start → gate → west door → west stair ×3 → roof → east stair ×3 → east door → start'};
@@ -85,20 +87,20 @@ await check('rooms', 'every room on every storey is entered on foot: from the co
       for (const [room, d] of steps) { const p = sides(room, d); assert(g.walkTo(...p.out), `${r.id}: in front of the door of ${room.id} (${g.at()})`); assert(g.walkTo(...p.in), `${r.id}: through the door of ${room.id} (${g.at()})`); }
       near(g.player.y, y, .02, `${r.id}: on the floor of storey ${n}`); assert(g.player.x > r.x[0] && g.player.x < r.x[1] && g.player.z > r.z[0] && g.player.z < r.z[1], `${r.id}: inside it`); entered.push(`${n}: ${r.id}`);
       for (const [room, d] of steps.reverse()) { const p = sides(room, d); assert(g.walkTo(...p.in) && g.walkTo(...p.out), `${r.id}: out again through the door of ${room.id}`); } } });
-  assert(entered.length >= 24, `${entered.length} rooms entered`); report.rooms = {entered: entered.length, list: entered};
+  assert(entered.length >= 20, `${entered.length} rooms entered`); report.rooms = {entered: entered.length, list: entered};
 });
 
 await check('stairs', 'both stairs are climbed in both directions on every storey, tread by tread: going up, the feet are always on a tread\'s top or a landing and the body arrives on the floor above standing; going down likewise to the floor below; the railing between the flights holds (a body on the upper flight does not fall to the lower one)', async () => {
   const g = await body(); const treads = new Set(); let lowest = 1e9; const each = () => { if (g.height.on() === 'stair') { treads.add(+g.player.y.toFixed(3)); lowest = Math.min(lowest, g.player.y); } if (g.height.mustCrouch()) throw new Error('made to crouch on a stair at ' + g.at()); };
   const rise = h => h / 16, ok = (y, base, h) => { const k = (y - base) / rise(h); return Math.abs(k - Math.round(k)) < .02 || Math.abs(y - base - h / 2) < .02; };   // a tread's top: base + k × rise; the landing: base + half the storey
   g.walk(ROUTE.toWestDoor); let y0 = 0; K.storeys.forEach((S, n) => { treads.clear(); g.walk(upWest(), each); assert(treads.size >= 14, `${treads.size} treads of the west stair, storey ${n}`); for (const y of treads) assert(ok(y, y0, S.height), `on a tread: ${y} (storey ${n} from ${y0})`); y0 += S.height; near(g.player.y, n === 2 ? ROOF : y0, .02, 'the floor above'); });
-  g.walk([['out', -10.5, 62], ['over', 11.9, 61.6]]); let y1 = y0; [...K.storeys].reverse().forEach((S, i) => { const n = 2 - i; treads.clear(); g.walk(downEast(), each); assert(treads.size >= 14, `${treads.size} treads of the east stair down, storey ${n}`); y1 -= S.height; for (const y of treads) assert(ok(y, y1, S.height), `on a tread going down: ${y}`); near(g.player.y, n ? y1 : FLOORS[0], .02, 'the floor below'); });
+  g.walk([['out', -10.5, CZ[0] + 1.7], ['over', ...EAST.front]]); let y1 = y0; [...K.storeys].reverse().forEach((S, i) => { const n = 2 - i; treads.clear(); g.walk(downEast(), each); assert(treads.size >= 14, `${treads.size} treads of the east stair down, storey ${n}`); y1 -= S.height; for (const y of treads) assert(ok(y, y1, S.height), `on a tread going down: ${y}`); near(g.player.y, n ? y1 : FLOORS[0], .02, 'the floor below'); });
   // The other way round each: up the east stair from the ground floor to the first floor, down the west stair to the ground.
-  g.walk([['in front of the east stair', 10.5, 61.7]]); treads.clear(); g.walk([['up its first flight', 10.5, 66.4], ['across the landing', 11.9, 66.4], ['up its second flight', 11.9, 61.7]], each); near(g.player.y, FLOORS[1], .02, 'the first floor by the east stair'); assert(treads.size >= 14);
-  g.walk([['along the corridor', -10.5, 61.4]]); treads.clear(); g.walk([['down the west stair', ...WEST.landing], ['across', ...WEST.A], ['down', ...WEST.entry]], each); near(g.player.y, FLOORS[0], .02, 'the ground floor by the west stair'); assert(treads.size >= 14);
+  g.walk([['in front of the east stair', 10.5, CZ[1] - .7]]); treads.clear(); g.walk([['up its first flight', 10.5, farE - .35], ['across the landing', 11.9, farE - .35], ['up its second flight', 11.9, CZ[1] - .7]], each); near(g.player.y, FLOORS[1], .02, 'the first floor by the east stair'); assert(treads.size >= 14);
+  g.walk([['along the corridor', -10.5, CZ[0] + .7]]); treads.clear(); g.walk([['down the west stair', ...WEST.landing], ['across', ...WEST.A], ['down', ...WEST.entry]], each); near(g.player.y, FLOORS[0], .02, 'the ground floor by the west stair'); assert(treads.size >= 14);
   // The railing: on the west stair's second flight, halfway up, walking sideways into the rail, the body stays on its flight.
-  g.walk(upWest().slice(0, 3)); g.put(-10.5, g.player.y, 58.5, FACING.south); g.hold('KeyW', .6); const y = g.player.y; g.set({yaw: FACING.west}); g.hold('KeyW', 1.5); assert(g.player.x > -11.2 && Math.abs(g.player.y - y) < .3, `held by the railing (${g.at()})`);
-  g.put(-11.9, FLOORS[1] + .6, 58.4, FACING.north); g.hold('KeyW', .4); g.set({yaw: FACING.east}); g.hold('KeyW', 1.5); assert(g.player.x < -11.2, `held by the railing from the first flight (${g.at()})`);
+  g.walk(upWest().slice(0, 3)); g.put(-10.5, g.player.y, farW + 2.5, FACING.south); g.hold('KeyW', .6); const y = g.player.y; g.set({yaw: FACING.west}); g.hold('KeyW', 1.5); assert(g.player.x > -11.2 && Math.abs(g.player.y - y) < .3, `held by the railing (${g.at()})`);
+  g.put(-11.9, FLOORS[1] + .6, farW + 2.4, FACING.north); g.hold('KeyW', .4); g.set({yaw: FACING.east}); g.hold('KeyW', 1.5); assert(g.player.x < -11.2, `held by the railing from the first flight (${g.at()})`);
   // Over the gap between the top of the block's inside stair (house A) and its floor, .4 m wide, a standing body rests on both sides (Build 25: over a hole narrower than itself, a body stands on what is within its lean).
   g.put(-12.2, 4.6, 6.4); g.run(1); near(g.player.y, 4.6, .06, `over the gap at the top of house A's stair (${g.at()})`);
   report.stairs = {treadsAStorey: 16, rise: K.storeys.map(s => +(s.height / 16).toFixed(3)), run: .35, flightWidth: 1.37, railing: 'posts every tread, .31 m apart, under a sloping handrail'};
@@ -106,7 +108,7 @@ await check('stairs', 'both stairs are climbed in both directions on every store
 
 await check('roof', 'the roof is reached through both stair heads and its edges can be fallen from: out of the west head and in at the east head; onto the parapet by a pull-up and off it, the body lands on the square 10.4 m below and the fall costs what FALL says (about three quarters of the health), and no more', async () => {
   const g = await body(), sp = g.height.space; g.walk(ROUTE.toWestDoor); for (let n = 0; n < 3; n++) g.walk(upWest()); near(g.player.y, ROOF, .02);
-  g.walk([['out of the west head', -10.5, 62.5], ['the roof', 0, 65], ['before the east head', ...EAST.front], ['in at the east head', ...EAST.entry]]); assert.equal(g.height.on(), 'stair'); g.walk([['out again', 11.9, 61.6], ['the roof', 0, 65]]); near(g.player.y, ROOF, .02);
+  g.walk([['out of the west head', -10.5, CZ[0] + 2], ['the roof', 0, 65], ['before the east head', ...EAST.front], ['in at the east head', ...EAST.entry]]); assert.equal(g.height.on(), 'stair'); g.walk([['out again', ...EAST.front], ['the roof', 0, 65]]); near(g.player.y, ROOF, .02);
   const tanks = K.roof.tanks; for (const [x, z] of tanks) { g.put(x - 1.2, ROOF, z, FACING.east); g.hold('KeyW', 1); assert(g.player.x < x - .6, `stopped by the tank at ${x}, ${z} (${g.at()})`); }
   g.put(4.5, ROOF, 70, FACING.south); g.hold('KeyW', 1); const before = g.player.y; g.tap('Space'); g.run(1.2); assert(g.player.y > before + .5, `onto the parapet (${g.at()})`); assert.equal(g.height.on(), 'slab');
   g.hold('KeyW', 3, () => g.height.grounded() ? undefined : false); g.run(2.5); near(g.player.y, .018, .03, 'down on the paving, past the beam ends (a body rests on nothing narrower than its stance)'); assert(g.player.z > 71, 'outside the wall');   // W let go the moment the body is in the air: it falls straight down along the wall's face, past the beam ends under the floors

@@ -25,6 +25,20 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 27 (local, 2026-09-30): co-op height, map build 6 of 9, and the customs house widened. **Positions always travelled as
+three numbers; what was flat was around them, and each fix is gated on `SPACE` so Kohar Valley's co-op is Build 26's (T37
+replays a scripted two-player run against `e57e195`).** The guest's health is the host's to keep, so a guest's fall is charged
+by the host from the guest's poses (`remoteHeight`: a pose above its floor is a body in the air, the next on a floor a landing,
+the drop from the highest pose charged by `fallDamage`; a pose on a ladder, `cl`, is never in the air) and the guest's own
+`land()` charges nothing while guesting. Poses and snapshots send `crouch||mustCrouch`. Revive reach is three-dimensional on a
+map with height, on both pages and on the host when it takes a guest's `revive`. `mateNow()` keeps the teammate's own height
+(it used to put the extrapolated teammate on the terrain: a blast under a floor found it there). Connected on a map to look at
+the host runs the AI (and the foes of `?foes=1`) and the guest draws what it is told; `lookReset` never hides the teammate.
+Knife, blast and the guest's shots were already three-dimensional (rays and `rewind` with y). **The customs house:** the corridor
+3 m (was 2.2), the rooms fewer and larger (halls 62 to 93 m², rooms 44 to 75, the loft 143; closets stay), doorways from the
+corridor 1.6 m bare frames (`door: false`, `way()`), doorways between rooms 1.3 m bare frames, the four street doors keep their
+leaves swung open; the stair wells stay 4.3 m long (`stairW` z 55.5..59.8, `stairE` 62.8..67.1). A two-page bench cannot be
+driven from here; the foes bench and T37 stand for it.
 Build 26 (local, 2026-09-30): enemy height on Dehrun Terraces, map build 5 of 9. **On a map with a space the enemies walk a
 navigation in layers (`dist/navmesh.js`, made by the kit on demand, `built.navigation()`; Kohar Valley never loads it and
 `LAYERS` is null there: every AI change is gated on `LAYERS`, and T36 requires Kohar's cover table, paths, spots and the fire
@@ -297,15 +311,16 @@ node tests/test-kit-b23.mjs
 node tests/test-height-b24.mjs
 node tests/test-arena-b25.mjs
 node tests/test-foes-b26.mjs
+node tests/test-coopheight-b27.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 26 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 27 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena and 8 enemy-height checks (268 in 29 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height and 8 co-op-height checks (276 in 30 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
