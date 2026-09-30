@@ -75,7 +75,7 @@ await check('see', 'host and guest see each other at the right height: on the fi
 });
 
 await check('shot', 'a shot from the guest and the same shot from the host do the same to a target on another level: from the foot of the west stair at an enemy standing on its landing 1.65 m up, the host\'s rifle and the guest\'s rifle (judged by the host from the guest\'s message) take the same health and end at the same point; and a shot from each at a target hidden by the floor above hits the floor', async () => {
-  const p = await pair(), {host, guest} = p, farW = Math.min(...K.stairs[0].z), spot = V(-10.5, FLOORS[1], CZ[0] + .7), target = p.foe(0, -10.5, 1.7, farW + .75);   /* the shooter at the top of the west stair's second flight, the target on the landing below */
+  const p = await pair(), {host, guest} = p, farW = Math.min(...K.stairs[0].z), SX = Math.max(...K.stairs[0].x) - 1,   /* over the second flight, which comes up to this floor */ spot = V(SX, FLOORS[1], CZ[0] + .7), target = p.foe(0, SX, 1.7, farW + .75);   /* the shooter at the top of the west stair's second flight, the target on the landing below */
   const config = host.ambush.gunConfig();   /* the host's rifle: the guest's is the same (both assault) */
   const aim = () => target.g.position.clone().setY(target.g.position.y + 1.25).sub(spot.clone().setY(spot.y + 1.7)).normalize();
   p.place('host', spot.x, spot.y, spot.z); p.place('guest', 0, FLOORS[0], 66); const hp0 = target.hp, end1 = host.hitScan(spot.clone().setY(spot.y + 1.7), aim(), config, 'local'); const took1 = hp0 - target.hp; assert(took1 > 0, `the host's shot hit (${took1})`);

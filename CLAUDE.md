@@ -27,6 +27,26 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 29 (local, 2026-09-30): windows and stairs. **Glass is the kit's (`built.glass`, `GLASS` in `game.js`; null on Kohar Valley,
+where nothing of it runs): a pane is not a mesh but one instance of one box per kind of glass (`pane` dark, `clear`), listed in
+`stats.list` as before, with a third instanced drawing for what a broken pane leaves in its frame (teeth along the edges). Breaking
+hides one instance and shows another: no mesh, geometry or material is ever made after load (T39 counts).** A whole pane stops sight
+and shots (`clear()`, hence `visible()`, the knife and cover checks; `hitScan` ends at the glass and breaks it: the breaking shot
+goes no further); a broken pane stops nothing. Only the host or a player alone breaks (`glassBreak`; never while `guesting()`): the
+guest is told (`glass`), and every snapshot carries `gl` (how many panes are broken and a sum over which); a guest whose panes differ
+asks (`glassAsk`, again every fifth snapshot) and is sent the list (`glassAll`, `GLASS.set`). Also breaking: a grenade passing through
+(`nadeAdvance`), a blast within `GLASS_BLAST` 5 m (before its damage: glass shields nobody), a player's body in a pane (`glassBodies`,
+host-side for both players), and any AI actor that would see someone but for glass (`sees()` notes the pane in `a.glassAt`, the fire
+block shoots it out at the usual cadence drawn from `aiRng`, hurting nobody, then the actor sees). `reset()` makes every pane whole.
+**Do not put glass back among the occluders or make panes meshes; do not let the guest break a pane.** Windows: `win()` is 1.4 m wide
+with its head at 2.2 m (was 1.1 / 2.05), `dwin()` a double window (`double: true`: one 2.4 m opening, two casements, a post between,
+two panes, half shutters); the town's shells are `glazed` (panes only) and every other one has doubles upstairs where a face has
+room; 294 panes in all. **Stairs (Step A measured why 1.7 m felt tight: not the width, but (1) on 17 of 23 flights a body hugging a
+wall stopped dead against something a few centimetres proud of it, (2) half landings 1.37 m clear, (3) roof doors 1.3 m, about 1.1 clear):**
+every flight is 2 m (1.99 to 2.12 clear; the customs house's wells 4.3 by 4.8 m, x ±8.3 to ±12.6, `landing: 2`, `head.door` 1.9; house
+A's well to x −10.6; district stairs take `w − 2.5`); the player's own moves are nudged (`BODY.nudge` .2, `space.move(..., {nudge})`:
+a step that makes under a quarter of its way is tried from up to .2 m to each side and the best taken; enemies and the floods are
+not nudged). `navmesh.js`: a place the body settles lower than the mover left it must be clear there. B25 awaits the user.
 Build 28 (local, 2026-09-30): the layout of Dehrun Terraces, map build 7 of 9. **The town is data in `dist/map-dehrun.js`, most of
 it made by a generator at the top of the file (`DIST`: terraces, retaining walls, lane steps, cross streets, town walls, gates, 61
 houses) from `TERRACES`, `LANES`, `height(x, z)` and `level(z)`; the block and the customs house are written out as before.** Six
@@ -336,15 +356,16 @@ node tests/test-arena-b25.mjs
 node tests/test-foes-b26.mjs
 node tests/test-coopheight-b27.mjs
 node tests/test-town-b28.mjs
+node tests/test-windows-b29.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 28 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 29 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height and 6 town checks (282 in 31 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town and 9 windows-and-stairs checks (291 in 32 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

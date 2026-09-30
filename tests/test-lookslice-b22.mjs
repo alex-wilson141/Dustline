@@ -49,7 +49,7 @@ await check('kohar', 'Kohar Valley fetches nothing of the new map: the modules i
   const game = SOURCE ? fs.readFileSync(SOURCE, 'utf8') : read('game.js'), {KOHAR} = await import(new URL('dist/map-kohar.js', projectRoot));
   for (const t of ['WORLD.sky.environment??.35', 'WORLD.sky.background??.75', 'WORLD.sky.ambient??1.6', 'WORLD.sun.colour??0xffe6c2', 'WORLD.sun.power??3.6', 'WORLD.terrain.surface||groundY', 'LOOKMAP=WORLD.look||null']) assert(game.includes(t), `the game keeps ${t}`);
   for (const k of ['environment', 'background', 'ambient']) assert(!(k in KOHAR.sky)); for (const k of ['colour', 'power']) assert(!(k in KOHAR.sun)); assert(!('surface' in KOHAR.terrain) && !('look' in KOHAR) && !('build' in KOHAR) && !('block' in KOHAR));
-  assert.match(read('index.html'), /BUILD 28/);
+  assert.match(read('index.html'), /BUILD 29/);
   report.kohar = {modulesLoaded: graph.length, assetsAskedFor: asked.length, drawn: d, note: 'that its world is Build 20\'s, number for number, is checked by T31 on this same build'};
 });
 
@@ -94,7 +94,7 @@ await check('served', 'every file of the new map is served: a web server over di
 
 await check('ceilings', 'the block stays under the ceilings with every model in place: draw calls under 700 and triangles under 700,000 (raised after B19), counted over everything that is drawn; each kind of prop is drawn once per part however many stand there', async () => {
   const g = await dehrun(), d = drawn(g), props = DEHRUN.block.props.length;
-  assert(d.calls <= CEILING.draws, `${d.calls} draw calls`); assert(d.triangles <= CEILING.triangles, `${d.triangles} triangles`); assert(d.calls > 40 && d.triangles > 150000, 'the block is there'); assert(d.triangles < 600000, 'the map has not grown past what was measured in B19 and B20 by more than the customs house added in Build 25 (its measurement is B21)');
+  assert(d.calls <= CEILING.draws, `${d.calls} draw calls`); assert(d.triangles <= CEILING.triangles, `${d.triangles} triangles`); assert(d.calls > 40 && d.triangles > 150000, 'the block is there'); assert(d.triangles < 650000, 'the town has not grown past what Build 28 measured (B24) by more than Build 29\'s windows, glass and wider stairs');
   assert.equal(d.propKinds, kinds.length); const parts = []; g.scene.traverse(o => { if (o.userData.prop) parts.push(o); }); assert(parts.every(o => o.isInstancedMesh && o.count === DEHRUN.block.props.filter(p => p[0] === o.userData.prop).length), 'one drawing per part for all of a kind'); assert(parts.length < props, `${parts.length} drawings for ${props} props`);
   assert.equal(Math.round(g.built.stats.propTriangles), Math.round(parts.reduce((s, o) => s + (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count, 0)));
   assert.equal(g.scene.children.filter(o => o.isLight).length, 3, 'no light source is added (sky, sun, the lamp in the open house)');

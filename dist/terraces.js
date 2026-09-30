@@ -98,6 +98,13 @@ export function buildTerraces(ctx, map) {
     if (seen && !turned) occluders.push(o);
     return o;
   }
+  // ---- Glass (Build 29): a pane is not a mesh of its own. It is listed (so that everything that read the kit's boxes
+  // still finds it), drawn as one instance of one box per kind of glass, and known to the game as a thin box that a
+  // shot breaks and that stops sight and bullets until then (`glass`, made below once every pane is known).
+  const panes = [];
+  function glaze(w, h, d, x, y, z, m) { const name = m.userData.surface; assert(w > 0 && h > 0 && d > 0, `a pane: ${w} x ${h} x ${d}`);
+    stats.list.push({at: [x, y, z], size: [w, h, d], surface: name, turned: false, min: [x - w / 2, y - h / 2, z - d / 2], max: [x + w / 2, y + h / 2, z + d / 2], solid: false, tag: null}); stats.boxes++;
+    panes.push({kind: name, at: [x, y, z], size: [w, h, d], min: [x - w / 2, y - h / 2, z - d / 2], max: [x + w / 2, y + h / 2, z + d / 2]}); }
   const solid = (x0, x1, z0, z1) => solids.push({x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: Math.abs(x1 - x0) / 2, d: Math.abs(z1 - z0) / 2});
   // A box given by its ends along the wall's line: `axis` is the direction the wall runs in.
   const along = (axis, at, from, to, thick, y0, y1, surface, opt) => axis === 'x' ? block(to - from, y1 - y0, thick, (from + to) / 2, (y0 + y1) / 2, at, surface, opt) : block(thick, y1 - y0, to - from, at, (y0 + y1) / 2, (from + to) / 2, surface, opt);
@@ -109,7 +116,7 @@ export function buildTerraces(ctx, map) {
   }
 
   // ---- A wall with openings. `out` is the side the outside is on (+1 or -1 across the wall's line).
-  function wall({axis, at, from, to, base, height, thick = .34, surface, lining, out = 1, openings = [], hard = false, plain = false}) {
+  function wall({axis, at, from, to, base, height, thick = .34, surface, lining, out = 1, openings = [], hard = false, plain = false, glazed = false}) {
     const list = [...openings].sort((a, b) => a.at - b.at), top = base + height, skin = lining ? .06 : 0, body = thick - skin, mid = at + out * skin / 2, inner = at - out * (thick - skin) / 2;
     const piece = (a, b, y0, y1, closes) => { if (b - a < .01 || y1 - y0 < .01) return; along(axis, mid, a, b, body, y0, y1, surface); if (lining) along(axis, inner, a, b, skin, y0, y1, lining, {shadow: false});
       if (hard && closes) axis === 'x' ? solid(a, b, at - thick / 2, at + thick / 2) : solid(at - thick / 2, at + thick / 2, a, b); };
@@ -118,15 +125,16 @@ export function buildTerraces(ctx, map) {
       piece(cursor, a, base, top, true); piece(a, b, base, sill, false); piece(a, b, head, top, false);
       if (hard && (o.sill || o.closed || o.kind === 'shop' && o.counter)) axis === 'x' ? solid(a, b, at - thick / 2, at + thick / 2) : solid(at - thick / 2, at + thick / 2, a, b);
       if (o.kind === 'door' || o.kind === 'open') stats.doors.push({x: axis === 'x' ? o.at : at, z: axis === 'x' ? at : o.at, axis, y: sill, width: o.width, kind: o.kind, shut: o.kind === 'door' && !!o.closed && o.open == null});   // Build 26: every doorway, for the enemies' paths
-      dress(o, {axis, at, out, thick, a, b, sill, head, plain}); cursor = b; }
+      dress(o, {axis, at, out, thick, a, b, sill, head, plain, glazed}); cursor = b; }
     piece(cursor, to, base, top, true);
   }
   // What an opening gets. A window: a frame in the wall's depth, a stone sill, a casement set back in it with glass
   // and glazing bars, shutters outside, iron bars where asked. A door: a frame, a threshold, a leaf of planks with
   // battens that stands in the opening when shut and swings into the room when open. A shop: a rolling shutter and a
   // counter. An awning: cloth that sags, with a hem, on a rail at the wall and a pole on posts or on brackets.
-  function dress(o, {axis, at, out, thick, a, b, sill, head, plain}) {
+  function dress(o, {axis, at, out, thick, a, b, sill, head, plain, glazed}) {
     const face = at + out * thick / 2, P = (along_, across, y, w, h, d, surface, opt) => axis === 'x' ? block(w, h, d, along_, y, across, surface, opt) : block(d, h, w, across, y, along_, surface, opt);
+    const G = (along_, across, y, w, h, d, m) => axis === 'x' ? glaze(w, h, d, along_, y, across, m) : glaze(d, h, w, across, y, along_, m);
     const frame = o.frame || 'beams', deep = thick + .08, mid = (a + b) / 2, w = b - a, tall = head - sill, set = at + out * (thick / 2 - .13);   // `set`: where the casement or the shut door stands
     if (o.kind === 'open') { P(mid, at, head + .06, w + .3, .15, deep + .06, frame); return; }   // Build 25: a plain opening (the way into a stair): a beam across it and nothing else
     if (o.kind !== 'shop') { P(a + .04, at, (sill + head) / 2, .08, tall - .03, deep, frame); P(b - .04, at, (sill + head) / 2, .08, tall - .03, deep, frame); }
@@ -137,14 +145,19 @@ export function buildTerraces(ctx, map) {
     const hinge = (end, dir, angle, length, surface, to = 1, line = at + out * to * (thick / 2 + .03), y0 = sill + .03, y1 = head - .03, fat = .045) => { const u = Math.cos(angle) * dir, v = Math.sin(angle) * out * to;
       return axis === 'x' ? leaf(end, line, u, v, length, y0, y1, fat, surface) : leaf(line, end, v, u, length, y0, y1, fat, surface); };
     // A house beyond the walls is seen from far: it gets the frame, the dark room and the shutters, and no more.
-    if (plain) { if (o.kind === 'window' && o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue'); } return; }
+    // A double window (Build 29): two casements in one opening, a post between them; its shutters are half leaves.
+    const halves = o.double ? [[a, mid + .03], [mid - .03, b]] : [[a, b]], leafLong = (o.double ? w / 4 : w / 2) - .06;
+    if (o.kind === 'window' && o.double) P(mid, at, (sill + head) / 2, .1, tall - .03, deep, frame);
+    if (plain) { if (o.kind === 'window') { if (glazed) for (const [ha, hb] of halves) G((ha + hb) / 2, set, (sill + head) / 2, hb - ha - .17, tall - .08, .012, pane);   // a town house seen from its street: its panes are there to be shot out
+        if (o.shutters !== false) { const open = o.open ?? 2.75, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, leafLong, o.leaf || 'blue'); hinge(b - .04, -1, r, leafLong, o.leaf || 'blue'); } } return; }
     if (o.kind === 'window') { const glass = o.closed || o.back ? pane : clear, y = (sill + head) / 2, rail = .055;
-      P(mid, set, y, w - .17, tall - .08, .012, glass, {shadow: false, seen: false});
-      // The casement stops no body: a window without bars can be climbed through (its glass gives way to the story).
-      for (const e of [a + .08 + rail / 2, b - .08 - rail / 2]) P(e, set, y, rail, tall - .06, .05, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); for (const e of [sill + .04 + rail / 2, head - .04 - rail / 2]) P(mid, set, e, w - .17 - 2 * rail, rail, .05, frame, {seen: false, shadow: false, body: false, tag: 'casement'});
-      P(mid, set, y, .035, tall - .08 - 2 * rail, .04, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); if (tall > 1) P(mid, set, sill + tall * .62, w - .17 - 2 * rail, .035, .038, frame, {seen: false, shadow: false, body: false, tag: 'casement'});
-      if (o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue'); }
-      if (o.bars) { for (let i = 1; i < 5; i++) P(a + w * i / 5, face - out * .05, y, .022, tall - .05, .022, iron, {shadow: false, seen: false}); for (const e of [sill + tall * .3, sill + tall * .7]) P(mid, face - out * .05, e, w - .16, .02, .03, iron, {shadow: false, seen: false}); } }
+      for (const [ha, hb] of halves) { const hm = (ha + hb) / 2, hw = hb - ha;
+        G(hm, set, y, hw - .17, tall - .08, .012, glass);
+        // The casement stops no body: a window without bars can be climbed through (its glass gives way to the body: the game breaks it).
+        for (const e of [ha + .08 + rail / 2, hb - .08 - rail / 2]) P(e, set, y, rail, tall - .06, .05, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); for (const e of [sill + .04 + rail / 2, head - .04 - rail / 2]) P(hm, set, e, hw - .17 - 2 * rail, rail, .05, frame, {seen: false, shadow: false, body: false, tag: 'casement'});
+        P(hm, set, y, .035, tall - .08 - 2 * rail, .04, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); if (tall > 1) P(hm, set, sill + tall * .62, hw - .17 - 2 * rail, .035, .038, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); }
+      if (o.shutters !== false) { const open = o.open ?? 2.75, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, leafLong, o.leaf || 'blue'); hinge(b - .04, -1, r, leafLong, o.leaf || 'blue'); }
+      if (o.bars) { const n = w > 1.5 ? Math.round(w / .24) : 5; for (let i = 1; i < n; i++) P(a + w * i / n, face - out * .05, y, .022, tall - .05, .022, iron, {shadow: false, seen: false}); for (const e of [sill + tall * .3, sill + tall * .7]) P(mid, face - out * .05, e, w - .16, .02, .03, iron, {shadow: false, seen: false}); } }
     if (o.kind === 'door' && o.door !== false) { const shut = !!o.closed && o.open == null, L = w - .17, plank = o.leaf || 'planks', to = o.swing === 'out' ? 1 : -1;   // an open leaf swings into the room, or out when the map says so (a door onto a roof)
       const d = shut ? hinge(a + .085, 1, 0, L, plank, 1, set, sill + .06, head - .04, .05) : hinge(a + .085, 1, o.open ?? 1.75, L, plank, to, at + out * to * (thick / 2 + .03), sill + .06, head - .04, .05);
       // Battens across the planks and a handle, on the leaf's outer side, turned with it.
@@ -199,7 +212,7 @@ export function buildTerraces(ctx, map) {
     block(x1 - x0 + .3, 1.4, z1 - z0 + .3, (x0 + x1) / 2, base - .74, (z0 + z1) / 2, 'masonry', {seen: false});    // the footing, down into the ground
     storeys.forEach((S, n) => {
       const ground = n === 0, inside = enter && (ground || S.room) ? (S.lining || 'room') : null, holes = wells.filter(w => w.storeys.includes(n));
-      for (const [name, f] of Object.entries(faces)) wall({...f, base: y, height: S.height, thick: t, surface: S.surface, lining: inside, openings: (S[name] || []).map(o => ({...o, closed: o.closed ?? (!enter && o.kind !== 'shop'), back: o.back ?? (enter && !ground && !S.room ? .02 : 0)})), hard: ground && enter, plain: !!H.plain});
+      for (const [name, f] of Object.entries(faces)) wall({...f, base: y, height: S.height, thick: t, surface: S.surface, lining: inside, openings: (S[name] || []).map(o => ({...o, closed: o.closed ?? (!enter && o.kind !== 'shop'), back: o.back ?? (enter && !ground && !S.room ? .02 : 0)})), hard: ground && enter, plain: !!H.plain, glazed: !!H.glazed});
       if (ground && enter) block(x1 - x0 - 2 * t, .08, z1 - z0 - 2 * t, (x0 + x1) / 2, y + .01, (z0 + z1) / 2, S.floor || 'floor', {shadow: false, tag: 'floor'});
       if (inside) { slab(x0 + t, x1 - t, z0 + t, z1 - t, y + S.height - .235, .05, 'ceiling', holes, {shadow: false});                // the ceiling and its beams
         for (let z = z0 + .8; z < z1 - .4; z += 1.1) slab(x0 + t, x1 - t, z - .07, z + .07, y + S.height - .34, .16, 'beams', holes, {shadow: false, seen: false}); }
@@ -354,9 +367,40 @@ export function buildTerraces(ctx, map) {
         inst.instanceMatrix.needsUpdate = true; inst.computeBoundingSphere(); scene.add(inst); triangles += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * list.length; });
       stats.propTriangles += triangles; ctx.changed?.(); return kind; }).catch(e => { console.warn('DUSTLINE: a model did not arrive:', kind, e?.message || e); stats.failed = (stats.failed || []).concat(kind); return null; }));
   }
+  // ---- The glass, once every pane is known (Build 29). Three drawings for all of it: the dark panes, the clear panes,
+  // and what a broken pane leaves in its frame (teeth of glass along the edges). Breaking a pane hides its instance and
+  // shows its teeth: no mesh, geometry or material is ever made or thrown away after this point.
+  const glass = (() => { const n = panes.length, broken = new Uint8Array(n), holder = new THREE.Object3D(), none = new THREE.Matrix4().makeScale(0, 0, 0), unit = new THREE.BoxGeometry(1, 1, 1), by = {pane: [], clear: []};
+    panes.forEach((p, i) => by[p.kind].push(i)); const whole = new Array(n), left = new Array(n);
+    panes.forEach((p, i) => { holder.position.set(...p.at); holder.rotation.set(0, 0, 0); holder.scale.set(...p.size); holder.updateMatrix(); whole[i] = holder.matrix.clone();
+      const thinX = p.size[0] < p.size[2]; holder.rotation.set(0, thinX ? Math.PI / 2 : 0, 0); holder.scale.set(thinX ? p.size[2] : p.size[0], p.size[1], 1); holder.updateMatrix(); left[i] = holder.matrix.clone(); });
+    for (const [kind, list] of Object.entries(by)) { if (!list.length) continue; const inst = new THREE.InstancedMesh(unit, materials[kind], list.length); inst.castShadow = false; inst.receiveShadow = true; inst.userData.glass = kind;
+      list.forEach((i, slot) => { panes[i].mesh = inst; panes[i].slot = slot; inst.setMatrixAt(slot, whole[i]); }); inst.instanceMatrix.needsUpdate = true; inst.computeBoundingSphere(); scene.add(inst); }
+    // The teeth: triangles standing in from the four edges of a unit square, of uneven length (always the same ones).
+    const tri = []; let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let side = 0; side < 4; side++) { let t = -.5; while (t < .5) { const wide = .07 + rnd() * .14, t1 = Math.min(.5, t + wide), deep = .05 + rnd() * .2, tip = t + (t1 - t) * (.2 + rnd() * .6), pt = (u, v) => side === 0 ? [u, -.5 + v] : side === 1 ? [u, .5 - v] : side === 2 ? [-.5 + v, u] : [.5 - v, u];
+        if (rnd() < .8) tri.push(...pt(t, 0), 0, ...pt(t1, 0), 0, ...pt(tip, deep), 0); t = t1; } }
+    const teeth = new THREE.BufferGeometry(); teeth.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3)); teeth.computeVertexNormals();
+    const shard = plain('shards', new THREE.MeshStandardMaterial({color: '#c4d2d4', roughness: .05, metalness: 0, envMapIntensity: 1.6, transparent: true, opacity: .5, depthWrite: false, side: THREE.DoubleSide}));
+    const rest = n ? new THREE.InstancedMesh(teeth, shard, n) : null; if (rest) { rest.castShadow = false; rest.userData.glass = 'shards'; for (let i = 0; i < n; i++) rest.setMatrixAt(i, left[i]); rest.computeBoundingSphere(); for (let i = 0; i < n; i++) rest.setMatrixAt(i, none); rest.instanceMatrix.needsUpdate = true; scene.add(rest); }
+    const show = i => { const p = panes[i]; p.mesh.setMatrixAt(p.slot, broken[i] ? none : whole[i]); p.mesh.instanceMatrix.needsUpdate = true; rest.setMatrixAt(i, broken[i] ? left[i] : none); rest.instanceMatrix.needsUpdate = true; };
+    return {count: n, panes, broken, teeth: tri.length / 9,
+      // The nearest whole pane a ray meets within `far` (origin and unit direction as vectors): its index, how far, where.
+      hit(o, d, far = 1e9) { let best = -1, bd = far; const O = [o.x, o.y, o.z], D = [d.x, d.y, d.z];
+        for (let i = 0; i < n; i++) { if (broken[i]) continue; const p = panes[i]; let t0 = 0, t1 = bd, ok = true; for (let k = 0; k < 3 && ok; k++) { if (Math.abs(D[k]) < 1e-9) ok = O[k] >= p.min[k] && O[k] <= p.max[k]; else { let a = (p.min[k] - O[k]) / D[k], b = (p.max[k] - O[k]) / D[k]; if (a > b) [a, b] = [b, a]; if (a > t0) t0 = a; if (b < t1) t1 = b; ok = t0 <= t1; } } if (ok && t0 < bd) { bd = t0; best = i; } }
+        return best < 0 ? null : {i: best, distance: bd, point: [O[0] + D[0] * bd, O[1] + D[1] * bd, O[2] + D[2] * bd]}; },
+      // The whole panes that a box touches (a body walking through a window, a blast).
+      within(x0, y0, z0, x1, y1, z1) { const out = []; for (let i = 0; i < n; i++) { const p = panes[i]; if (!broken[i] && p.min[0] <= x1 && p.max[0] >= x0 && p.min[1] <= y1 && p.max[1] >= y0 && p.min[2] <= z1 && p.max[2] >= z0) out.push(i); } return out; },
+      break(i) { if (!(i >= 0 && i < n) || broken[i]) return false; broken[i] = 1; show(i); return true; },
+      reset() { for (let i = 0; i < n; i++) if (broken[i]) { broken[i] = 0; show(i); } },
+      list() { const out = []; for (let i = 0; i < n; i++) if (broken[i]) out.push(i); return out; },
+      // Made exactly what a list says (the guest, from the host): returns the panes newly broken.
+      set(list) { const want = new Uint8Array(n), fresh = []; for (const i of list) if (i >= 0 && i < n) want[i] = 1; for (let i = 0; i < n; i++) if (want[i] !== broken[i]) { if (want[i]) fresh.push(i); broken[i] = want[i]; show(i); } return fresh; },
+      // How many are broken and a sum over which: two pages with the same panes broken give the same two numbers.
+      sum() { let c = 0, h = 0; for (let i = 0; i < n; i++) if (broken[i]) { c++; h = (h + Math.imul(i + 1, 2654435761)) >>> 0; } return [c, h]; }}; })();
   // What a body can stand on, walk into and climb: every box with its top and bottom, the ground, the ladders.
   const space = makeSpace({boxes: stats.list.filter(b => !b.turned).map(b => ({min: b.min, max: b.max, solid: b.solid, tag: b.tag || b.surface})).concat(propBoxes, tankBoxes), ground: groundY, ladders, edges: map.edges});
   // Build 26: where the enemies can go, made from the space when first asked for (a body of their width, their stair rule).
   let nav = null; const navigation = () => nav ??= makeNav(space, {region: map.edges, doors: stats.doors, ladders, starts: [map.starts.player, ...(map.enemies?.spawns || [])].map(([x, z]) => ({x, y: groundY(x, z), z}))});
-  return {stats, materials, roofs, space, navigation, ready: Promise.all(ready)};
+  return {stats, materials, roofs, space, navigation, glass, ready: Promise.all(ready)};
 }

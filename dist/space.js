@@ -6,7 +6,7 @@
 // on it, and falls off anything it walks past. A box is `solid` (it stops a body) and, if solid, its top is a floor.
 import './build.js'; // DEPLOY-01 upgrade guard
 
-export const BODY = {radius: .34, stand: 1.8, crouch: 1.1, step: .35, mantle: 1.35, lean: .2, reach: .75, climb: 1.5, gravity: 9.8, jump: 3.7, stance: .2};
+export const BODY = {radius: .34, stand: 1.8, crouch: 1.1, step: .35, mantle: 1.35, lean: .2, reach: .75, climb: 1.5, gravity: 9.8, jump: 3.7, stance: .2, nudge: .2};
 // Fall damage: nothing up to `safe` metres, everything at `fatal`, and between them a curve that starts gently.
 export const FALL = {safe: 3, fatal: 12, power: 1.5};
 export const fallDamage = h => h <= FALL.safe ? 0 : h >= FALL.fatal ? 100 : 100 * ((h - FALL.safe) / (FALL.fatal - FALL.safe)) ** FALL.power;
@@ -69,16 +69,28 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
     return null; }
   // A horizontal move of a body whose feet are at y and whose head is at y + height, in steps of .25 m, each axis on
   // its own; it steps up onto anything within `step` of its feet. Returns the distance moved and the new floor.
-  function move(p, dx, dz, height, r = body.radius, {stairs = false} = {}) {
+  // `nudge` (Build 29, the player's own moves): a step that something small stops (a beam end, a doorpost, a coping a
+  // few centimetres proud of the wall the body walks along) is tried again from up to `nudge` metres to any side;
+  // the body slips past what it used to stop dead against. Nothing is passed that the body does not fit past.
+  function move(p, dx, dz, height, r = body.radius, {stairs = false, nudge = 0} = {}) {
     const ox = p.x, oz = p.z, steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .25));
-    for (let i = 0; i < steps; i++) for (const [ax, az] of [[dx / steps, 0], [0, dz / steps]]) { if (!ax && !az) continue; const nx = p.x + ax, nz = p.z + az;
+    const step = (ax, az) => { const nx = p.x + ax, nz = p.z + az;
       // Where the feet would be after the step, what is in the way is judged from there: on a stair the next tread is
       // not in the way of a body already on the one below.
       // Where it would drop, the body must also fit where it lands, or be pushed somewhere it fits (`settle`): it does
       // not step off a crate into a gap narrower than itself (Build 25; before, it landed wedged there).
       // Stepping down, what is in the way is judged from the lower level too (a low thing there is met, not stood in).
       const f = floor(nx, nz, p.y + body.step, body.lean, p.y), drop = f.y < p.y - body.step, feet = drop ? p.y : f.y;
-      if (passable(p.x, p.z, nx, nz, feet + body.step, feet + height, r, stairs, p.y + body.step, p.y + height) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y || !drop) p.y = f.y; } }   // up a step, or down one within `step` (Build 28: as the game settles a body every frame; a drop is left to gravity)
+      if (passable(p.x, p.z, nx, nz, feet + body.step, feet + height, r, stairs, p.y + body.step, p.y + height) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y || !drop) p.y = f.y; return true; } return false; };   // up a step, or down one within `step` (Build 28: as the game settles a body every frame; a drop is left to gravity)
+    const ax = dx / steps, az = dz / steps, L = Math.hypot(ax, az);
+    for (let i = 0; i < steps; i++) { const sx = p.x, sy = p.y, sz = p.z; if (ax) step(ax, 0); if (az) step(0, az); if (!nudge || !L) continue;
+      // Hardly any way made (under a quarter of the step, measured along what was asked): the same step from a little to
+      // one side or the other, whichever makes the most way, and only if it makes more. Sliding along a plain wall makes
+      // seven tenths of the way and is never nudged; a body square against a wall gains nothing to either side and stays.
+      const way = () => (Math.max(0, (p.x - sx) * Math.sign(ax)) * Math.abs(ax) + Math.max(0, (p.z - sz) * Math.sign(az)) * Math.abs(az)) / L, made = way();   /* way made on each axis asked for; stepping aside costs nothing */ if (made >= .25 * L) continue;
+      let best = made, at = [p.x, p.y, p.z];
+      for (let d = .04; d <= nudge + 1e-9; d += .04) for (const [lx, lz] of [[d, 0], [-d, 0], [0, d], [0, -d]]) { p.x = sx; p.y = sy; p.z = sz; if (!step(lx, lz)) continue; if (ax) step(ax, 0); if (az) step(0, az); if (way() > best + 1e-6) { best = way(); at = [p.x, p.y, p.z]; } }
+      [p.x, p.y, p.z] = at; }
     return Math.hypot(p.x - ox, p.z - oz);
   }
   // A ledge the body could pull itself onto: ahead by up to `reach`, its top between `step` and `mantle` above the

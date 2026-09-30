@@ -33,13 +33,14 @@ const surface = (x, z) => { if (Math.abs(x) <= BLOCK.x && z >= BLOCK.z[0] && z <
 const SUN_ROUND = 2.33, SUN_UP = .47, SKY_SUN = .629, SUN = [Math.cos(SUN_ROUND) * Math.cos(SUN_UP), Math.sin(SUN_UP), Math.sin(SUN_ROUND) * Math.cos(SUN_UP)], SKY_TURN = SUN_ROUND - SKY_SUN + Math.PI;
 
 const W = 'window', D = 'door';
-const win = (at, o = {}) => ({kind: W, at, width: 1.1, sill: .9, head: 2.05, ...o}), door = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.1, ...o});   // Build 26: 1.3 m, as the customs house (user decision, E41); the block's doors were 1.05 m
+// Build 29: windows are bigger (1.4 by 1.3 m, were 1.1 by 1.15) and a double window is two casements in one 2.4 m opening.
+const win = (at, o = {}) => ({kind: W, at, width: 1.4, sill: .9, head: 2.2, ...o}), dwin = (at, o = {}) => win(at, {width: 2.4, double: true, ...o}), door = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.1, ...o});   // Build 26: 1.3 m, as the customs house (user decision, E41); the block's doors were 1.05 m
 // Build 25: the customs house's doors are 1.3 m wide, for enemies as much as for the player (an enemy asks for .45 m
 // either side of its line; see the roadmap, E41). A room is a rectangle; the storeys' rooms tile the inside of the house.
 const wide = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.3, leaf: 'planks', open: 1.7, ...o}), room = (id, x, z) => ({id, x, z});
 // Build 27: the corridor is 3 m wide (was 2.2) and the rooms fewer and larger, so that it plays as an arena and not a warren.
 // Build 28: the stair wells are 3.5 m wide (flights of 1.7 m: two bodies pass on them).
-const K = {x: [-13, 13], z: [53, 71], in: {x: [-12.6, 12.6], z: [53.4, 70.6]}, corridor: [59.8, 62.8], stairW: {x: [-12.6, -9], z: [55.5, 59.8]}, stairE: {x: [9, 12.6], z: [62.8, 67.1]}};
+const K = {x: [-13, 13], z: [53, 71], in: {x: [-12.6, 12.6], z: [53.4, 70.6]}, corridor: [59.8, 62.8], stairW: {x: [-12.6, -8.3], z: [55, 59.8]}, stairE: {x: [8.3, 12.6], z: [62.8, 67.6]}};
 // A doorway between rooms is a bare frame (no leaf: a leaf stops nobody and only hides the view); the street doors keep their leaves.
 const way = (x, z, o = {}) => ({at: [x, z], door: false, ...o});
 const kRooms = (north, south) => [room('stair W', K.stairW.x, K.stairW.z), room('closet W', K.stairW.x, [K.in.z[0], K.stairW.z[0]]), ...north, room('corridor', K.in.x, K.corridor), ...south, room('stair E', K.stairE.x, K.stairE.z), room('closet E', K.stairE.x, [K.stairE.z[1], K.in.z[1]])];
@@ -85,13 +86,16 @@ for (const [z, lv] of [[30, 0], [5, 1.6], [-18, 3.2]]) { gate('z', -24, z, lv); 
 // side and climbed by an outside stair along its south face to a gap in its parapet.
 const H = (id, x, z, storeys, o = {}) => { const base = level((z[0] + z[1]) / 2), faces = o.faces || {};
   if (o.open) { const w = x[1] - x[0], d = z[1] - z[0], side = o.side || 'west', top = storeys.reduce((s, t) => s + t[0], 0), doorAt = side === 'west' || side === 'east' ? z[0] + d / 2 : x[0] + w / 2;
-    DIST.houses.push({id, x, z, base, enter: true, beamEnds: [side], roof: {parapet: .5, surface: 'gravel', gaps: [{side: 'south', from: x[0] + .35, to: x[0] + 2.25}]}, storeys: storeys.map(([h, sf, band], n) => ({height: h, surface: sf, band, ...(n === 0 ? {lining: 'room', floor: 'slab', [side]: [door(doorAt, {leaf: 'planks', open: 1.7})], north: [win(x[0] + w * .7, {bars: true})]} : {})}))});
+    DIST.houses.push({id, x, z, base, enter: true, beamEnds: [side], roof: {parapet: .5, surface: 'gravel', gaps: [{side: 'south', from: x[0] + .25, to: x[0] + 2.25}]}, storeys: storeys.map(([h, sf, band], n) => ({height: h, surface: sf, band, ...(n === 0 ? {lining: 'room', floor: 'slab', [side]: [door(doorAt, {leaf: 'planks', open: 1.7})], north: [win(x[0] + w * .7, {bars: true})]} : {[side]: [dwin(doorAt, {sill: .8})]})}))});
     // The stair takes the house's whole south face: treads at least .355 m deep (a body climbs by its edge; the
     // enemies' rule brushes treads within .66 m), the rise per tread from what is left (5.8 m in 27 treads on a
     // 12 m house, 21 on a 10 m one).
-    const run = w - 1.9 - .5, count = Math.min(Math.round(top / .2), Math.floor(run / .355));
-    DIST.flights.push({axis: 'x', at: z[1] + .2, from: x[0] + 2.2 + run, to: x[0] + 2.2, low: base, high: base + top, width: 1.7, count, out: 1, landing: 1.9}); return; }
-  DIST.houses.push({id, x, z, plain: true, base, beamEnds: ['south'], roof: {parapet: .5}, storeys: storeys.map(([h, sf, band], n) => ({height: h, surface: sf, band, ...Object.fromEntries(Object.entries(faces).map(([f, places]) => [f, places.map(at => n ? win(at, {sill: .8, open: [2.75, 1 + (Math.abs(at) * 7 % 3) * .8]}) : win(at, {bars: true}))]))}))}); };
+    const run = w - 2 - .5, count = Math.min(Math.round(top / .2), Math.floor(run / .355));
+    DIST.flights.push({axis: 'x', at: z[1] + .2, from: x[0] + 2.2 + run, to: x[0] + 2.2, low: base, high: base + top, width: 2, count, out: 1, landing: 2}); return; }
+  // A shell's windows (Build 29): glazed, to be shot out; upstairs every other house has double windows where its face
+  // has room for them (2.4 m with a metre of wall to the corner and to the next window), the rest single ones.
+  const twin = DIST.houses.length % 2 === 0, fits = (f, places, at) => { const [lo, hi] = f === 'north' || f === 'south' ? x : z; return at - 1.2 >= lo + 1 && at + 1.2 <= hi - 1 && places.every(o => o === at || Math.abs(o - at) >= 3.4); };
+  DIST.houses.push({id, x, z, plain: true, glazed: true, base, beamEnds: ['south'], roof: {parapet: .5}, storeys: storeys.map(([h, sf, band], n) => ({height: h, surface: sf, band, ...Object.fromEntries(Object.entries(faces).map(([f, places]) => [f, places.map(at => n ? (twin && fits(f, places, at) ? dwin : win)(at, {sill: .8, open: [2.75, 1 + (Math.abs(at) * 7 % 3) * .8]}) : win(at, {bars: true}))]))}))}); };
 const P = ['masonry', 'plaster', 'ochre', 'white'];
 const rows = [
   // the lower terrace, level 0 (z 17..80): lanes at x -48 / 48, cross street z 30
@@ -217,7 +221,7 @@ export const DEHRUN = {
     houses: [
       // A: the open house, west of the middle terrace. Stone below, plaster above, a balcony over the street.
       // Build 24: its upper floor is a room, reached by the stair through a well in the floor; a hatch and a ladder lead to the roof.
-      {id: 'A', x: [-13, -4.2], z: [2, 13], base: 1.6, enter: true, beamEnds: ['east', 'south'], roof: {parapet: .6, tanks: [[-10.5, 4.5]]}, wells: [{x: [-12.66, -10.9], z: [6.2, 11.7], storeys: [0]}, {x: [-5.7, -4.62], z: [3, 4.2], storeys: [1]}], storeys: [
+      {id: 'A', x: [-13, -4.2], z: [2, 13], base: 1.6, enter: true, beamEnds: ['east', 'south'], roof: {parapet: .6, tanks: [[-10.5, 4.5]]}, wells: [{x: [-12.66, -10.6], z: [6.2, 11.7], storeys: [0]}, {x: [-5.7, -4.62], z: [3, 4.2], storeys: [1]}], storeys: [
         {height: 3, surface: 'masonry', east: [door(5, {awning: ['#7c5a48', 1.4, 'brackets'], open: 1.8}), win(9.5, {width: 1.3, bars: true})], south: [win(-9)], north: [win(-8.5, {open: [2.75, 1.3]})]},
         {height: 2.8, surface: 'plaster', band: 'white', room: true, east: [win(4.4, {sill: .8}), door(7.5, {width: .95, leaf: 'blue', closed: true}), win(10.6, {sill: .8, open: [1.1, 2.75]})], south: [win(-8.5, {sill: .8})], north: [win(-9, {sill: .8})], west: [win(7.5, {sill: .8})]}]},
       // B: the shop across the street, open, with its counter and rolling shutter.
@@ -250,23 +254,23 @@ export const DEHRUN = {
       // south-east corners, climb from the ground to the roof and come out through stair heads. Doors on all four
       // sides. Every door and doorway in it is 1.3 m wide.
       {id: 'K', x: K.x, z: K.z, base: 0, thick: .4, enter: true, beamEnds: ['north', 'south'], roof: {parapet: .6, tanks: [[-6, 66.5], [5, 56]]}, door: {width: 1.6, head: 2.3},
-        stairs: [{axis: 'z', x: K.stairW.x, z: [K.stairW.z[1], K.stairW.z[0]], storeys: [0, 1, 2], head: {}}, {axis: 'z', x: K.stairE.x, z: [K.stairE.z[0], K.stairE.z[1]], storeys: [0, 1, 2], head: {}}],
+        stairs: [{axis: 'z', x: K.stairW.x, z: [K.stairW.z[1], K.stairW.z[0]], storeys: [0, 1, 2], landing: 2, head: {door: 1.9}}, {axis: 'z', x: K.stairE.x, z: [K.stairE.z[0], K.stairE.z[1]], storeys: [0, 1, 2], landing: 2, head: {door: 1.9}}],   // Build 29: flights 2 m clear, the half landing as deep as a flight is wide, the roof door 1.9 m
         storeys: [
         {height: 3.4, surface: 'masonry', room: true, floor: 'slab',
-          rooms: kRooms([nRoom('north-west room', [-9, -2]), nRoom('north hall', [-2, 12.6])], [sRoom('south-west room', [-12.6, -4]), sRoom('south hall', [-4, 4]), sRoom('south-east room', [4, 9])]),
-          doors: [way(-6, 59.8), way(0, 59.8), way(8, 59.8), way(-8, 62.8), way(0, 62.8), way(7, 62.8), way(-9, 54.8, {width: 1.3}), way(9, 68.5, {width: 1.3}), way(4, 67, {width: 1.3}), way(-2, 56.5, {width: 1.3}), way(-4, 67, {width: 1.3})],
-          west: [wide(61.3), win(55, {bars: true}), win(65, {bars: true}), win(68.5, {bars: true})], east: [wide(61.3), win(56, {bars: true}), win(59, {bars: true}), win(68.5, {bars: true})],
+          rooms: kRooms([nRoom('north-west room', [-8.3, -2]), nRoom('north hall', [-2, 12.6])], [sRoom('south-west room', [-12.6, -4]), sRoom('south hall', [-4, 4]), sRoom('south-east room', [4, 8.3])]),
+          doors: [way(-6, 59.8), way(0, 59.8), way(8, 59.8), way(-8, 62.8), way(0, 62.8), way(7, 62.8), way(-8.3, 54.2, {width: 1.3}), way(8.3, 69.1, {width: 1.3}), way(4, 67, {width: 1.3}), way(-2, 56.5, {width: 1.3}), way(-4, 67, {width: 1.3})],
+          west: [wide(61.3), win(54.2, {bars: true}), win(65, {bars: true}), win(68.5, {bars: true})], east: [wide(61.3), win(56, {bars: true}), win(58.4, {bars: true}), win(68.5, {bars: true})],
           north: [wide(3), win(-11.2, {bars: true}), win(-7, {bars: true}), win(-.5, {bars: true}), win(7, {bars: true}), win(11, {bars: true})], south: [wide(0), win(-10, {bars: true}), win(-7, {bars: true}), win(2, {bars: true}), win(7, {bars: true}), win(11.2, {bars: true})]},
         {height: 3.2, surface: 'plaster', band: 'white', room: true,
-          rooms: kRooms([nRoom('north-west room', [-9, -3]), nRoom('north room', [-3, 5]), nRoom('north-east room', [5, 12.6])], [sRoom('south-west room', [-12.6, -5]), sRoom('south room', [-5, 4]), sRoom('south-east room', [4, 9])]),
-          doors: [way(-6, 59.8), way(1, 59.8), way(9, 59.8), way(-3, 56.5, {width: 1.3}), way(-8, 62.8), way(0, 62.8), way(7, 62.8), way(4, 67, {width: 1.3}), way(-9, 54.8, {width: 1.3}), way(9, 68.5, {width: 1.3})],
-          west: [win(55, {sill: .8}), win(64.5, {sill: .8}), win(68.5, {sill: .8, open: [2.75, 1.2]})], east: [win(56, {sill: .8}), win(59, {sill: .8, open: [1.1, 2.75]}), win(68.5, {sill: .8})],
-          north: [win(-11.2, {sill: .8}), win(-6.5, {sill: .8}), win(0, {sill: .8, open: [2.75, 1.4]}), win(3, {sill: .8}), win(8, {sill: .8}), win(11, {sill: .8})], south: [win(-10.5, {sill: .8}), win(-7.5, {sill: .8}), win(-3, {sill: .8, open: [1.3, 2.75]}), win(1, {sill: .8}), win(7, {sill: .8}), win(11.2, {sill: .8})]},
+          rooms: kRooms([nRoom('north-west room', [-8.3, -3]), nRoom('north room', [-3, 5]), nRoom('north-east room', [5, 12.6])], [sRoom('south-west room', [-12.6, -5]), sRoom('south room', [-5, 4]), sRoom('south-east room', [4, 8.3])]),
+          doors: [way(-6, 59.8), way(1, 59.8), way(9, 59.8), way(-3, 56.5, {width: 1.3}), way(-8, 62.8), way(0, 62.8), way(7, 62.8), way(4, 67, {width: 1.3}), way(-8.3, 54.2, {width: 1.3}), way(8.3, 69.1, {width: 1.3})],
+          west: [win(54.2, {sill: .8}), dwin(64.8, {sill: .8}), win(68.5, {sill: .8, open: [2.75, 1.2]})], east: [win(56, {sill: .8}), win(58.4, {sill: .8, open: [1.1, 2.75]}), win(68.5, {sill: .8})],
+          north: [win(-11.2, {sill: .8}), win(-6.5, {sill: .8}), dwin(0, {sill: .8}), win(3, {sill: .8}), win(8, {sill: .8}), win(11, {sill: .8})], south: [win(-10.5, {sill: .8}), win(-7.5, {sill: .8}), win(-3, {sill: .8, open: [1.3, 2.75]}), dwin(.8, {sill: .8}), win(7, {sill: .8}), win(11.2, {sill: .8})]},
         {height: 3.2, surface: 'white', band: 'ochre', room: true,
-          rooms: kRooms([nRoom('loft', [-9, 12.6])], [sRoom('south-west room', [-12.6, -3]), sRoom('south room', [-3, 4]), sRoom('south-east room', [4, 9])]),
-          doors: [way(-5, 59.8), way(7, 59.8), way(-8, 62.8), way(0, 62.8), way(7, 62.8), way(4, 67, {width: 1.3}), way(-3, 67, {width: 1.3}), way(-9, 54.8, {width: 1.3}), way(9, 68.5, {width: 1.3})],
-          west: [win(55, {sill: .8}), win(65, {sill: .8}), win(68.5, {sill: .8})], east: [win(56, {sill: .8, open: [2.75, 1]}), win(59, {sill: .8}), win(68.5, {sill: .8})],
-          north: [win(-11.2, {sill: .8}), win(-7, {sill: .8}), win(-2.5, {sill: .8}), win(2, {sill: .8}), win(6.5, {sill: .8, open: [1.2, 2.75]}), win(11, {sill: .8})], south: [win(-10, {sill: .8}), win(-6, {sill: .8}), win(-1.5, {sill: .8}), win(1.5, {sill: .8}), win(7, {sill: .8, open: [2.75, 1.3]}), win(11.2, {sill: .8})]}]},
+          rooms: kRooms([nRoom('loft', [-8.3, 12.6])], [sRoom('south-west room', [-12.6, -3]), sRoom('south room', [-3, 4]), sRoom('south-east room', [4, 8.3])]),
+          doors: [way(-5, 59.8), way(7, 59.8), way(-8, 62.8), way(0, 62.8), way(7, 62.8), way(4, 67, {width: 1.3}), way(-3, 67, {width: 1.3}), way(-8.3, 54.2, {width: 1.3}), way(8.3, 69.1, {width: 1.3})],
+          west: [win(54.2, {sill: .8}), dwin(65, {sill: .8}), win(68.5, {sill: .8})], east: [win(56, {sill: .8, open: [2.75, 1]}), win(58.4, {sill: .8}), win(68.5, {sill: .8})],
+          north: [win(-11.2, {sill: .8}), win(-7, {sill: .8}), dwin(-2.5, {sill: .8}), win(2, {sill: .8}), dwin(6.5, {sill: .8}), win(11, {sill: .8})], south: [win(-10, {sill: .8}), dwin(-6, {sill: .8}), win(-1.5, {sill: .8}), win(1.5, {sill: .8}), win(7, {sill: .8, open: [2.75, 1.3]}), win(11.2, {sill: .8})]}]},
       ...DIST.houses,
     ],
     balconies: [
@@ -274,8 +278,8 @@ export const DEHRUN = {
     ],
     // Outside and inside stairs: geometry until height is built.
     flights: [
-      {axis: 'x', at: 34, from: 12.8, to: 7.4, low: 0, high: 3, width: 1.7, count: 15, out: 1, landing: 1.9},   // Build 28: 1.7 m
-      {axis: 'z', at: -12.66, from: 11.6, to: 6.6, low: 1.6, high: 4.6, width: 1.7, count: 14, out: 1, surface: 'room', tread: 'planks'},   // Build 28: 1.7 m (Build 26 made it 1.05 for an enemy): two bodies pass
+      {axis: 'x', at: 34, from: 12.8, to: 7.4, low: 0, high: 3, width: 2, count: 15, out: 1, landing: 2},   // Build 29: 2 m
+      {axis: 'z', at: -12.66, from: 11.6, to: 6.6, low: 1.6, high: 4.6, width: 2, count: 14, out: 1, surface: 'room', tread: 'planks'},   // Build 29: 2 m
       ...DIST.flights,
     ],
     // Ladders [where it stands, which way the climber faces it from, its foot and top, where the climber steps off].
@@ -347,15 +351,15 @@ export const DEHRUN = {
       // Light models only: the whole map is to stay under 700,000 triangles (a lantern alone is 8,300). Build 27: placed
       // again for the wider corridor and the larger rooms, against the walls, clear of every doorway.
       ['painted_wooden_table', 6, 55.5, 90], ['painted_wooden_chair_01', 5.2, 55.5, 90], ['painted_wooden_chair_01', 6.9, 55.7, -80],
-      ['wooden_table_02', -6.5, 54.5], ['painted_wooden_stool', -7.5, 55.2], ['ceramic_pot', -9.3, 59.2], ['wooden_crate_02', 12.32, 54.2], ['wooden_crate_01', 12.32, 54.2, 90, .47], ['barrel_03', 11.9, 59], ['cement_bag', 10, 54, 30],
+      ['wooden_table_02', -5.2, 54.5], ['painted_wooden_stool', -4, 54.7], ['ceramic_pot', -7.8, 59.2], ['wooden_crate_02', 12.32, 54.2], ['wooden_crate_01', 12.32, 54.2, 90, .47], ['barrel_03', 11.9, 59], ['cement_bag', 10, 54, 30],
       ['wooden_lantern_01', -6, 61.3, 0, 2.3], ['barrel_03', -11.9, 69.8], ['barrel_03', -11.2, 70], ['cement_bag', -11.8, 64.3, 10],
-      ['painted_wooden_bench', -1.5, 70.1, 0], ['painted_wooden_bench', 3.4, 64.5, -90], ['painted_wooden_shelves', 9.66, 64, -90], ['painted_wooden_shelves', 9.66, 64.8, -90], ['wooden_crate_02', 4.8, 70.1, 0],
-      ['barrel_03', 9.2, 70, 15], ['barrel_03', 8.4, 70.2, 40],
-      ['painted_wooden_table', -5.5, 56.5, 0, 3.4], ['painted_wooden_chair_01', -6.3, 55.5, 190, 3.4], ['painted_wooden_chair_01', -4.7, 57.6, 10, 3.4],
+      ['painted_wooden_bench', -1.5, 70.1, 0], ['painted_wooden_bench', 3.4, 64.5, -90], ['painted_wooden_shelves', 8.06, 64, -90], ['painted_wooden_shelves', 8.06, 64.8, -90], ['wooden_crate_02', 4.8, 70.1, 0],
+      ['barrel_03', 9.2, 70, 15], ['barrel_03', 7.2, 70.2, 40],
+      ['painted_wooden_table', -4.9, 54.5, 90, 3.4], ['painted_wooden_chair_01', -5.9, 54.3, 100, 3.4], ['painted_wooden_chair_01', -3.9, 54.6, -80, 3.4],
       ['vintage_day_bed', 1, 53.94, 0, 3.4], ['painted_wooden_stool', 3.5, 54.5, 20, 3.4], ['painted_wooden_cabinet', 11.85, 55, 0, 3.78], ['painted_wooden_shelves', 12.56, 58, -90, 3.4],
       ['wooden_table_02', -9, 69.6, 90, 3.4], ['painted_wooden_stool', -8, 68.5, 0, 3.4], ['ceramic_pot', -12.2, 64.2, 40, 3.4], ['painted_wooden_bench', -4.5, 66, 90, 3.4], ['planter_pot_clay', -1, 70, 0, 3.4, 2],
-      ['wooden_crate_02', 5.2, 70.1, 0, 3.4], ['barrel_03', 9.3, 70, 10, 3.4], ['barrel_03', 8.5, 70.1, 50, 3.4], ['wooden_lantern_01', 0, 61.3, 0, 5.7],
-      ['wooden_crate_02', 12.32, 54.1, 0, 6.6], ['wooden_crate_01', 12.32, 54.1, 90, 7.07], ['barrel_03', 8, 54, 0, 6.6], ['barrel_03', 8.7, 54.3, 60, 6.6], ['cement_bag', 2, 54, 30, 6.6], ['cement_bag', 2.1, 54.1, -20, 6.78], ['propane_tank', -8.5, 54, 0, 6.6],
+      ['wooden_crate_02', 5.2, 70.1, 0, 3.4], ['barrel_03', 9.3, 70, 10, 3.4], ['barrel_03', 7.2, 70.1, 50, 3.4], ['wooden_lantern_01', 0, 61.3, 0, 5.7],
+      ['wooden_crate_02', 12.32, 54.1, 0, 6.6], ['wooden_crate_01', 12.32, 54.1, 90, 7.07], ['barrel_03', 8, 54, 0, 6.6], ['barrel_03', 8.7, 54.3, 60, 6.6], ['cement_bag', 2, 54, 30, 6.6], ['cement_bag', 2.1, 54.1, -20, 6.78], ['propane_tank', -6, 53.85, 0, 6.6],
       ['vintage_day_bed', -8, 70.06, 180, 6.6], ['painted_wooden_table', 0, 68.5, 0, 6.6], ['painted_wooden_chair_01', -.8, 67.5, 190, 6.6], ['painted_wooden_chair_01', .7, 69.5, 5, 6.6], ['wooden_lantern_01', 0, 66.5, 30, 8.6],
       ['painted_wooden_shelves', 9.66, 68, -90, 6.6], ['planter_pot_clay', 6, 70.1, 0, 6.6, 1.3],
       ['barrel_03', -3, 69, 0, 9.83], ['cement_bag', 3, 68.6, 20, 9.83], ['cement_bag', 3.1, 68.7, -30, 10.01],
