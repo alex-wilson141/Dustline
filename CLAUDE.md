@@ -27,6 +27,20 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 30 (local, 2026-09-30): window frames and the eye on stairs. **A broken window is a hole: what stands in the opening with
+the pane is `loose` in the kit (`part()`, `L()` in `dress`): the casement's rails and glazing bars, the iron bars, and the post of a
+double window (owned by both panes: it goes with the second). A loose part is listed in `stats.list` exactly as before (T35), drawn
+as an instance (one drawing per surface: five drawings for all windows), and when its pane or panes break it is `gone` from the list,
+hidden in the picture and `off` in the body's space (`inside()` in `space.js` skips a box that is `off`); `reset()` brings it back.**
+Never make a casement or a window's bars with `block()` again. What stays round a hole: the reveal's posts, the lintel, the sill, the
+shutters, the dark room of a shell, and teeth of glass no deeper than .14 of the pane. A barred window shot out can be climbed
+through (the user's brief: nothing spanning the opening). `glass.spanning(i)` is what still stands in a pane's opening. **The eye on
+stairs (Step A, E46: the user called the stairs tight at 1.37, 1.7 and 2.0 m; no dimension was the cause; the eye took every tread
+as a 21 cm jump in one frame, ten times a second walking):** on a map with a space `eyeStep` holds the eye back by each step the feet
+take up or down within `BODY.step` (`eyeStepped(d, speed)` from `heightStep`) and gives it back at the feet's own climbing rate
+(`BODY.ease` [1, 4.5] m/s, never slower than .65 of the body's speed, never more than `BODY.sag` .3 m behind): the eye rises in a line.
+Jumps, falls, pull-ups and ladders are not eased; the feet, the body's speed, the treads and the field of view are unchanged; Kohar
+Valley adds nothing (`SPACE?eyeStep:0`). Shots leave from the eye where it is drawn. B26 awaits the user.
 Build 29 (local, 2026-09-30): windows and stairs. **Glass is the kit's (`built.glass`, `GLASS` in `game.js`; null on Kohar Valley,
 where nothing of it runs): a pane is not a mesh but one instance of one box per kind of glass (`pane` dark, `clear`), listed in
 `stats.list` as before, with a third instanced drawing for what a broken pane leaves in its frame (teeth along the edges). Breaking
@@ -357,15 +371,16 @@ node tests/test-foes-b26.mjs
 node tests/test-coopheight-b27.mjs
 node tests/test-town-b28.mjs
 node tests/test-windows-b29.mjs
+node tests/test-frames-b30.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 29 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 30 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town and 9 windows-and-stairs checks (291 in 32 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs and 6 frames-and-eye checks (297 in 33 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

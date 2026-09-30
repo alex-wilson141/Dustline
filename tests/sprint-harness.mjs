@@ -65,7 +65,7 @@ export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)
    // Build 29: glass.
    glass:typeof GLASS!=='undefined'&&GLASS?{G:GLASS,break:glassBreak,visible,clear,sees,bodies:glassBodies,blast:typeof blast==='function'?blast:undefined,effects}:undefined,
    // Build 24: height (a map with a space).
-   height:typeof SPACE!=='undefined'?{space:SPACE,settle:()=>{grounded=true;vy=0;climbing=null;mantling=null;},drop:()=>{grounded=false;vy=0;peakY=player.y;},grounded:()=>grounded,climbing:()=>!!climbing,mustCrouch:()=>mustCrouch,on:()=>stoodOn,lastFall:()=>lastFall}:undefined,
+   height:typeof SPACE!=='undefined'?{space:SPACE,settle:()=>{grounded=true;vy=0;climbing=null;mantling=null;},drop:()=>{grounded=false;vy=0;peakY=player.y;},grounded:()=>grounded,climbing:()=>!!climbing,mustCrouch:()=>mustCrouch,on:()=>stoodOn,lastFall:()=>lastFall,eyeStep:()=>typeof eyeStep==='number'?eyeStep:0}:undefined,
    // Build 20: the session, down and revive.
    fall:typeof fallen==='object'?{fallen,REVIVE,reviveTarget,reviving,reviveKey,held:()=>reviveHeld,mateReviving:()=>mateReviving,tick:fallTick,raise,line:fallLine,wire:fallWire,humanDown,lobby,skirmishCoop:()=>skirmishCoop,BODY,boxEntry,LINKABLE}:undefined,
    // Build 19: equipment.

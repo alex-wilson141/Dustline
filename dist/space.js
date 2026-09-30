@@ -6,7 +6,7 @@
 // on it, and falls off anything it walks past. A box is `solid` (it stops a body) and, if solid, its top is a floor.
 import './build.js'; // DEPLOY-01 upgrade guard
 
-export const BODY = {radius: .34, stand: 1.8, crouch: 1.1, step: .35, mantle: 1.35, lean: .2, reach: .75, climb: 1.5, gravity: 9.8, jump: 3.7, stance: .2, nudge: .2};
+export const BODY = {radius: .34, stand: 1.8, crouch: 1.1, step: .35, mantle: 1.35, lean: .2, reach: .75, climb: 1.5, gravity: 9.8, jump: 3.7, stance: .2, nudge: .2, ease: [1, 4.5], sag: .3};   // Build 30: `ease`, `sag`: the eye follows the feet up and down treads at the feet's own rate (1 to 4.5 m/s), never more than .3 m behind
 // Fall damage: nothing up to `safe` metres, everything at `fatal`, and between them a curve that starts gently.
 export const FALL = {safe: 3, fatal: 12, power: 1.5};
 export const fallDamage = h => h <= FALL.safe ? 0 : h >= FALL.fatal ? 100 : 100 * ((h - FALL.safe) / (FALL.fatal - FALL.safe)) ** FALL.power;
@@ -21,7 +21,8 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   for (const b of list) for (let i = at(b.min[0] - reach); i <= at(b.max[0] + reach); i++) for (let j = at(b.min[2] - reach); j <= at(b.max[2] + reach); j++) { const k = key(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(b); }
   const near = (x, z) => grid.get(key(at(x), at(z))) || [];
   // A box's footprint includes its edges: on the seam between two slabs a body stands on both, not on neither (Build 25).
-  const inside = (b, x, z, r) => x >= b.min[0] - r && x <= b.max[0] + r && z >= b.min[2] - r && z <= b.max[2] + r;
+  // A box switched `off` is not there (Build 30: what went with a broken window's pane).
+  const inside = (b, x, z, r) => !b.off && x >= b.min[0] - r && x <= b.max[0] + r && z >= b.min[2] - r && z <= b.max[2] + r;
   // Whether a body standing at (x, z) with its feet at y0 and its head at y1 hits anything.
   // The map's edges hold at every height: nothing walks, jumps or falls past them.
   // The same for a body to which treads near its feet are no obstacle (the enemies' stair rule, `stairs`).

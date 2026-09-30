@@ -111,8 +111,8 @@ await check('break', 'a shot breaks glass, and a broken pane stops nothing: thro
   // What is drawn: the pane's instance is hidden, its teeth are shown; a whole pane the other way round.
   const m = new THREE.Matrix4(), scale = (mesh, slot) => { mesh.getMatrixAt(slot, m); return m.elements[0] ** 2 + m.elements[5] ** 2 + m.elements[10] ** 2; }, rest = g.scene.children.find(o => o.userData.glass === 'shards');
   assert(scale(G.panes[pane].mesh, G.panes[pane].slot) === 0 && scale(rest, pane) > 0, 'a broken pane: teeth in the frame, no pane'); assert(scale(G.panes[p3].mesh, G.panes[p3].slot) > 0 && scale(rest, p3) === 0, 'a whole pane: no teeth');
-  assert.equal(g.scene.children.filter(o => o.userData.glass).length, 3, 'three drawings for all the glass');
-  report.break = {panes: G.count, broken: G.list().length, teethPerPane: G.teeth, drawings: 3};
+  assert.equal(g.scene.children.filter(o => o.userData.glass).length, 5, 'five drawings for all the glass and what stands in the windows with it (Build 30: three before)');
+  report.break = {panes: G.count, broken: G.list().length, teethPerPane: G.teeth, drawings: 5};
 });
 
 await check('ways', 'everything that should break glass does: a grenade thrown at a window goes through it and the pane is broken; a blast breaks the panes within 5 m and none further; a player\'s body through a window breaks its pane; an ally seeing an enemy through glass shoots the pane out; and a guest page breaks nothing by itself', async () => {
@@ -171,11 +171,11 @@ await check('coop', 'host and guest have the same panes broken and agree on sigh
   report.coop = {panes: H.count, brokenOnBoth: broken, delayFrames: p.delay, note: 'one process, a stand-in connection: what two networks do is not shown'};
 });
 
-await check('leak', 'nothing is made or left by breaking: 30 missions of 40 panes each (shots, breaks outright, a blast, then a reset) leave the scene with the objects, geometries and materials it started with, no effect waiting and every pane whole; the glass is three drawings throughout', async () => {
+await check('leak', 'nothing is made or left by breaking: 30 missions of 40 panes each (shots, breaks outright, a blast, then a reset) leave the scene with the objects, geometries and materials it started with, no effect waiting and every pane whole; the glass and its fittings are five drawings throughout', async () => {
   const g = await world(), G = g.G; g.nobody(); g.put(0, 0, 40); g.run(1); const before = drawn(g), fx0 = g.glass.effects.length; let broke = 0;
   for (let round = 0; round < 30; round++) { for (let k = 0; k < 40; k++) { const i = (round * 37 + k * 7) % G.count, q = G.panes[i], thinX = q.size[0] < q.size[2], o = V(q.at[0] + (thinX ? -3 : 0), q.at[1], q.at[2] + (thinX ? 0 : -3)); if (k % 3 === 0) g.glass.break(i) && broke++; else { const e = g.hitScan(o, thinX ? X.clone() : V(0, 0, 1), RIFLE, 'local'); void e; if (G.broken[i]) broke++; } }
     g.glass.blast(V(-15, .4, 66.7), 'local'); g.run(.4); assert(G.list().length >= 20, `round ${round}: ${G.list().length} broken`); g.reset(); g.play(); g.nobody(); assert.equal(G.list().length, 0); }
-  g.run(1); const after = drawn(g); assert.deepEqual(after, before, 'the scene as it was'); assert.equal(g.glass.effects.length, fx0, 'no effect left'); assert.equal(g.scene.children.filter(o => o.userData.glass).length, 3);
+  g.run(1); const after = drawn(g); assert.deepEqual(after, before, 'the scene as it was'); assert.equal(g.glass.effects.length, fx0, 'no effect left'); assert.equal(g.scene.children.filter(o => o.userData.glass).length, 5);
   report.leak = {rounds: 30, panesBroken: broke, scene: after};
 });
 
