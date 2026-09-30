@@ -51,7 +51,7 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], r
     if (n.exact) for (const [gx, gz] of [[Math.floor(n.x / step) * step, Math.floor(n.z / step) * step], [Math.ceil(n.x / step) * step, Math.floor(n.z / step) * step], [Math.floor(n.x / step) * step, Math.ceil(n.z / step) * step], [Math.ceil(n.x / step) * step, Math.ceil(n.z / step) * step]]) targets.push([gx, gz]);
     for (const [tx, tz, exact] of targets) { if (!within(tx, tz)) continue; const dx = tx - n.x, dz = tz - n.z, d = Math.hypot(dx, dz); if (d < .05) continue; p.x = n.x; p.y = n.y; p.z = n.z;
       if (moveBody(p, dx, dz) < d - .02) continue; const r = rest(p.x, p.z, p.y); if (!r || !within(r.x, r.z)) continue;
-      if (r.drop > safeDrop) continue; if (!exact && r.drop === 0 && (Math.abs(r.x - tx) > 1e-6 || Math.abs(r.z - tz) > 1e-6)) continue; const m = place(r.x, r.z, r.y, exact && r.drop === 0); if (exact) m.exact = true;
+      if (r.drop > safeDrop || n.y - r.y > safeDrop) continue;   /* the drop as the place above sees it too (the mover may have stepped down a tread on the way) */ if (!exact && r.drop === 0 && (Math.abs(r.x - tx) > 1e-6 || Math.abs(r.z - tz) > 1e-6)) continue; const m = place(r.x, r.z, r.y, exact && r.drop === 0); if (exact) m.exact = true;
       link(n, m, r.drop > B.step ? 'drop' : 'walk', d + (r.drop > B.step ? r.drop * 2 : Math.abs(r.y - n.y))); if (!m.done) queue.push(m); } } }
   // Ladders: from the place at the foot to the place at the top, and back down.
   for (const l of ladders) { const foot = nearest(l.standX, l.standZ, l.bottom, 1.2), top = nearest(l.exit[0], l.exit[1], l.top, 1.2); if (!foot || !top) continue;

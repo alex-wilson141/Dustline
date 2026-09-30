@@ -15,8 +15,10 @@ Work on one requested milestone at a time; do not implement the entire backlog.
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
 - `dist/map-kohar.js`: Kohar Valley, map 1, as a description (Build 21). `dist/maps.js`: the maps and the active one.
-- `dist/map-dehrun.js`, `dist/terraces.js`, `dist/GLTFLoader.js`, `dist/assets/dehrun/`: Dehrun Terraces, map 2 (Build 22: one
-  street block, to look at). Fetched only for the address `?map=dehrun`.
+- `dist/map-dehrun.js`, `dist/terraces.js`, `dist/GLTFLoader.js`, `dist/assets/dehrun/`: Dehrun Terraces, map 2 (Build 28: the
+  whole town in grey-box round the look-slice block and the customs house; walked as a look map, played as Skirmish).
+  Fetched only for the address `?map=dehrun`. `dist/space.js` (the body and its space) and `dist/navmesh.js` (the enemies'
+  layered navigation) serve any map that brings a space.
 - `tests/`: portable Node.js headless regression checks and historical evidence.
 - `tools/stamp-build.mjs`: stamps content hashes into `dist/index.html` (import map,
   stylesheet, start-up check) and `dist/build.js` (asset hashes). Run it after every
@@ -25,6 +27,27 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 28 (local, 2026-09-30): the layout of Dehrun Terraces, map build 7 of 9. **The town is data in `dist/map-dehrun.js`, most of
+it made by a generator at the top of the file (`DIST`: terraces, retaining walls, lane steps, cross streets, town walls, gates, 61
+houses) from `TERRACES`, `LANES`, `height(x, z)` and `level(z)`; the block and the customs house are written out as before.** Six
+terraces (−1.6 to 6.4 m) end at the lines z 80, 17, −6, −55, −80; lanes at x 0 and ±48 have steps and a ramp in the height
+(`RUN`), everywhere else a line is a sheer retaining wall. Town walls at x ±72, z 105 and −100 hold the map's edges inside them.
+The block (x ±24) and the square (x ±22) are gated to the districts through arched openings (no gates) at z 30, 5, −18 and 62.
+43 houses are `plain` shells (no glass, no casements: T33 counts only made houses); nine district houses are open (a door, one
+room, an outside stair up the south face to a gap in the parapet). **Skirmish plays on the new map:** `looking()` is the walk
+(Story mode on a look map; Skirmish there is a mission), `WORLD.starts[mode]||WORLD.starts` gives each mode its own starts,
+`WORLD.enemies.leave` the loop enemies leave the relay for (`LEAVE`, Kohar Valley's `RING`), the mast group is hidden only while
+looking. Stair flights are 1.7 m wide everywhere (the customs house's 1.77: wells 3.6 m, x ±9 to ±12.6; the well partition
+leaves 1.67 clear; house A's inside stair 1.7); a district stair has treads ≥ .355 m (27 on a 12 m house, 21 on a 10 m one).
+`terraces.js` records every flight in `stats.flights` (`axis, run, across, low, high, width`) for the checks. **Space rules added
+(stairs only; the player's flat path and Kohar Valley untouched):** a tread is `brushed` (stepped over by the enemies' rule)
+only when it is not under the body's middle and no more than .66 m above the feet; the mover walks *down* steps within `step`
+(a drop is left to gravity); what a body stands against at its origin is judged at the origin's own height, and a tread it only
+brushed there is not something it may slide along. The enemies' navigation covers the whole town (92,914 places, 181 drops, 6
+ladder edges; T38 proves nothing stranded and every district, open house and the customs house entire reached); the player's
+flood (T38, .5 m) finds no place without a way back. **Changing map inside a running page is NOT built (MAP-01 stands, item 4 of
+the Build 28 brief deferred with a plan in MAP-08):** the world is built when `game.js` loads; a second map needs a reload, which
+drops the connection. Headless ceilings for the whole town: 102 draw calls, 588,528 triangles drawn (T32). B24 awaits the user.
 Build 27 (local, 2026-09-30): co-op height, map build 6 of 9, and the customs house widened. **Positions always travelled as
 three numbers; what was flat was around them, and each fix is gated on `SPACE` so Kohar Valley's co-op is Build 26's (T37
 replays a scripted two-player run against `e57e195`).** The guest's health is the host's to keep, so a guest's fall is charged
@@ -312,15 +335,16 @@ node tests/test-height-b24.mjs
 node tests/test-arena-b25.mjs
 node tests/test-foes-b26.mjs
 node tests/test-coopheight-b27.mjs
+node tests/test-town-b28.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 27 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 28 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height and 8 co-op-height checks (276 in 30 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height and 6 town checks (282 in 31 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

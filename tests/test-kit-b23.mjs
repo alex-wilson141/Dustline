@@ -36,15 +36,15 @@ await check('planes', 'nothing flickers: nowhere in the block or beyond it do tw
 });
 
 await check('openings', 'windows and doors are made, not holes: every window of the block has a casement with glass and glazing bars set back in the wall (dark glass where the house is shut, clear where it is open), a frame and a sill; every shut door stands in its opening with battens and a handle; iron bars are iron', async () => {
-  const windows = openings(B.houses, o => o.kind === 'window'), doors = openings(B.houses, o => o.kind === 'door'), count = s => list.filter(b => b.surface === s).length;
+  const made = B.houses.filter(h => !h.plain), windows = openings(made, o => o.kind === 'window'), doors = openings(made, o => o.kind === 'door'), count = s => list.filter(b => b.surface === s).length;   /* Build 28: the town's plain houses are shells with shutters and no glass, like the houses beyond the walls */
   assert(windows.length >= 30 && doors.length >= 9, `${windows.length} windows, ${doors.length} doors`);
   assert.equal(count('pane') + count('clear'), windows.length, 'one pane of glass a window'); assert(count('clear') >= 5 && count('pane') >= 20);
   // Build 25: the doors inside a house (on its partitions) and the doors of its stair heads have handles too.
-  const inner = B.houses.reduce((n, h) => n + h.storeys.reduce((m, s) => m + (s.doors || []).filter(d => (d.kind || 'door') === 'door' && d.door !== false).length, 0) + (h.stairs || []).filter(s => s.head).length, 0);
-  const barred = windows.filter(o => o.bars).length; const shops = openings(B.houses, o => o.kind === 'shop').length; assert.equal(count('bars'), barred * 6 + doors.length + inner + shops * 2, 'four bars and two rails a barred window, a handle a door (inside doors and roof doors too), two guides a rolling shutter');
+  const inner = made.reduce((n, h) => n + h.storeys.reduce((m, s) => m + (s.doors || []).filter(d => (d.kind || 'door') === 'door' && d.door !== false).length, 0) + (h.stairs || []).filter(s => s.head).length, 0);
+  const barred = windows.filter(o => o.bars).length; const shops = openings(made, o => o.kind === 'shop').length; assert.equal(count('bars'), barred * 6 + doors.length + inner + shops * 2, 'four bars and two rails a barred window, a handle a door (inside doors and roof doors too), two guides a rolling shutter');
   // A pane stands inside the wall's thickness, not on its face: for each pane a wall box holds it.
   for (const p of list.filter(b => b.surface === 'pane' || b.surface === 'clear')) { const thin = p.size.indexOf(Math.min(...p.size)); assert(p.size[thin] < .02); }
-  const far = openings(B.beyond.houses, o => o.kind === 'window'); assert(far.length >= 30); assert(B.beyond.houses.every(h => h.plain), 'houses beyond the walls are plain');
+  const far = openings(B.beyond.houses.concat(B.houses.filter(h => h.plain)), o => o.kind === 'window'); assert(far.length >= 30); assert(B.beyond.houses.every(h => h.plain), 'houses beyond the walls are plain');
   for (const m of ['pane', 'clear']) assert(g.built.materials[m].roughness < .1 && g.built.materials[m].envMapIntensity > 1, `${m} glints`); assert(g.built.materials.clear.transparent && g.built.materials.clear.opacity < .5 && !g.built.materials.pane.transparent);
   report.openings = {windows: windows.length, doors: doors.length, insideDoors: inner, barred, beyondTheWalls: far.length};
 });

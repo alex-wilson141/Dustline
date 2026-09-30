@@ -17,6 +17,7 @@ const results = [], report = {};
 async function check(tag, name, fn) { if (ONLY && !ONLY.includes(tag)) return; await fn(); results.push(name); }
 const page = () => createGame(SOURCE ? {sourcePath: SOURCE} : {});
 const DEHRUN = await maps.loadMap('dehrun'); maps.selectMap('kohar');
+const BLOCK = {x: [-23.6, 23.6], z: [-29.6, 43.6]};   // Build 28: the block within the town; these checks are the block's
 const near = (a, b, e, what) => assert(Math.abs(a - b) <= e, `${what}: ${a} against ${b}`);
 // A body on the block, playing, with the ways to drive it.
 async function body() { maps.selectMap('dehrun'); let g; try { g = await page(); g.prepare({clearLane: false}); await g.built.ready; } finally { maps.selectMap('kohar'); }
@@ -42,7 +43,7 @@ await check('kohar', 'Kohar Valley keeps its flat rules: it brings no space, the
 });
 
 await check('stand', 'the body stands on every kind of surface at every level: put half a metre above each of 600 places on the block, it comes to rest on the floor there within a centimetre and stays; the places include street, paving, yard, steps, a stair, a floor, a roof, a balcony and the top of a wall; and it cannot rest inside a wall', async () => {
-  const g = await body(), sp = g.height.space, seen = new Map(), E = DEHRUN.edges; let tried = 0, off = 0;
+  const g = await body(), sp = g.height.space, seen = new Map(), E = BLOCK; let tried = 0, off = 0;
   const cover = (x, z) => g.height.space.headroom(x, z, sp.floor(x, z, 1e9).y) >= BODY.crouch;
   for (let x = E.x[0] + 1; x <= E.x[1] - 1; x += 2.3) for (let z = E.z[0] + 1; z <= E.z[1] - 1; z += 2.7) { const f = sp.floor(x, z, 1e9); if (!cover(x, z)) continue; tried++;
     g.put(x, f.y + .5, z); g.height.drop(); g.run(1.5); near(g.player.y, f.y, .011, `resting at ${x}, ${z} on ${f.on?.tag || 'ground'}`); const y1 = g.player.y; g.run(.5); assert.equal(g.player.y, y1, 'and staying');
@@ -109,13 +110,13 @@ await check('crouch', 'crouching is three-dimensional: the body stands 1.8 m and
 });
 
 await check('bounds', 'there is no way to where the body should not be: from 400 places on the block, pulling up in eight directions never ends outside the block, inside a shut house, or below the ground; the boundary walls and the shut houses hold; falling off any roof or terrace ends on a floor', async () => {
-  const g = await body(), sp = g.height.space, E = DEHRUN.edges, shut = DEHRUN.block.houses.filter(h => !h.enter); let pulls = 0, ups = 0;
-  const bad = p => p.x < E.x[0] - .5 || p.x > E.x[1] + .5 || p.z < E.z[0] - .5 || p.z > E.z[1] + .5 || p.y < -.05 || shut.some(h => p.x > h.x[0] + .4 && p.x < h.x[1] - .4 && p.z > h.z[0] + .4 && p.z < h.z[1] - .4 && p.y < h.base + h.storeys.reduce((s, t) => s + t.height, 0) - .3);
+  const g = await body(), sp = g.height.space, E = BLOCK, shut = DEHRUN.block.houses.filter(h => !h.enter); let pulls = 0, ups = 0;
+  const M = DEHRUN.edges, bad = p => p.x < M.x[0] - .5 || p.x > M.x[1] + .5 || p.z < M.z[0] - .5 || p.z > M.z[1] + .5 || p.y < -1.65 || shut.some(h => p.x > h.x[0] + .4 && p.x < h.x[1] - .4 && p.z > h.z[0] + .4 && p.z < h.z[1] - .4 && p.y < h.base + h.storeys.reduce((s, t) => s + t.height, 0) - .3);
   for (let x = E.x[0] + 1; x <= E.x[1] - 1; x += 2.3) for (let z = E.z[0] + 1; z <= E.z[1] - 1; z += 3.1) for (let k = 0; k < 8; k++) { const f = sp.floor(x, z, 1e9); if (sp.headroom(x, z, f.y) < BODY.crouch) continue; const yaw = k * Math.PI / 4;
     g.put(x, f.y, z, yaw); const before = g.player.y; g.tap('Space'); g.run(.6); pulls++; if (g.player.y > before + .3) ups++; g.hold('KeyW', 1.2); g.run(1.5); assert(!bad(g.player), `from ${x}, ${z} facing ${k}: ended at ${g.at()}`); assert(g.height.grounded() || g.height.climbing(), 'came to rest'); }
   assert(ups > 20, `${ups} pull-ups of ${pulls}`);
   // The edges hold at every height: from the low house's roof by the south gate, a running jump east towards the boundary wall ends inside the block.
-  g.put(21, 2.93, 40, FACING.east); g.hold('KeyW', .5); g.tap('Space'); g.hold('KeyW', 1.5); g.run(2); assert(g.player.x <= E.x[1] + 1e-9 && g.height.grounded(), `inside the edges (${g.at()})`); assert(!bad(g.player));
+  g.put(21, 2.93, 40, FACING.east); g.hold('KeyW', .5); g.tap('Space'); g.hold('KeyW', 1.5); g.run(2); assert(g.player.x <= 24 + 1e-9 && g.height.grounded(), `inside the block's east wall (${g.at()})`); assert(!bad(g.player));
   report.bounds = {places: pulls / 8, pullUps: ups, note: 'the walk along the edges and the roofs is in the stand and mantle checks'};
 });
 

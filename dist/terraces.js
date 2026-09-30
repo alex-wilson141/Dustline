@@ -47,7 +47,7 @@ const assert = (ok, what) => { if (!ok) throw new Error('DUSTLINE kit: ' + what)
 
 export function buildTerraces(ctx, map) {
   const {scene, renderer, solids, occluders, groundY} = ctx, B = map.block, loader = new THREE.TextureLoader();
-  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()), textures = new Map(), materials = {}, stats = {list: [], awnings: [], doors: [], boxes: 0, props: 0, propKinds: 0, propTriangles: 0, requested: []};
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()), textures = new Map(), materials = {}, stats = {list: [], awnings: [], doors: [], flights: [], boxes: 0, props: 0, propKinds: 0, propTriangles: 0, requested: []};
   const texture = (file, kind) => { const key = `${file}_${kind}`; if (textures.has(key)) return textures.get(key);
     const url = kind === 'diff' ? assetURL('assets/dehrun/tex/' + file + '_diff_1k.jpg') : kind === 'nor_gl' ? assetURL('assets/dehrun/tex/' + file + '_nor_gl_1k.jpg') : assetURL('assets/dehrun/tex/' + file + '_arm_1k.jpg');
     const t = loader.load(url); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; if (kind === 'diff') t.colorSpace = THREE.SRGBColorSpace; textures.set(key, t); stats.requested.push(url); return t; };
@@ -246,6 +246,7 @@ export function buildTerraces(ctx, map) {
       assert(tr > .349 && rise < .33 && v1 - v0 > 1.8, `${H.id}: a stair of ${treads} treads, ${tr.toFixed(2)} m by ${rise.toFixed(2)} m, ${(v1 - v0).toFixed(2)} m wide`);
       const box = (ua, ub, va, vb, ya, yb, surface, opt) => { const [u0, u1] = ua < ub ? [ua, ub] : [ub, ua]; return onZ ? block(vb - va, yb - ya, u1 - u0, (va + vb) / 2, (ya + yb) / 2, (u0 + u1) / 2, surface, opt) : block(u1 - u0, yb - ya, vb - va, (u0 + u1) / 2, (ya + yb) / 2, (va + vb) / 2, surface, opt); };
       const flight = (va, vb, low, away) => {   // `away` +1: from the entry edge towards the far end; -1: from the far end back to the entry edge
+        stats.flights.push({axis: onZ ? 'z' : 'x', run: away > 0 ? [n0, n0 + dir * length] : [n0 + dir * length, n0], across: [va, vb], low, high: low + rise * treads, width: vb - va});
         for (let i = 0; i < treads; i++) { const top = low + rise * (i + 1), k = away > 0 ? i : treads - 1 - i, ua = n0 + dir * tr * k, ub = ua + dir * tr;
           box(ua, ub, va, vb, top - rise - .22, top - .03, body, {seen: i % 3 === 0, tag: 'stair'}); box(ua - dir * .005, ub + dir * .005, va, vb, top - .03, top, tread, {shadow: false, tag: 'stair'});
           box(ua + dir * (tr / 2 - .02), ua + dir * (tr / 2 + .02), vm - .02, vm + .02, top, top + .92, 'beams', {seen: false, shadow: false, tag: 'rail'}); }
@@ -287,6 +288,7 @@ export function buildTerraces(ctx, map) {
   // ---- An outside stair up the side of a house (geometry: it cannot be climbed until height is built).
   function flight({axis, at, from, to, low, high, width = 1, count = 12, out = 1, surface = 'masonry', tread = 'slab', landing = 0}) {
     const rise = (high - low) / count, run = (to - from) / count, across = at + out * width / 2;
+    stats.flights.push({axis, run: [from, to], across: [Math.min(at, at + out * width), Math.max(at, at + out * width)], low, high, width});   // Build 28: for the checks (two bodies pass)
     for (let i = 0; i < count; i++) { const c = from + run * (i + .5), top = low + rise * (i + 1), P = (h, yy, s, w, opt) => axis === 'x' ? block(Math.abs(run) + .01, h, w, c, yy, across, s, opt) : block(w, h, Math.abs(run) + .01, across, yy, c, s, opt);
       P(top - low, (top + low) / 2, surface, width, {seen: i % 3 === 0, tag: 'stair'}); P(.05, top + .025, tread, width + .06, {seen: false, shadow: false, tag: 'stair'}); }
     const a = Math.min(from, to), b = Math.max(from, to); axis === 'x' ? solid(a, b, Math.min(at, at + out * width), Math.max(at, at + out * width)) : solid(Math.min(at, at + out * width), Math.max(at, at + out * width), a, b);
