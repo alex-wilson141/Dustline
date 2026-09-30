@@ -2,7 +2,7 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 21 is LIVE** (pushed 2026-09-29; GitHub run 36631040830 passed). **Builds 22 and 23 are committed locally and NOT pushed**, with the held documentation commit `6bca1dc` under them. Pushing publishes; wait for the user's word.
+**Build 23 is LIVE** (Builds 22 and 23 pushed together on 2026-09-30 UTC; GitHub run 36652816925 passed; the live page says BUILD 23, token `7f8e1ae1dd02`). The block is at the live address with `?map=dehrun`. Pushing publishes; wait for the user's word.
 
 **User verdict on the look slice (2026-09-29): APPROVED.** "It is significantly better than Kohar Valley. Build the map this way."
 
@@ -26,7 +26,6 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 **Decisions for the user (Build 23):**
 - Look again: is anything still wrong?
 - Keep the props as they are (the ceiling was raised after the measurement), or still lighten the heaviest for a whole map.
-- Push Builds 22 and 23, and when.
 
 **Build 22 in short: the look slice of Dehrun Terraces (map build 2 of 9).**
 - **How to see it:** serve `dist/` and open `http://localhost:8765/?map=dehrun`, press WALK THE BLOCK. After a push: the live address with `?map=dehrun`. Without it, the game is Kohar Valley as before.
