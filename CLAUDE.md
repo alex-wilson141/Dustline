@@ -25,6 +25,17 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 23 (local, 2026-09-29): look slice critique and fixes. **The user approved the look slice: build Dehrun Terraces this way.**
+**A fault in the kit is a fault in every block**: T33 checks the kit's work. No two different surfaces may lie in one plane where
+they can be seen (it flickers): a terrace's ground ends behind the face of its retaining wall, a roof lies above the walls it rests
+on, lintels and sills stand off the wall's planes, walls end inside their corners. Windows have a casement and glass (`pane` shut,
+`clear` open), shut doors stand in the opening; awnings are woven cloth that sags, carried by posts or brackets, in the block's
+colours; beam ends come from `chance`, never evenly; balconies are propped; surfaces carry shade in their geometry's colours
+(`stain`). The light comes from where the sun stands in the sky's picture (`sky.turn`). Houses `beyond` the walls are `plain`.
+**The block is at 341,000 of 350,000 triangles: nothing can be added without taking something out** (MAP-03). **Layout
+requirement (user, E38): the Ambush arena of Dehrun Terraces is a large multi-storey building designed for it from the start
+(internal stairs, a roof, a street around it); if that cannot work within the map, say so and do not compromise.** Doors must be
+wide enough for enemies before any mode is played there.
 Build 22 (local, 2026-09-29): the look slice of Dehrun Terraces, map build 2 of 9. **Kohar Valley must fetch nothing of the new
 map**: `map-dehrun.js`, `terraces.js` and `GLTFLoader.js` are never imported by a module the game loads with Kohar Valley (only
 `maps.js` fetches the description, by `import('./map-dehrun.js')`, for the address `?map=dehrun`); a later import must name its
@@ -236,15 +247,16 @@ node tests/test-equipment-b19.mjs
 node tests/test-revive-b20.mjs
 node tests/test-mapdata-b21.mjs
 node tests/test-lookslice-b22.mjs
+node tests/test-kit-b23.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 22 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 23 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data and 5 look-slice checks (238 in 25 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice and 6 building-kit checks (244 in 26 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

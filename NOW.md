@@ -2,7 +2,32 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 21 is LIVE** (pushed 2026-09-29; GitHub run 36631040830 passed). **Build 22 is committed locally and NOT pushed**, with the held documentation commit `6bca1dc` under it. Pushing publishes; wait for the user's word.
+**Build 21 is LIVE** (pushed 2026-09-29; GitHub run 36631040830 passed). **Builds 22 and 23 are committed locally and NOT pushed**, with the held documentation commit `6bca1dc` under them. Pushing publishes; wait for the user's word.
+
+**User verdict on the look slice (2026-09-29): APPROVED.** "It is significantly better than Kohar Valley. Build the map this way."
+
+**Layout requirement (user, E38):** Dehrun Terraces gets a large multi-storey building designed as the Ambush arena from the start (internal stairs, a roof, a street around it; start upstairs, buy your way down and out). Never carved out of another layout. If it cannot work within the map, report it; the user will then consider a dedicated Ambush map.
+
+**SAFARI: never take it without asking first and waiting for the answer; never retry if the window does not come forward.** Build 23 did not use Safari. The block's measurement (B18) is still outstanding.
+
+**Build 23 in short: look slice critique and fixes.**
+- **Flicker:** gone. 442 exposed places where two surfaces shared a plane, the largest 151 m² each side of the street; most were in the kit.
+- **Openings:** casement windows with glass and glazing bars; shut doors standing in their openings with battens and a handle; rolling shutters of slats.
+- **Awnings:** woven striped cloth that sags, with a hem, on rail, pole and arms, carried by posts or brackets, in the block's colours.
+- **Timber:** beam ends uneven in spacing and size; balconies propped.
+- **Surfaces:** uneven over metres, darker at the foot of walls.
+- **Light:** the sun in the sky is where the shadows say; shade is lit.
+- **Ground:** trodden yards, paving along the fronts.
+- **Beyond the walls:** twelve plain houses, field walls on the hill.
+- **Cost:** 91 draw calls, about 341,000 triangles from the street. **No room left under the 350,000 ceiling.**
+- **Checks:** 26 suites, 244 checks, all pass (headless). T33 is new (6 checks); 40 deliberate breakages caught.
+- **Left (MAP-03):** heavy props, everything always drawn, bullets through small things, doors too narrow for enemies, blank boundary walls, plain hill, one lamp a room, no plants.
+
+**Decisions for the user (Build 23):**
+- Look again: is anything still wrong?
+- The triangle ceiling: fewer props, lighter copies of the heaviest, or a higher ceiling after a Safari measurement.
+- When to measure in Safari.
+- Push Builds 22 and 23, and when.
 
 **Build 22 in short: the look slice of Dehrun Terraces (map build 2 of 9).**
 - **How to see it:** serve `dist/` and open `http://localhost:8765/?map=dehrun`, press WALK THE BLOCK. After a push: the live address with `?map=dehrun`. Without it, the game is Kohar Valley as before.
@@ -186,7 +211,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for lookslice-b22, mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for kit-b23, lookslice-b22, mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

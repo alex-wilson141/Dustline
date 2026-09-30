@@ -39,32 +39,57 @@ const FOLDER = 'assets' + '/dehrun/';
 export const surfaceAssets = file => ['diff', 'nor_gl', 'arm'].map(kind => `${FOLDER}tex/${file}_${kind}_1k.jpg`);
 export const modelAsset = name => `${FOLDER}models/${name}.glb`;
 
-const BOX_FACES = ['x', 'x', 'y', 'y', 'z', 'z'];
+const assert = (ok, what) => { if (!ok) throw new Error('DUSTLINE kit: ' + what); };
 
 export function buildTerraces(ctx, map) {
   const {scene, renderer, solids, occluders, groundY} = ctx, B = map.block, loader = new THREE.TextureLoader();
-  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()), textures = new Map(), materials = {}, stats = {boxes: 0, props: 0, propKinds: 0, propTriangles: 0, requested: []};
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()), textures = new Map(), materials = {}, stats = {list: [], awnings: [], boxes: 0, props: 0, propKinds: 0, propTriangles: 0, requested: []};
   const texture = (file, kind) => { const key = `${file}_${kind}`; if (textures.has(key)) return textures.get(key);
     const url = kind === 'diff' ? assetURL('assets/dehrun/tex/' + file + '_diff_1k.jpg') : kind === 'nor_gl' ? assetURL('assets/dehrun/tex/' + file + '_nor_gl_1k.jpg') : assetURL('assets/dehrun/tex/' + file + '_arm_1k.jpg');
     const t = loader.load(url); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; if (kind === 'diff') t.colorSpace = THREE.SRGBColorSpace; textures.set(key, t); stats.requested.push(url); return t; };
   for (const [name, s] of Object.entries(SURFACES)) { const arm = texture(s.file, 'arm');
     materials[name] = new THREE.MeshStandardMaterial({color: s.tint || '#ffffff', map: texture(s.file, 'diff'), normalMap: texture(s.file, 'nor_gl'), aoMap: arm, roughnessMap: arm, roughness: 1, metalness: s.metal ? 1 : 0, ...(s.metal ? {metalnessMap: arm} : {}), side: s.both ? THREE.DoubleSide : THREE.FrontSide});
-    const m = materials[name]; m.normalScale.setScalar(s.relief || 1); m.userData.surface = name; if (s.shade != null) m.aoMapIntensity = s.shade; if (s.fill) { m.emissive.set(s.fill); m.emissiveMap = m.map; } }
-  // Plain colours for what has no photographed surface: dyed cloth, the dark of a closed room, lamp glow, wire.
-  const cloth = colour => materials['cloth' + colour] ||= new THREE.MeshStandardMaterial({color: colour, roughness: .95, side: THREE.DoubleSide});
-  const dark = materials.dark = new THREE.MeshStandardMaterial({color: '#14110e', roughness: 1});
+    const m = materials[name]; m.vertexColors = true; m.normalScale.setScalar(s.relief || 1); m.userData.surface = name; if (s.shade != null) m.aoMapIntensity = s.shade; if (s.fill) { m.emissive.set(s.fill); m.emissiveMap = m.map; } }
+  // What has no photographed surface: cloth (a picture woven here, striped and faded), window glass, the dark of a
+  // closed room, lamp glow, wire.
+  function woven(colour) { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), base = new THREE.Color(colour);
+    x.fillStyle = '#' + base.getHexString(); x.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 8; i++) { x.fillStyle = i % 4 === 0 ? 'rgba(233,222,196,.5)' : i % 4 === 2 ? 'rgba(30,24,18,.18)' : 'rgba(0,0,0,0)'; x.fillRect(i * 32 + 10, 0, i % 4 === 0 ? 9 : 4, 256); }
+    for (let i = 0; i < 256; i += 2) { x.fillStyle = `rgba(0,0,0,${.035 + .03 * Math.sin(i * 1.7)})`; x.fillRect(0, i, 256, 1); x.fillStyle = `rgba(255,255,255,${.025 + .02 * Math.sin(i * 2.3)})`; x.fillRect(i, 0, 1, 256); }
+    for (let i = 0; i < 40; i++) { const px = (Math.sin(i * 12.9898) * 43758.5453 % 1 + 1) % 1 * 256, py = (Math.sin(i * 78.233) * 12543.123 % 1 + 1) % 1 * 256, r = 10 + i % 7 * 5; const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop?.(0, i % 3 ? 'rgba(60,45,30,.14)' : 'rgba(240,230,210,.12)'); g.addColorStop?.(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(px - r, py - r, r * 2, r * 2); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = aniso; return t; }
+  const cloth = colour => { const k = 'cloth' + colour; if (!materials[k]) { materials[k] = new THREE.MeshStandardMaterial({color: '#ffffff', map: woven(colour), roughness: .96, side: THREE.DoubleSide}); materials[k].userData.surface = k; } return materials[k]; };
+  const plain = (name, m) => { m.userData.surface = name; return materials[name] = m; };
+  const dark = plain('dark', new THREE.MeshStandardMaterial({color: '#14110e', roughness: 1}));
+  const pane = plain('pane', new THREE.MeshStandardMaterial({color: '#232b2e', roughness: .06, metalness: 0, envMapIntensity: 1.6}));                      // glass with a dark room behind
+  const clear = plain('clear', new THREE.MeshStandardMaterial({color: '#aebdc0', roughness: .05, metalness: 0, envMapIntensity: 1.6, transparent: true, opacity: .28, depthWrite: false}));   // glass that is seen through
+  const iron = plain('bars', new THREE.MeshStandardMaterial({color: '#2a2724', roughness: .6, metalness: .7}));
+  const tankIron = materials.iron.clone(); tankIron.vertexColors = false; tankIron.userData = {surface: 'tank'}; materials.tank = tankIron;
   const glow = materials.glow = new THREE.MeshBasicMaterial({color: '#ffd9a0'});
   const wire = new THREE.LineBasicMaterial({color: 0x2c2a26});
+  // Numbers that look like chance and are the same every time: from a place, a value from 0 to 1.
+  const chance = (x, y, z, k = 0) => { const v = Math.sin(x * 127.1 + y * 311.7 + z * 74.7 + k * 19.19) * 43758.5453; return v - Math.floor(v); };
+  const smoothstep = v => { const t = Math.min(1, Math.max(0, v)); return t * t * (3 - 2 * t); };
+  // The shade a built surface has at a place: lighter and darker over metres, as walls are, and darker towards the
+  // ground on what stands upright, where rain splashes and feet scuff.
+  const stain = (x, y, z, upright) => { const n = .5 * Math.sin(x * .37 + z * .21 + y * .53) + .3 * Math.sin(x * .13 - z * .41 + 1.7) + .2 * Math.sin(x * 1.1 + z * .9 + y * 1.3), h = y - groundY(x, z);
+    return (1 + .075 * n) * (upright ? .7 + .3 * smoothstep((h + .1) / 1.3) : 1); };
 
-  // A box whose surface repeats by its size in metres and continues from one box to the next.
+  // A box whose surface repeats by its size in metres and continues from one box to the next. Large boxes are made
+  // of several faces a side so that their shade can change along them.
   function block(w, h, d, x, y, z, surface, {solid = false, seen = true, turn = 0, tilt = 0, lean = 0, shadow = true} = {}) {
-    const g = new THREE.BoxGeometry(w, h, d), m = typeof surface === 'string' ? materials[surface] : surface, tile = SURFACES[m.userData.surface]?.tile || 1, uv = g.attributes.uv;
-    const size = {x: w, y: h, z: d}, at = {x, y, z};
-    for (let i = 0; i < uv.count; i++) { const f = BOX_FACES[Math.floor(i / 4)], [a, b] = f === 'x' ? ['z', 'y'] : f === 'y' ? ['x', 'z'] : ['x', 'y'];
-      uv.setXY(i, (uv.getX(i) - .5) * size[a] / tile + at[a] / tile, (uv.getY(i) - .5) * size[b] / tile + at[b] / tile); }
+    const m = typeof surface === 'string' ? materials[surface] : surface, name = m.userData.surface, tile = SURFACES[name]?.tile || 1, turned = !!(turn || tilt || lean);
+    assert(m && w > 0 && h > 0 && d > 0, `a box of ${surface}: ${w} x ${h} x ${d}`);
+    const cut = v => turned || !m.vertexColors ? 1 : Math.min(6, Math.max(1, Math.ceil(v / 3.2))), g = new THREE.BoxGeometry(w, h, d, cut(w), cut(h), cut(d)), uv = g.attributes.uv, pos = g.attributes.position, nor = g.attributes.normal;
+    for (let i = 0; i < uv.count; i++) { const f = Math.abs(nor.getX(i)) > .5 ? 'x' : Math.abs(nor.getY(i)) > .5 ? 'y' : 'z', px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+      const [u, v] = f === 'x' ? [pz + z, py + y] : f === 'y' ? [px + x, pz + z] : [px + x, py + y]; uv.setXY(i, u / tile, v / tile); }
+    if (m.vertexColors) { const c = new Float32Array(pos.count * 3), o = new THREE.Object3D(); o.position.set(x, y, z); o.rotation.set(tilt, turn, lean); o.updateMatrix(); const q = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) { q.fromBufferAttribute(pos, i).applyMatrix4(o.matrix); const v = stain(q.x, q.y, q.z, !turned && Math.abs(nor.getY(i)) < .5); c[i * 3] = v; c[i * 3 + 1] = v * .985; c[i * 3 + 2] = v * .96; }
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
+    stats.list.push({at: [x, y, z], size: [w, h, d], surface: name || 'plain', turned});
     const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.set(tilt, turn, lean); o.castShadow = shadow; o.receiveShadow = true; scene.add(o); stats.boxes++;
     if (solid) solids.push({x, z, w: w / 2, d: d / 2});
-    if (seen && !turn && !tilt && !lean) occluders.push(o);
+    if (seen && !turned) occluders.push(o);
     return o;
   }
   const solid = (x0, x1, z0, z1) => solids.push({x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: Math.abs(x1 - x0) / 2, d: Math.abs(z1 - z0) / 2});
@@ -78,7 +103,7 @@ export function buildTerraces(ctx, map) {
   }
 
   // ---- A wall with openings. `out` is the side the outside is on (+1 or -1 across the wall's line).
-  function wall({axis, at, from, to, base, height, thick = .34, surface, lining, out = 1, openings = [], hard = false}) {
+  function wall({axis, at, from, to, base, height, thick = .34, surface, lining, out = 1, openings = [], hard = false, plain = false}) {
     const list = [...openings].sort((a, b) => a.at - b.at), top = base + height, skin = lining ? .06 : 0, body = thick - skin, mid = at + out * skin / 2, inner = at - out * (thick - skin) / 2;
     const piece = (a, b, y0, y1, closes) => { if (b - a < .01 || y1 - y0 < .01) return; along(axis, mid, a, b, body, y0, y1, surface); if (lining) along(axis, inner, a, b, skin, y0, y1, lining, {shadow: false});
       if (hard && closes) axis === 'x' ? solid(a, b, at - thick / 2, at + thick / 2) : solid(at - thick / 2, at + thick / 2, a, b); };
@@ -86,48 +111,79 @@ export function buildTerraces(ctx, map) {
     for (const o of list) { const a = o.at - o.width / 2, b = o.at + o.width / 2, sill = base + (o.sill || 0), head = base + o.head;
       piece(cursor, a, base, top, true); piece(a, b, base, sill, false); piece(a, b, head, top, false);
       if (hard && (o.sill || o.closed || o.kind === 'shop' && o.counter)) axis === 'x' ? solid(a, b, at - thick / 2, at + thick / 2) : solid(at - thick / 2, at + thick / 2, a, b);
-      dress(o, {axis, at, out, thick, a, b, sill, head}); cursor = b; }
+      dress(o, {axis, at, out, thick, a, b, sill, head, plain}); cursor = b; }
     piece(cursor, to, base, top, true);
   }
-  // What an opening gets: a frame, a sill or a threshold, shutters or a door, a shop's rolling shutter, a dark room behind.
-  function dress(o, {axis, at, out, thick, a, b, sill, head}) {
+  // What an opening gets. A window: a frame in the wall's depth, a stone sill, a casement set back in it with glass
+  // and glazing bars, shutters outside, iron bars where asked. A door: a frame, a threshold, a leaf of planks with
+  // battens that stands in the opening when shut and swings into the room when open. A shop: a rolling shutter and a
+  // counter. An awning: cloth that sags, with a hem, on a rail at the wall and a pole on posts or on brackets.
+  function dress(o, {axis, at, out, thick, a, b, sill, head, plain}) {
     const face = at + out * thick / 2, P = (along_, across, y, w, h, d, surface, opt) => axis === 'x' ? block(w, h, d, along_, y, across, surface, opt) : block(d, h, w, across, y, along_, surface, opt);
-    const frame = o.frame || 'beams', deep = thick + .08, mid = (a + b) / 2, w = b - a;
-    if (o.kind !== 'shop') { P(a + .04, at, (sill + head) / 2, .08, head - sill, deep, frame); P(b - .04, at, (sill + head) / 2, .08, head - sill, deep, frame); }
-    P(mid, at, head + .07, w + .3, .14, deep + .06, frame);                                  // the lintel, a beam across
-    if (o.sill) P(mid, face + out * .05, sill - .04, w + .24, .08, .3, 'slab'); else P(mid, at, sill + .02, w, .04, deep + .1, 'slab', {shadow: false});
-    if (o.closed || o.back) P(mid, at - out * (thick / 2 + (o.back || .02)), (sill + head) / 2, w, head - sill, .04, dark, {shadow: false, seen: !!o.closed});
+    const frame = o.frame || 'beams', deep = thick + .08, mid = (a + b) / 2, w = b - a, tall = head - sill, set = at + out * (thick / 2 - .13);   // `set`: where the casement or the shut door stands
+    if (o.kind !== 'shop') { P(a + .04, at, (sill + head) / 2, .08, tall - .03, deep, frame); P(b - .04, at, (sill + head) / 2, .08, tall - .03, deep, frame); }
+    P(mid, at, head + .06, w + .3, .15, deep + .06, frame);                                  // the lintel, a beam across, a little below the wall it carries
+    if (o.sill) P(mid, face + out * .05, sill - .025, w + .24, .08, .3, 'slab'); else P(mid, at, sill + .04, w, .06, deep + .1, 'slab', {shadow: false});
+    if (o.closed || o.back) P(mid, at - out * (thick / 2 + .06), (sill + head) / 2, w + .2, tall + .2, .03, dark, {shadow: false, seen: !!o.closed});
     // Swung by `angle` from closed, towards the side `to` (+1 outside, -1 inside), hinged at the end `end`, reaching towards `dir` when closed.
-    const hinge = (end, dir, angle, length, surface, to = 1) => { const u = Math.cos(angle) * dir, v = Math.sin(angle) * out * to, line = at + out * to * (thick / 2 + .03);
-      axis === 'x' ? leaf(end, line, u, v, length, sill + .03, head - .03, .045, surface) : leaf(line, end, v, u, length, sill + .03, head - .03, .045, surface); };
-    if (o.kind === 'window' && o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open];
-      hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue');
-      if (o.bars) for (let i = 1; i < 4; i++) P(a + w * i / 4, at, (sill + head) / 2, .025, head - sill, .025, dark, {shadow: false, seen: false}); }
-    if (o.kind === 'door' && o.door !== false) hinge(a + .05, 1, o.open ?? (o.closed ? 0 : 1.75), w - .1, o.leaf || 'planks', o.closed ? 1 : -1);
-    if (o.kind === 'shop') { const drop = o.drop ?? .9; P(mid, face - out * .1, head - drop / 2, w, drop, .05, 'shutter'); P(mid, face - out * .1, head + .02, w + .1, .22, .26, 'shutter');
-      if (o.counter) { P(mid, at, sill + .45, w, .9, thick + .3, 'masonry'); P(mid, at, sill + .93, w + .1, .06, thick + .5, 'planks'); } }
-    if (o.awning) { const [colour, reach = 1.5] = o.awning, n = 8, g = new THREE.PlaneGeometry(w + .6, reach, 10, n); g.rotateX(-Math.PI / 2); const p = g.attributes.position;
-      for (let i = 0; i < p.count; i++) { const t = (p.getZ(i) + reach / 2) / reach; p.setY(i, -t * .55 - Math.sin(t * Math.PI) * .07 + Math.sin(p.getX(i) * 3.1) * .015); } g.computeVertexNormals();
-      const m = new THREE.Mesh(g, cloth(colour)); m.castShadow = m.receiveShadow = true; m.rotation.y = axis === 'x' ? (out > 0 ? 0 : Math.PI) : (out > 0 ? Math.PI / 2 : -Math.PI / 2);
-      const c = face + out * reach / 2; m.position.set(axis === 'x' ? mid : c, head + .55, axis === 'x' ? c : mid); scene.add(m);
-      if (o.awning[2] !== false) for (const e of [a - .25, b + .25]) P(e, face + out * (reach - .05), (sill - (o.sill || 0) + head) / 2, .06, head - sill + (o.sill || 0), .06, 'beams', {seen: false}); }
+    const hinge = (end, dir, angle, length, surface, to = 1, line = at + out * to * (thick / 2 + .03), y0 = sill + .03, y1 = head - .03, fat = .045) => { const u = Math.cos(angle) * dir, v = Math.sin(angle) * out * to;
+      return axis === 'x' ? leaf(end, line, u, v, length, y0, y1, fat, surface) : leaf(line, end, v, u, length, y0, y1, fat, surface); };
+    // A house beyond the walls is seen from far: it gets the frame, the dark room and the shutters, and no more.
+    if (plain) { if (o.kind === 'window' && o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue'); } return; }
+    if (o.kind === 'window') { const glass = o.closed || o.back ? pane : clear, y = (sill + head) / 2, rail = .055;
+      P(mid, set, y, w - .17, tall - .08, .012, glass, {shadow: false, seen: false});
+      for (const e of [a + .08 + rail / 2, b - .08 - rail / 2]) P(e, set, y, rail, tall - .06, .05, frame, {seen: false, shadow: false}); for (const e of [sill + .04 + rail / 2, head - .04 - rail / 2]) P(mid, set, e, w - .17 - 2 * rail, rail, .05, frame, {seen: false, shadow: false});
+      P(mid, set, y, .035, tall - .08 - 2 * rail, .04, frame, {seen: false, shadow: false}); if (tall > 1) P(mid, set, sill + tall * .62, w - .17 - 2 * rail, .035, .038, frame, {seen: false, shadow: false});
+      if (o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue'); }
+      if (o.bars) { for (let i = 1; i < 5; i++) P(a + w * i / 5, face - out * .05, y, .022, tall - .05, .022, iron, {shadow: false, seen: false}); for (const e of [sill + tall * .3, sill + tall * .7]) P(mid, face - out * .05, e, w - .16, .02, .03, iron, {shadow: false, seen: false}); } }
+    if (o.kind === 'door' && o.door !== false) { const shut = !!o.closed && o.open == null, L = w - .17, plank = o.leaf || 'planks';
+      const d = shut ? hinge(a + .085, 1, 0, L, plank, 1, set, sill + .06, head - .04, .05) : hinge(a + .085, 1, o.open ?? 1.75, L, plank, -1, at - out * (thick / 2 + .03), sill + .06, head - .04, .05);
+      // Battens across the planks and a handle, on the leaf's outer side, turned with it.
+      const side = shut ? out : 1, put = (u, y, len, hgt, fat, surface, off) => { const c = block(len, hgt, fat, 0, y, 0, surface, {turn: d.rotation.y, seen: false, shadow: false}), ux = Math.cos(d.rotation.y), uz = -Math.sin(d.rotation.y), nx = -uz, nz = ux, k = (axis === 'x' ? nz : nx) * side > 0 ? 1 : -1;
+        c.position.set(d.position.x + ux * u + nx * k * off, y, d.position.z + uz * u + nz * k * off); stats.list.at(-1).at = [c.position.x, y, c.position.z]; return c; };
+      for (const t of [.2, .55, .85]) put(0, sill + tall * t, L - .06, .09, .025, frame, .037); put(L * .36, sill + tall * .46, .04, .14, .04, iron, .045); }
+    if (o.kind === 'shop') { const drop = o.drop ?? .9, slats = Math.max(1, Math.round(drop / .11));
+      for (let i = 0; i < slats; i++) P(mid, face - out * (.1 + (i % 2) * .012), head - drop * (i + .5) / slats, w - .02, drop / slats - .004, .04, 'shutter', {seen: i === 0, shadow: i % 3 === 0});          // slats, every other one a little forward
+      P(mid, face - out * .1, head + .03, w + .1, .24, .26, 'shutter'); for (const e of [a + .03, b - .03]) P(e, face - out * .1, (sill + head) / 2, .05, tall, .07, iron, {seen: false});                  // the box it rolls into, and its guides
+      if (o.counter) { P(mid, at, sill + .45, w, .9, thick + .3, 'masonry'); P(mid, at, sill + .935, w + .1, .06, thick + .5, 'planks'); } }
+    if (o.awning) awning(o.awning, {axis, out, face, a, b, ground: sill - (o.sill || 0), head, P});
+  }
+  function awning([colour, reach = 1.5, carried = 'posts'], {axis, out, face, a, b, ground, head, P}) {
+    const w = b - a + .7, mid = (a + b) / 2, high = head + .62, fall = .5, nx = 14, nz = 10, g = new THREE.PlaneGeometry(w, reach, nx, nz); g.rotateX(-Math.PI / 2); const p = g.attributes.position, uv = g.attributes.uv;
+    // The cloth: down from the rail at the wall to the pole, slack between them and between the posts.
+    const sag = (x, t) => -t * fall - Math.sin(t * Math.PI) * .09 * (1 - .5 * Math.abs(x) / (w / 2)) - (1 - (2 * x / w) ** 2) * .05 * t + Math.sin(x * 2.3 + t * 4) * .012;
+    for (let i = 0; i < p.count; i++) { const t = (p.getZ(i) + reach / 2) / reach; p.setY(i, sag(p.getX(i), t)); uv.setXY(i, (p.getX(i) + w / 2) / 1.1, t * reach / 1.1); } g.computeVertexNormals();
+    const turn = axis === 'x' ? (out > 0 ? 0 : Math.PI) : (out > 0 ? Math.PI / 2 : -Math.PI / 2), c = face + out * (reach / 2 + .02), place = m => { m.castShadow = m.receiveShadow = true; m.rotation.y = turn; m.position.set(axis === 'x' ? mid : c, high, axis === 'x' ? c : mid); m.userData.cloth = true; scene.add(m); return m; };
+    place(new THREE.Mesh(g, cloth(colour)));
+    // What was made, for the checks: how far the middle of the cloth hangs below the straight line from rail to pole.
+    stats.awnings.push({colour, reach, carried, slack: +(-(sag(0, .5) - (sag(0, 0) + sag(0, 1)) / 2)).toFixed(3), points: p.count, hem: true});
+    // Its hem: a strip hanging from the front edge, cut in shallow points.
+    const hem = new THREE.PlaneGeometry(w, .2, nx * 2, 1), hp = hem.attributes.position, hu = hem.attributes.uv; for (let i = 0; i < hp.count; i++) { const x = hp.getX(i), low = hp.getY(i) < 0; hp.setXYZ(i, x, sag(x, 1) - (low ? .16 + .05 * Math.abs(Math.sin(x * 5.2)) : 0), reach / 2 + (low ? .015 : 0)); hu.setXY(i, (x + w / 2) / 1.1, low ? .2 : 0); } hem.computeVertexNormals(); place(new THREE.Mesh(hem, cloth(colour)));
+    P(mid, face + out * .04, high + .02, w + .1, .07, .07, 'beams', {seen: false});                                                       // the rail at the wall
+    const front = face + out * (reach + .02), edge = high - fall;
+    P(mid, front, edge + .005, w + .2, .06, .06, 'beams', {seen: false});                                                                // the pole at the front
+    for (const e of [a - .3, b + .3]) { if (carried === 'posts') { P(e, front, (ground + edge) / 2, .075, edge - ground, .075, 'beams', {seen: false}); P(e, front, ground + .06, .16, .12, .16, 'slab', {seen: false}); }
+      else { const len = Math.hypot(reach, reach * .75), ang = Math.atan2(reach * .75, reach), s = axis === 'x' ? block(.06, .06, len, e, edge - reach * .375, face + out * reach / 2, 'beams', {tilt: -out * ang, seen: false}) : block(len, .06, .06, face + out * reach / 2, edge - reach * .375, e, 'beams', {lean: out * ang, seen: false}); void s; }
+      P(e, face + out * reach / 2, (high + edge) / 2 + .03, .05, .05, reach, 'beams', {seen: false}).rotation[axis === 'x' ? 'x' : 'z'] = (axis === 'x' ? out : -out) * Math.atan2(fall, reach); }   // the arms from the rail to the pole
   }
 
   // ---- A house: storeys of four walls, floors between them, beam ends under each floor, a flat roof behind a parapet.
   function house(H) {
     const {x: [x0, x1], z: [z0, z1], base, storeys} = H, t = H.thick || .34, enter = !!H.enter; let y = base;
     const faces = {north: {axis: 'x', at: z0 + t / 2, from: x0, to: x1, out: -1}, south: {axis: 'x', at: z1 - t / 2, from: x0, to: x1, out: 1}, west: {axis: 'z', at: x0 + t / 2, from: z0 + t, to: z1 - t, out: -1}, east: {axis: 'z', at: x1 - t / 2, from: z0 + t, to: z1 - t, out: 1}};
-    block(x1 - x0 + .3, 1.4, z1 - z0 + .3, (x0 + x1) / 2, base - .68, (z0 + z1) / 2, 'masonry', {seen: false});    // the footing, down into the ground
+    block(x1 - x0 + .3, 1.4, z1 - z0 + .3, (x0 + x1) / 2, base - .74, (z0 + z1) / 2, 'masonry', {seen: false});    // the footing, down into the ground
     storeys.forEach((S, n) => {
       const ground = n === 0, inside = enter && (ground || S.room) ? (S.lining || 'room') : null;
-      for (const [name, f] of Object.entries(faces)) wall({...f, base: y, height: S.height, thick: t, surface: S.surface, lining: inside, openings: (S[name] || []).map(o => ({...o, closed: o.closed ?? (!enter && o.kind !== 'shop'), back: o.back ?? (enter && !ground && !S.room ? .02 : 0)})), hard: ground && enter});
+      for (const [name, f] of Object.entries(faces)) wall({...f, base: y, height: S.height, thick: t, surface: S.surface, lining: inside, openings: (S[name] || []).map(o => ({...o, closed: o.closed ?? (!enter && o.kind !== 'shop'), back: o.back ?? (enter && !ground && !S.room ? .02 : 0)})), hard: ground && enter, plain: !!H.plain});
       if (ground && enter) block(x1 - x0 - 2 * t, .08, z1 - z0 - 2 * t, (x0 + x1) / 2, y + .01, (z0 + z1) / 2, S.floor || 'floor', {shadow: false});
       if (inside) { block(x1 - x0 - 2 * t, .05, z1 - z0 - 2 * t, (x0 + x1) / 2, y + S.height - .235, (z0 + z1) / 2, 'ceiling', {shadow: false});                // the ceiling and its beams
         for (let z = z0 + .8; z < z1 - .4; z += 1.1) block(x1 - x0 - 2 * t, .16, .14, (x0 + x1) / 2, y + S.height - .34, z, 'beams', {shadow: false, seen: false}); }
       y += S.height;
-      block(x1 - x0 - .02, .2, z1 - z0 - .02, (x0 + x1) / 2, y - .1 + .001 * n, (z0 + z1) / 2, n === storeys.length - 1 ? (H.roof?.surface || 'trail') : 'planks');                        // the floor above, or the roof
-      for (const side of S.beamEnds || H.beamEnds || []) { const f = faces[side], reach = .38;                                     // beam ends through the wall
-        for (let p = f.from + .5; p < f.to - .2; p += .85) f.axis === 'x' ? block(.15, .15, reach, p, y - .22, f.at + f.out * (t / 2 + reach / 2 - .04), 'beams', {seen: false}) : block(reach, .15, .15, f.at + f.out * (t / 2 + reach / 2 - .04), y - .22, p, 'beams', {seen: false}); }
+      n === storeys.length - 1 ? block(x1 - x0 - .3, .2, z1 - z0 - .3, (x0 + x1) / 2, y - .07, (z0 + z1) / 2, H.roof?.surface || 'gravel') : block(x1 - x0 - 2 * t - .02, .2, z1 - z0 - 2 * t - .02, (x0 + x1) / 2, y - .1, (z0 + z1) / 2, 'planks');                        // the floor above, or the roof
+      for (const side of S.beamEnds || H.beamEnds || []) { const f = faces[side];                                     // beam ends through the wall: no two alike, as hewn timber is
+        for (let p = f.from + .35 + .3 * chance(f.at, y, f.from); p < f.to - .25; p += .62 + .5 * chance(p, y, f.at, 1)) { const k = chance(p, y, f.at, 2), reach = .26 + .22 * k, fat = .12 + .06 * chance(p, y, f.at, 3), drop = .02 * chance(p, y, f.at, 4);
+          if ((B.balconies || []).some(v => v.axis === f.axis && Math.abs(v.at - (f.at + f.out * t / 2)) < .05 && Math.abs(v.y - y) < .4 && p > v.from - .1 && p < v.to + .1)) continue;   // a balcony's own beams are there
+          f.axis === 'x' ? block(fat, fat, reach, p, y - .22 - drop, f.at + f.out * (t / 2 + reach / 2 - .04), 'beams', {seen: false}) : block(reach, fat, fat, f.at + f.out * (t / 2 + reach / 2 - .04), y - .22 - drop, p, 'beams', {seen: false}); } }
       if (S.band) for (const f of Object.values(faces)) along(f.axis, f.at + f.out * (t / 2 + .02), f.from - (f.axis === 'z' ? t : 0), f.to + (f.axis === 'z' ? t : 0), .06, y - .12, y + .08, S.band, {seen: false, shadow: false});
     });
     const p = H.roof?.parapet ?? .55, cap = H.roof?.coping || 'slab';
@@ -135,7 +191,7 @@ export function buildTerraces(ctx, map) {
       let c = a; for (const g of [...gaps].sort((u, v) => u.from - v.from)) { if (g.from - c > .05) { along(f.axis, line, c, g.from, pt, y, y + p, storeys.at(-1).surface); along(f.axis, line, c - .03, g.from + .03, pt + .1, y + p, y + p + .06, cap, {seen: false}); } c = g.to; }
       if (b - c > .05) { along(f.axis, line, c, b, pt, y, y + p, storeys.at(-1).surface); along(f.axis, line, c - .03, b + .03, pt + .1, y + p, y + p + .06, cap, {seen: false}); } }
     if (!enter) solid(x0, x1, z0, z1);
-    for (const tank of H.roof?.tanks || []) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, 1.1, 14), materials.iron); c.position.set(tank[0], y + .75, tank[1]); c.castShadow = c.receiveShadow = true; scene.add(c); for (const dx of [-.4, .4]) block(.1, .2, 1, tank[0] + dx, y + .1, tank[1], 'beams', {seen: false}); }
+    for (const tank of H.roof?.tanks || []) { const c = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, 1.1, 14), tankIron); c.position.set(tank[0], y + .75, tank[1]); c.castShadow = c.receiveShadow = true; scene.add(c); for (const dx of [-.4, .4]) block(.1, .2, 1, tank[0] + dx, y + .1, tank[1], 'beams', {seen: false}); }
     return y;
   }
 
@@ -143,7 +199,9 @@ export function buildTerraces(ctx, map) {
   function balcony({axis, at, from, to, y, out, depth = 1.15, surface = 'planks'}) {
     const mid = at + out * depth / 2, P = (p, across, yy, w, h, d, s, opt) => axis === 'x' ? block(w, h, d, p, yy, across, s, opt) : block(d, h, w, across, yy, p, s, opt);
     P((from + to) / 2, mid, y - .04, to - from, .07, depth, surface);
-    for (let p = from + .15; p <= to - .1; p += Math.max(.6, (to - from - .3) / Math.round((to - from) / .9))) P(p, mid - out * .1, y - .16, .13, .16, depth + .25, 'beams', {seen: false});
+    // The beams that carry it come out of the wall, and every other one is propped from the wall below.
+    let n = 0; for (let p = from + .15; p <= to - .1; p += Math.max(.6, (to - from - .3) / Math.round((to - from) / .9)), n++) { P(p, mid - out * .1, y - .16, .13, .16, depth + .25, 'beams', {seen: false});
+      if (n % 2 === 0) { const run = depth - .25, len = Math.hypot(run, run), c = at + out * run / 2; axis === 'x' ? block(.09, .09, len, p, y - .24 - run / 2, c, 'beams', {tilt: out * Math.PI / 4, seen: false}) : block(len, .09, .09, c, y - .24 - run / 2, p, 'beams', {lean: out * Math.PI / 4, seen: false}); } }
     for (let p = from + .06; p <= to; p += (to - from - .12) / Math.max(1, Math.round((to - from) / 1.3))) P(p, at + out * (depth - .06), y + .5, .08, 1, .08, 'beams', {seen: false});
     for (const yy of [y + .98, y + .5]) P((from + to) / 2, at + out * (depth - .06), yy, to - from, .07, .07, 'beams', {seen: false});
     for (const e of [from + .05, to - .05]) for (const yy of [y + .98, y + .5]) P(e, mid, yy, .07, .07, depth, 'beams', {seen: false});
@@ -167,11 +225,11 @@ export function buildTerraces(ctx, map) {
   }
   // ---- A lean-to: a sheet sloping down in the direction `fall` ('x+', 'x-', 'z+', 'z-'), on posts at its low edge
   // (and at its high edge when it leans on nothing).
-  function leanTo({x: [x0, x1], z: [z0, z1], base, high, low, fall, surface = 'iron', free = false}) {
+  function leanTo({x: [x0, x1], z: [z0, z1], base, high, low, fall, surface = 'iron', free = false, posts = [.04, .5, .96]}) {
     const onX = fall[0] === 'x', up = fall[1] === '+' ? 1 : -1, span = onX ? x1 - x0 : z1 - z0, angle = Math.atan2(high - low, span), len = Math.hypot(span, high - low) + .5, mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
     onX ? block(len, .04, z1 - z0 + .4, mx, base + (high + low) / 2, mz, surface, {lean: -up * angle, seen: false}) : block(x1 - x0 + .4, .04, len, mx, base + (high + low) / 2, mz, surface, {tilt: up * angle, seen: false});
     const edge = (lowSide, h) => { const c = onX ? (up > 0 === lowSide ? x1 - .12 : x0 + .12) : (up > 0 === lowSide ? z1 - .12 : z0 + .12);
-      for (const t of [.04, .5, .96]) onX ? block(.11, h - .06, .11, c, base + (h - .06) / 2, z0 + (z1 - z0) * t, 'beams', {seen: false}) : block(.11, h - .06, .11, x0 + (x1 - x0) * t, base + (h - .06) / 2, c, 'beams', {seen: false});
+      for (const t of posts) onX ? block(.11, h - .06, .11, c, base + (h - .06) / 2, z0 + (z1 - z0) * t, 'beams', {seen: false}) : block(.11, h - .06, .11, x0 + (x1 - x0) * t, base + (h - .06) / 2, c, 'beams', {seen: false});
       onX ? block(.1, .12, z1 - z0 + .3, c, base + h - .1, mz, 'beams', {seen: false}) : block(x1 - x0 + .3, .12, .1, mx, base + h - .1, c, 'beams', {seen: false}); };
     edge(true, low + .12); if (free) edge(false, high - .12);
     for (const t of [.2, .5, .8]) onX ? block(.07, .09, z1 - z0 + .3, x0 + span * t, base + (up > 0 ? high - (high - low) * t : low + (high - low) * t) - .07, mz, 'beams', {seen: false}) : block(x1 - x0 + .3, .09, .07, mx, base + (up > 0 ? high - (high - low) * t : low + (high - low) * t) - .07, z0 + span * t, 'beams', {seen: false});
@@ -184,6 +242,9 @@ export function buildTerraces(ctx, map) {
     if (w.coping) along(w.axis, w.at, w.from - .04, w.to + .04, w.thick + .14, top, top + .08, w.coping, {seen: false}); }
   for (const s of B.steps) steps(s);
   const roofs = {}; for (const h of B.houses) roofs[h.id] = house(h);
+  // Beyond the walls: houses and field walls that are seen and not reached.
+  for (const h of B.beyond?.houses || []) house(h);
+  for (const w of B.beyond?.walls || []) along(w.axis, w.at, w.from, w.to, w.thick, w.base - w.foot, w.base + w.height, w.surface, {seen: false});
   for (const b of B.balconies || []) balcony(b);
   for (const f of B.flights || []) flight(f);
   for (const l of B.leanTos || []) leanTo(l);
@@ -208,7 +269,7 @@ export function buildTerraces(ctx, map) {
       const o = new THREE.Mesh(new THREE.BoxGeometry(w, hard[2], d)); o.position.set(x, groundY(x, z) + hard[2] / 2, z); o.updateMatrixWorld(true); o.userData.round = true; occluders.push(o); }
     ready.push(fetch(url).then(r => { if (!r.ok) throw new Error(`${kind}: ${r.status}`); return r.arrayBuffer(); }).then(buffer => new Promise((done, fail) => gltf.parse(buffer, '', done, fail))).then(model => {
       model.scene.updateMatrixWorld(true); let triangles = 0;
-      model.scene.traverse(o => { if (!o.isMesh) return; const m = o.material; if (m.transmission) { m.transmission = 0; m.transparent = true; m.opacity = .35; m.depthWrite = false; } if (m.map) m.map.anisotropy = aniso;
+      model.scene.traverse(o => { if (!o.isMesh) return; const m = o.material; if (B.tints?.[kind]) m.color.multiply(new THREE.Color(B.tints[kind])); if (m.transmission) { m.transmission = 0; m.transparent = true; m.opacity = .35; m.depthWrite = false; } if (m.map) m.map.anisotropy = aniso;
         const inst = new THREE.InstancedMesh(o.geometry, m, list.length); inst.castShadow = !m.transparent; inst.receiveShadow = true; inst.userData.prop = kind;
         list.forEach(([, x, z, turn = 0, lift = 0, scale = 1, tilt = 0], i) => { holder.position.set(x, groundY(x, z) + lift, z); holder.rotation.set(tilt * Math.PI / 180, turn * Math.PI / 180, 0); holder.scale.setScalar(scale); holder.updateMatrix(); inst.setMatrixAt(i, holder.matrix.clone().multiply(o.matrixWorld)); });
         inst.instanceMatrix.needsUpdate = true; inst.computeBoundingSphere(); scene.add(inst); triangles += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * list.length; });
