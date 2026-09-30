@@ -14,6 +14,7 @@ import * as THREE from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {assetURL} from './build.js';
 import {makeSpace} from './space.js';
+import {makeNav} from './navmesh.js';
 
 // The surfaces: the file, the size in metres of one repeat, and how it is used.
 export const SURFACES = {
@@ -46,7 +47,7 @@ const assert = (ok, what) => { if (!ok) throw new Error('DUSTLINE kit: ' + what)
 
 export function buildTerraces(ctx, map) {
   const {scene, renderer, solids, occluders, groundY} = ctx, B = map.block, loader = new THREE.TextureLoader();
-  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()), textures = new Map(), materials = {}, stats = {list: [], awnings: [], boxes: 0, props: 0, propKinds: 0, propTriangles: 0, requested: []};
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy()), textures = new Map(), materials = {}, stats = {list: [], awnings: [], doors: [], boxes: 0, props: 0, propKinds: 0, propTriangles: 0, requested: []};
   const texture = (file, kind) => { const key = `${file}_${kind}`; if (textures.has(key)) return textures.get(key);
     const url = kind === 'diff' ? assetURL('assets/dehrun/tex/' + file + '_diff_1k.jpg') : kind === 'nor_gl' ? assetURL('assets/dehrun/tex/' + file + '_nor_gl_1k.jpg') : assetURL('assets/dehrun/tex/' + file + '_arm_1k.jpg');
     const t = loader.load(url); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; if (kind === 'diff') t.colorSpace = THREE.SRGBColorSpace; textures.set(key, t); stats.requested.push(url); return t; };
@@ -116,6 +117,7 @@ export function buildTerraces(ctx, map) {
     for (const o of list) { const a = o.at - o.width / 2, b = o.at + o.width / 2, sill = base + (o.sill || 0), head = base + o.head;
       piece(cursor, a, base, top, true); piece(a, b, base, sill, false); piece(a, b, head, top, false);
       if (hard && (o.sill || o.closed || o.kind === 'shop' && o.counter)) axis === 'x' ? solid(a, b, at - thick / 2, at + thick / 2) : solid(at - thick / 2, at + thick / 2, a, b);
+      if (o.kind === 'door' || o.kind === 'open') stats.doors.push({x: axis === 'x' ? o.at : at, z: axis === 'x' ? at : o.at, axis, y: sill, width: o.width, kind: o.kind, shut: o.kind === 'door' && !!o.closed && o.open == null});   // Build 26: every doorway, for the enemies' paths
       dress(o, {axis, at, out, thick, a, b, sill, head, plain}); cursor = b; }
     piece(cursor, to, base, top, true);
   }
@@ -352,5 +354,7 @@ export function buildTerraces(ctx, map) {
   }
   // What a body can stand on, walk into and climb: every box with its top and bottom, the ground, the ladders.
   const space = makeSpace({boxes: stats.list.filter(b => !b.turned).map(b => ({min: b.min, max: b.max, solid: b.solid, tag: b.tag || b.surface})).concat(propBoxes, tankBoxes), ground: groundY, ladders, edges: map.edges});
-  return {stats, materials, roofs, space, ready: Promise.all(ready)};
+  // Build 26: where the enemies can go, made from the space when first asked for (a body of their width, their stair rule).
+  let nav = null; const navigation = () => nav ??= makeNav(space, {region: map.edges, doors: stats.doors, ladders, starts: [map.starts.player, ...(map.enemies?.spawns || [])].map(([x, z]) => ({x, y: groundY(x, z), z}))});
+  return {stats, materials, roofs, space, navigation, ready: Promise.all(ready)};
 }

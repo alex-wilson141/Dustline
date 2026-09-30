@@ -15,13 +15,17 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   // The boxes, indexed by the 2 m squares they cover, so that a body asks only about what is near it.
   const grid = new Map(), key = (i, j) => i * 100003 + j, at = v => Math.floor(v / cell);
   // A box narrower than `stance` across (a post, a rail, a beam end) stops a body but holds none up (Build 25).
-  const list = boxes.filter(b => b.solid !== false).map((b, i) => ({...b, i, thin: b.max[0] - b.min[0] < body.stance || b.max[2] - b.min[2] < body.stance}));
-  for (const b of list) for (let i = at(b.min[0] - body.radius - .01); i <= at(b.max[0] + body.radius + .01); i++) for (let j = at(b.min[2] - body.radius - .01); j <= at(b.max[2] + body.radius + .01); j++) { const k = key(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(b); }
+  const list = boxes.filter(b => b.solid !== false).map((b, i) => ({...b, i, thin: b.max[0] - b.min[0] < body.stance || b.max[2] - b.min[2] < body.stance, tread: b.tag === 'stair' || b.tag === 'steps'}));
+  // Each box is filed under every square within `reach` of it: the widest body that asks (the enemies', .45), not the player's.
+  const reach = Math.max(body.radius, .5) + .01;
+  for (const b of list) for (let i = at(b.min[0] - reach); i <= at(b.max[0] + reach); i++) for (let j = at(b.min[2] - reach); j <= at(b.max[2] + reach); j++) { const k = key(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(b); }
   const near = (x, z) => grid.get(key(at(x), at(z))) || [];
   // A box's footprint includes its edges: on the seam between two slabs a body stands on both, not on neither (Build 25).
   const inside = (b, x, z, r) => x >= b.min[0] - r && x <= b.max[0] + r && z >= b.min[2] - r && z <= b.max[2] + r;
   // Whether a body standing at (x, z) with its feet at y0 and its head at y1 hits anything.
   // The map's edges hold at every height: nothing walks, jumps or falls past them.
+  // The same for a body to which treads near its feet are no obstacle (the enemies' stair rule, `stairs`).
+  function stands(x, z, y0, y1, r = body.radius, stairs = false) { if (edges && (x < edges.x[0] || x > edges.x[1] || z < edges.z[0] || z > edges.z[1])) return false; for (const b of near(x, z)) if (b.min[1] < y1 && b.max[1] > y0 && inside(b, x, z, r) && !(stairs && b.tread && b.min[1] < y0 + .65)) return false; return true; }
   function clear(x, z, y0, y1, r = body.radius) { if (edges && (x < edges.x[0] || x > edges.x[1] || z < edges.z[0] || z > edges.z[1])) return false; for (const b of near(x, z)) if (b.min[1] < y1 && b.max[1] > y0 && inside(b, x, z, r)) return false; return true; }
   // The highest floor under (x, z) that is no higher than yTop: a box top the body's middle stands over (it may lean
   // `lean` past an edge), or the ground.
@@ -43,8 +47,11 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   // Whether a body may step from (ox, oz) to (nx, nz): nothing in its way there, except what it already stands against
   // or in, and that no deeper than before. A body that a fall has left against a wall, under a sill, can so slide out
   // along the wall or away from it, and never further in (Build 25; before, such a body could not move at all).
-  function passable(ox, oz, nx, nz, y0, y1, r) { if (edges && (nx < edges.x[0] || nx > edges.x[1] || nz < edges.z[0] || nz > edges.z[1])) return false;
-    for (const b of near(nx, nz)) { if (!(b.min[1] < y1 && b.max[1] > y0 && inside(b, nx, nz, r))) continue; if (!inside(b, ox, oz, r) || depth(b, nx, nz, r) > depth(b, ox, oz, r) + 1e-9) return false; } return true; }
+  // `stairs` (Build 26, the enemies' stair rule): treads within a metre above the feet do not stand in the way of a body
+  // wider than a tread is long; such a body climbs by what is under its middle, as the player's narrower body does by
+  // its edge. Everything else (walls, rails, the flight above) counts as for any body.
+  function passable(ox, oz, nx, nz, y0, y1, r, stairs = false) { if (edges && (nx < edges.x[0] || nx > edges.x[1] || nz < edges.z[0] || nz > edges.z[1])) return false;
+    for (const b of near(nx, nz)) { if (!(b.min[1] < y1 && b.max[1] > y0 && inside(b, nx, nz, r))) continue; if (stairs && b.tread && b.min[1] < y0 + .65) continue; if (!inside(b, ox, oz, r) || depth(b, nx, nz, r) > depth(b, ox, oz, r) + 1e-9) return false; } return true; }
   // Where a body that has landed at (x, z) comes to rest: pushed out of whatever it overlaps by the shortest way, a few
   // times over if need be (off a wall's face after a fall along it, from under a sill). Null where no push frees it:
   // a gap narrower than the body (Build 25).
@@ -53,15 +60,16 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
     return null; }
   // A horizontal move of a body whose feet are at y and whose head is at y + height, in steps of .25 m, each axis on
   // its own; it steps up onto anything within `step` of its feet. Returns the distance moved and the new floor.
-  function move(p, dx, dz, height, r = body.radius) {
+  function move(p, dx, dz, height, r = body.radius, {stairs = false} = {}) {
     const ox = p.x, oz = p.z, steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .25));
     for (let i = 0; i < steps; i++) for (const [ax, az] of [[dx / steps, 0], [0, dz / steps]]) { if (!ax && !az) continue; const nx = p.x + ax, nz = p.z + az;
       // Where the feet would be after the step, what is in the way is judged from there: on a stair the next tread is
       // not in the way of a body already on the one below.
       // Where it would drop, the body must also fit where it lands, or be pushed somewhere it fits (`settle`): it does
       // not step off a crate into a gap narrower than itself (Build 25; before, it landed wedged there).
-      const f = floor(nx, nz, p.y + body.step, body.lean, p.y), feet = Math.max(p.y, f.y), drop = f.y < p.y - body.step;
-      if (passable(p.x, p.z, nx, nz, feet + body.step, feet + height, r) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y) p.y = f.y; } }
+      // Stepping down, what is in the way is judged from the lower level too (a low thing there is met, not stood in).
+      const f = floor(nx, nz, p.y + body.step, body.lean, p.y), drop = f.y < p.y - body.step, feet = drop ? p.y : f.y;
+      if (passable(p.x, p.z, nx, nz, feet + body.step, feet + height, r, stairs) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y) p.y = f.y; } }
     return Math.hypot(p.x - ox, p.z - oz);
   }
   // A ledge the body could pull itself onto: ahead by up to `reach`, its top between `step` and `mantle` above the
@@ -75,7 +83,7 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   function ladderAt(p, fx, fz, back = false) { for (const l of ladders) { const dx = p.x - l.x, dz = p.z - l.z, facing = fx * l.dir[0] + fz * l.dir[1];
     if (!back) { if (Math.hypot(dx, dz) > .75 || p.y < l.bottom - .4 || p.y > l.top - .6 || facing > -.35) continue; return l; }
     else { if (Math.hypot(p.x - l.exit[0], p.z - l.exit[1]) > .8 || p.y < l.top - 1.3 || p.y > l.top + .3 || facing < .35) continue; return l; } } return null; }
-  return {boxes: list, clear, floor, ceiling, headroom, move, ledge, ladderAt, ladders, body, settle,
+  return {boxes: list, clear, stands, floor, ceiling, headroom, move, ledge, ladderAt, ladders, body, settle,
     // Whether a body under something may stand up yet: only once the whole of it is out from under (else it is held down).
     mayStand: (x, z, y) => headroom(x, z, y, body.radius) >= body.stand,
     // Everything a body can stand on within a square, for the checks: box tops and the ground.

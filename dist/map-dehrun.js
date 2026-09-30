@@ -28,7 +28,7 @@ const surface = (x, z) => { if (Math.abs(x) <= BLOCK.x && z >= BLOCK.z[0] && z <
 const SUN_ROUND = 2.33, SUN_UP = .47, SKY_SUN = .629, SUN = [Math.cos(SUN_ROUND) * Math.cos(SUN_UP), Math.sin(SUN_UP), Math.sin(SUN_ROUND) * Math.cos(SUN_UP)], SKY_TURN = SUN_ROUND - SKY_SUN + Math.PI;
 
 const W = 'window', D = 'door';
-const win = (at, o = {}) => ({kind: W, at, width: 1.1, sill: .9, head: 2.05, ...o}), door = (at, o = {}) => ({kind: D, at, width: 1.05, head: 2.1, ...o});
+const win = (at, o = {}) => ({kind: W, at, width: 1.1, sill: .9, head: 2.05, ...o}), door = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.1, ...o});   // Build 26: 1.3 m, as the customs house (user decision, E41); the block's doors were 1.05 m
 // Build 25: the customs house's doors are 1.3 m wide, for enemies as much as for the player (an enemy asks for .45 m
 // either side of its line; see the roadmap, E41). A room is a rectangle; the storeys' rooms tile the inside of the house.
 const wide = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.3, leaf: 'planks', open: 1.7, ...o}), room = (id, x, z) => ({id, x, z});
@@ -46,7 +46,9 @@ const fieldWall = (z, from, to) => { const out = []; for (let a = from; a < to; 
 export const DEHRUN = {
   id: 'dehrun', name: 'Dehrun Terraces',
   // A map to walk and look at: no mission, nobody else. The words the game shows there.
-  look: {lamp: 2.4, title: 'DEHRUN TERRACES', line: 'Look slice: the block and the customs house', note: 'NO MISSION · NOBODY ELSE HERE', button: 'WALK THE BLOCK →', brief: 'A street in the hill town, and the customs house.', text: 'One street block of Dehrun Terraces and, through the gate at the south end of the street, the square with the customs house: three storeys of rooms and corridors, two stairs, a roof. Walk in by any of its four doors; the stairs come out on the roof.', radio: 'Dehrun Terraces, look slice. Nobody else is here. The street climbs north; behind you, through the south gate, stands the customs house. Its doors are open and both stairs go up to the roof.'},
+  look: {lamp: 2.4, title: 'DEHRUN TERRACES', line: 'Look slice: the block and the customs house', note: 'NO MISSION · NOBODY ELSE HERE', button: 'WALK THE BLOCK →', brief: 'A street in the hill town, and the customs house.', text: 'One street block of Dehrun Terraces and, through the gate at the south end of the street, the square with the customs house: three storeys of rooms and corridors, two stairs, a roof. Walk in by any of its four doors; the stairs come out on the roof.', radio: 'Dehrun Terraces, look slice. Nobody else is here. The street climbs north; behind you, through the south gate, stands the customs house. Its doors are open and both stairs go up to the roof.',
+    // Build 26: with `?foes=1` these enemies are in the customs house and on the square, on the loops named, hunting you.
+    foes: [{at: [-8, 9.83, 58], loop: 'ROOF'}, {at: [8, 9.83, 68], loop: 'ROOF'}, {at: [0, 6.6, 61.4], loop: 'UPPER'}, {at: [6, 6.6, 57], loop: 'UPPER'}, {at: [-15, 0, 50], loop: 'SQUARE'}, {at: [15, 0, 74], loop: 'SQUARE'}]},
   height,
   terrain: {size: 400, segments: 100, surface},
   // A clear sky with a low sun: `background` and `environment` are how bright the sky is drawn and how much it lights,
@@ -72,7 +74,9 @@ export const DEHRUN = {
   starts: {player: [0, 37], guest: [1.5, 38], squad: [[-1.5, 39], [0, 40.5], [1.5, 39.5]], mate: [1.5, 40.5]},
   enemies: {
     spawns: [[-2, -12], [2, -14], [-1, -18], [1, -22], [-2, -25], [2, -26], [0, -9]],
-    loops: {UP: [[0, -10], [0, -24], [-2, -17]], RING: [[-2, -12], [2, -12], [2, -24], [-2, -24]]},
+    // Build 26: a loop's node may carry its height [x, z, y]; these are the customs house's, for the foes of `?foes=1`.
+    loops: {UP: [[0, -10], [0, -24], [-2, -17]], RING: [[-2, -12], [2, -12], [2, -24], [-2, -24]],
+      ROOF: [[-8, 58, 9.83], [8, 58, 9.83], [8, 68, 9.83], [-8, 68, 9.83]], UPPER: [[-9, 61.4, 6.6], [10, 61.4, 6.6], [8, 57, 6.6], [-5, 57, 6.6]], HALLS: [[-9, 61.4, .05], [10, 61.4, .05], [0, 66, .05], [-8, 66, .05]], SQUARE: [[-18, 48, 0], [18, 48, 0], [18, 76, 0], [-18, 76, 0]]},
     assign: ['UP', 'UP', 'UP', 'UP', 'GARRISON', 'GARRISON', 'UP'],
     reinforceLoops: {0: ['UP'], 1: ['RING'], 2: ['UP'], skirmish: ['RING']},
     reinforcePoints: [{chain: [[0, -27], [0, -20]], stages: [0, 1, 2]}],
@@ -143,7 +147,7 @@ export const DEHRUN = {
         {height: 2.7, surface: 'ochre', lining: 'room', floor: 'slab', east: [{kind: 'shop', at: 28.5, width: 4.2, head: 2.3, drop: .9}], south: [win(-8.5, {shutters: false, bars: true})]}]},
       // E: the tall house at the top, three storeys.
       {id: 'E', x: [-14, -5], z: [-22, -10], base: 3.2, beamEnds: ['east', 'south'], roof: {parapet: .6, tanks: [[-11, -19]]}, storeys: [
-        {height: 3, surface: 'masonry', east: [door(-13, {leaf: 'planks', width: 1.2, head: 2.2, awning: ['#a08343', 1.3, 'brackets']}), win(-17.5, {bars: true}), win(-20, {bars: true})], south: [win(-9.5, {bars: true})]},
+        {height: 3, surface: 'masonry', east: [door(-13, {leaf: 'planks', width: 1.3, head: 2.2, awning: ['#a08343', 1.3, 'brackets']}), win(-17.5, {bars: true}), win(-20, {bars: true})], south: [win(-9.5, {bars: true})]},
         {height: 2.8, surface: 'plaster', band: 'white', east: [win(-12, {sill: .8}), win(-15.5, {sill: .8, open: [2.75, 1]}), win(-19.5, {sill: .8})], south: [win(-11, {sill: .8}), win(-8, {sill: .8})]},
         {height: 2.8, surface: 'white', band: 'ochre', east: [win(-12, {sill: .8}), door(-16, {leaf: 'blue', width: .95}), win(-19.8, {sill: .8})], south: [win(-9.5, {sill: .8, open: [1.2, 2.75]})]}]},
       // F: across from it, a house over a shuttered shop.
@@ -152,7 +156,7 @@ export const DEHRUN = {
         {height: 2.7, surface: 'plaster', band: 'ochre', west: [win(-11, {sill: .8}), door(-14.5, {leaf: 'blue', width: .95}), win(-18, {sill: .8, open: [2.75, 1.5]})], south: [win(8.5, {sill: .8})]}]},
       // G: a storehouse under the upper retaining wall.
       {id: 'G', x: [-12, -5.4], z: [-5.2, .4], base: 1.6, beamEnds: ['east'], roof: {parapet: .35, surface: 'gravel'}, storeys: [
-        {height: 2.7, surface: 'white', east: [door(-3.6, {leaf: 'blue', width: 1.2, head: 2.15}), win(-1, {width: .8, sill: 1.3, head: 2, bars: true, shutters: false})], south: [win(-8.5, {width: .8, sill: 1.3, head: 2, shutters: false, bars: true})]}]},
+        {height: 2.7, surface: 'white', east: [door(-3.6, {leaf: 'blue', width: 1.3, head: 2.15}), win(-1, {width: .8, sill: 1.3, head: 2, bars: true, shutters: false})], south: [win(-8.5, {width: .8, sill: 1.3, head: 2, shutters: false, bars: true})]}]},
       // H: a low house by the south gate.
       {id: 'H', x: [14.5, 22], z: [36.5, 43], base: 0, beamEnds: ['west'], roof: {parapet: .45}, storeys: [
         {height: 2.9, surface: 'ochre', west: [door(38.2, {leaf: 'planks', awning: ['#7c5a48', 1.2, 'brackets']}), win(41, {open: [2.75, 1.2]})], north: [win(18)]}]},
@@ -185,7 +189,7 @@ export const DEHRUN = {
     // Outside and inside stairs: geometry until height is built.
     flights: [
       {axis: 'x', at: 34, from: 12.8, to: 7.4, low: 0, high: 3, width: 1.05, count: 15, out: 1, landing: 1.9},
-      {axis: 'z', at: -12.66, from: 11.6, to: 6.6, low: 1.6, high: 4.6, width: .9, count: 14, out: 1, surface: 'room', tread: 'planks'},
+      {axis: 'z', at: -12.66, from: 11.6, to: 6.6, low: 1.6, high: 4.6, width: 1.05, count: 14, out: 1, surface: 'room', tread: 'planks'},   // Build 26: 1.05 m (was .9), wide enough for an enemy
     ],
     // Ladders [where it stands, which way the climber faces it from, its foot and top, where the climber steps off].
     ladders: [

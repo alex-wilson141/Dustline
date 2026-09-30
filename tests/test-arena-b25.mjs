@@ -168,25 +168,28 @@ await check('doors', 'every door and doorway of the customs house lets an enemy 
   report.doors = {passed: n, radius: NAV_R, width: 1.3, between: +(1.3 - .16).toFixed(2), blockDoors: {width: 1.05, between: .89, aBodyOfTheEnemiesRadius: blockDoor}, note: 'the customs house leaves 1.14 m between the posts of every door, .24 m more than a body of radius .45 needs'};
 });
 
-await check('block', 'the block that was there is exactly what it was: the new kit building Build 24\'s description of the block (run here from its commit) makes the very same boxes, awnings, ladders and solids as Build 24\'s kit; and in the new description everything north of the gate is unchanged too, the only differences being the gate\'s leaves (open now), what stands on the square and what moved to make room for it', async () => {
+await check('block', 'the block that was there is exactly what it was: the new kit building Build 24\'s description of the block (run here from its commit) makes the very same boxes, awnings, ladders and solids as Build 24\'s kit; and in the new description everything north of the gate is unchanged too, the only differences being the gate\'s leaves (open now), what stands on the square and what moved to make room for it, and (Build 26, the user\'s decision) the doors 1.3 m wide and house A\'s inside stair 1.05 m: with those two numbers put into Build 24\'s description, the block is the same box for box', async () => {
   const old = await oldBuild(BUILD24), oldMaps = await old.module('maps.js'), OLD = await oldMaps.loadMap('dehrun'), oldKit = (await old.module('terraces.js')).buildTerraces;
   const ctx = map => ({scene: new THREE.Scene(), renderer: {capabilities: {getMaxAnisotropy: () => 8}}, solids: [], occluders: [], groundY: (x, z) => map.height(x, z), ground: {material: new THREE.MeshStandardMaterial()}});
   const sig = b => JSON.stringify([b.at.map(v => +v.toFixed(4)), b.size.map(v => +v.toFixed(4)), b.surface, b.turned, b.tag, b.solid]);
   const made = async (kit, map) => { const c = ctx(map), out = kit(c, map); await out.ready; return {boxes: out.stats.list.map(sig).sort(), awnings: JSON.stringify(out.stats.awnings), ladders: JSON.stringify(out.space.ladders), solids: JSON.stringify(c.solids), count: out.stats.list.length}; };
   await page(); await old.createGame();   // the harness's document and fetch, which each kit draws its cloth and loads its models with (each build's own three.js is what its harness prepares)
-  const was = await made(oldKit, OLD), same = await made(buildTerraces, OLD);
-  assert.equal(same.count, was.count, 'as many boxes'); assert.deepEqual(same.boxes, was.boxes, 'the same boxes'); assert.equal(same.awnings, was.awnings); assert.equal(same.ladders, was.ladders); assert.equal(same.solids, was.solids);
+  const was = await made(oldKit, OLD), asIs = await made(buildTerraces, OLD);
+  assert.equal(asIs.count, was.count, 'as many boxes'); assert.deepEqual(asIs.boxes, was.boxes, 'the same boxes'); assert.equal(asIs.awnings, was.awnings); assert.equal(asIs.ladders, was.ladders); assert.equal(asIs.solids, was.solids);
   assert(was.count > 2500 && OLD.block.houses.length === 8 && !OLD.block.houses.some(h => h.stairs), 'Build 24\'s block, without the customs house');
-  // The new description against the old, both built by the new kit: north of the gate the same, but for the gate's leaves.
-  const now = await made(buildTerraces, DEHRUN), leaf = s => { const [at, size, , turned] = JSON.parse(s); return turned && Math.abs(at[0]) < 2 && Math.abs(at[2] - 44) < 1 && size[1] > 2; };
+  // The new description against the old, both built by the new kit: north of the gate the same, but for the gate's leaves,
+  // once the old description is given Build 26's door and stair widths (every door 1.3 m, house A's inside stair 1.05 m).
+  const widened = {...OLD, block: JSON.parse(JSON.stringify(OLD.block))}; for (const h of widened.block.houses) for (const st of h.storeys) for (const f of ['north', 'south', 'east', 'west']) for (const o of st[f] || []) if (o.kind === 'door' && o.width >= 1.05) o.width = 1.3;
+  widened.block.flights.find(f => f.width === .9).width = 1.05;
+  const same = await made(buildTerraces, widened), now = await made(buildTerraces, DEHRUN), leaf = s => { const [at, size, , turned] = JSON.parse(s); return turned && Math.abs(at[0]) < 2 && Math.abs(at[2] - 44) < 1 && size[1] > 2; };
   const north = list => list.filter(s => { const [at, size] = JSON.parse(s); return at[2] + size[2] / 2 <= 44.31 && !leaf(s); });
   assert.deepEqual(north(now.boxes), north(same.boxes), 'north of the gate nothing changed');
   const gone = same.boxes.filter(s => !now.boxes.includes(s)), added = now.boxes.filter(s => !same.boxes.includes(s));
   for (const s of gone) { const [at] = JSON.parse(s); assert(leaf(s) || at[2] > 48, `only the gate's leaves and what stood south of the block are gone: ${s}`); }
   for (const s of added) { const [at, size] = JSON.parse(s); assert(leaf(s) || at[2] - size[2] / 2 >= 43.9, `only the gate's leaves and what stands on the square are new: ${s}`); }
   assert.equal(gone.filter(leaf).length, 2); assert.equal(added.filter(leaf).length, 2, 'the two leaves of the gate, swung open');
-  assert.deepEqual(DEHRUN.block.houses.slice(0, 8), OLD.block.houses, 'the eight houses are described as they were'); assert.deepEqual(DEHRUN.height(3, 30), OLD.height(3, 30)); assert.deepEqual(DEHRUN.starts, OLD.starts);
-  report.block = {build24Boxes: was.count, newKitOnOldDescription: 'identical', nowBoxes: now.count, addedSouthOfTheGate: added.length - 2, goneSouthOfTheBlock: gone.length - 2, deliberate: ['the south gate open (ajar 1.3)', 'houses S1 and S2 and one field wall moved beyond the square', 'the sun aimed at the middle of the longer map (its direction unchanged)', 'edges, nav, dust, reach and the M map extended to z 80']};
+  assert.deepEqual(DEHRUN.block.houses.slice(0, 8), widened.block.houses, 'the eight houses are described as they were, their doors widened'); assert.deepEqual(DEHRUN.height(3, 30), OLD.height(3, 30)); assert.deepEqual(DEHRUN.starts, OLD.starts);
+  report.block = {build24Boxes: was.count, newKitOnOldDescription: 'identical', widenedInBuild26: 'every door 1.3 m (the .95 m balcony doors of shut upper floors excepted), house A\'s inside stair 1.05 m', nowBoxes: now.count, addedSouthOfTheGate: added.length - 2, goneSouthOfTheBlock: gone.length - 2, deliberate: ['the south gate open (ajar 1.3)', 'houses S1 and S2 and one field wall moved beyond the square', 'the sun aimed at the middle of the longer map (its direction unchanged)', 'edges, nav, dust, reach and the M map extended to z 80']};
 });
 
 console.log(JSON.stringify({...(ONLY ? {partial: ONLY} : {}), passed: results.length, checks: results, report, limitations: [
