@@ -77,7 +77,7 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], r
   function walkable(a, b) { const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < .01) return true; p.x = a.x; p.y = a.y; p.z = a.z; const n = Math.ceil(d / .1);
     for (let i = 0; i < n; i++) { if (moveBody(p, dx / n, dz / n) < d / n - .005) return false; const f = space.floor(p.x, p.z, p.y + B.step, B.lean, p.y); if (f.y < p.y - B.step) return false; p.y = f.y; }
     return Math.abs(p.y - b.y) < .6; }
-  return {nodes, stats, nearest, path, walkable, free, move: moveBody, rest, radius, height, doors: extras.length,
+  return {nodes, stats, nearest, path, walkable, free, move: moveBody, rest, radius, height, climb: FOE.climb, doors: extras.length,
     // Where a body walking at (x, z) with its feet at y stands, as the game's height rules see it.
     floor: (x, z, y) => space.floor(x, z, y + B.step, B.lean, y)};
 }

@@ -25,6 +25,24 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 26 (local, 2026-09-30): enemy height on Dehrun Terraces, map build 5 of 9. **On a map with a space the enemies walk a
+navigation in layers (`dist/navmesh.js`, made by the kit on demand, `built.navigation()`; Kohar Valley never loads it and
+`LAYERS` is null there: every AI change is gated on `LAYERS`, and T36 requires Kohar's cover table, paths, spots and the fire
+block to be Build 25's).** The navigation is a flood of the space by a body of the enemies' width (`FOE.radius` .45) under their
+own stair rule (`stairs` in `space.js`: treads within .65 m above the feet do not stand in a wide body's way; it climbs by what
+is under its middle) with places of their own on every doorway (`stats.doors`), one-way drops ≤ 3 m and ladders both ways
+(flooded from ladder tops too); places are recorded only where they were tried, never moved onto the grid. `pathTo`,
+`safeSpot(x,z,r,y)`, `planRoute(a,x,z,y)`, `V2(x,z,y)`, loop nodes and travel chains carry a height on layered maps; arrival
+needs the level. Cover comes per level (`buildCoverTable(occluders, groundY(x,z,bottom), isFree(x,z,y))`, points carry `y`);
+the threat's and the cover's eyes use real heights. `actorHeight` keeps every actor (alive or dead, `sink==null`) to its floor
+and lets it fall with the player's `fallDamage`; a fall that kills, or a dead body's fall, leaves blood (`bloodAt`, `decalFor`
+downward); a player's shot pushes an enemy .2 m (.5 m when it kills, `shove` in `characterHit`) and a body pushed off within 3 s
+is the player's kill; enemies climb ladders (`ladderStep`, approaching from where the wide body fits). `?foes=1` on a look map
+puts `look.foes` on their loops and runs `tickAI`; `reinforceTick` does nothing on a look map. User decisions: the block's
+doors are 1.3 m (`door()` default) and house A's inside stair 1.05 m so enemies fit (T35 states both); parapets and sills stay
+as they are (a .6 m parapet hides the square from the roof within about 9 m: cross-level fights are through windows and
+stairwells); fall kills are the player's within 3 s of a push. `space.js` also gained: the hash margin for the widest body,
+step-downs judged from the lower level, `stands` (clear with the stair rule).
 Build 25 (local, 2026-09-30): kit interiors and the customs house (house K), map build 4 of 9. **The kit builds a storey's
 `rooms` (rectangles that tile the inside; a corridor among them) into partitions along every shared edge, with the storey's
 `doors` (points on those edges; leaves swung open, 1.3 m in K) and a plain `open` way into each stair; a `stair` climbs a storey
@@ -278,15 +296,16 @@ node tests/test-lookslice-b22.mjs
 node tests/test-kit-b23.mjs
 node tests/test-height-b24.mjs
 node tests/test-arena-b25.mjs
+node tests/test-foes-b26.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 25 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 26 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height and 8 arena checks (260 in 28 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena and 8 enemy-height checks (268 in 29 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

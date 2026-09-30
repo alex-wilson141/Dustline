@@ -51,12 +51,15 @@ export function aiRandom(seed) {
 
 // Cover points .9 m out from the faces of standing-height occluder boxes (boxes are unrotated and unscaled).
 // Low cover (top < 1.3 m) is used crouched; tall cover needs a peek spot beside the face end to shoot from.
+// Build 26: on a map with height `groundY(x, z, bottom)` is the floor under a box's bottom and `isFree(x, z, y)` asks
+// about that level, so that every floor of a building has its own cover; each point carries its level `y`. Kohar
+// Valley's groundY and isFree ignore the extra argument: its table is what it was.
 export function buildCoverTable(occluders, groundY, isFree) {
   const points = [], buckets = new Map(), key = (x, z) => `${Math.floor(x / 8)},${Math.floor(z / 8)}`;
   for (const o of occluders) {
     const b = o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox), e = o.matrixWorld.elements;
     const lo = [b.min.x + e[12], b.min.y + e[13], b.min.z + e[14]], hi = [b.max.x + e[12], b.max.y + e[13], b.max.z + e[14]];
-    const cx = (lo[0] + hi[0]) / 2, cz = (lo[2] + hi[2]) / 2, ground = groundY(cx, cz), top = hi[1] - ground;
+    const cx = (lo[0] + hi[0]) / 2, cz = (lo[2] + hi[2]) / 2, ground = groundY(cx, cz, lo[1]), top = hi[1] - ground;
     if (lo[1] - ground > .45 || top < .95) continue;
     const low = top < 1.3;
     for (const [axis, sign] of [[0, 1], [0, -1], [2, 1], [2, -1]]) {
@@ -65,17 +68,17 @@ export function buildCoverTable(occluders, groundY, isFree) {
       for (let i = 0; i < n; i++) {
         const along = n === 1 ? (lo[t] + hi[t]) / 2 : a0 + len * i / (n - 1);
         const x = axis === 0 ? face + sign * .9 : along, z = axis === 2 ? face + sign * .9 : along;
-        if (!isFree(x, z)) continue;
+        if (!isFree(x, z, ground)) continue;
         const nx = axis === 0 ? sign : 0, nz = axis === 2 ? sign : 0;
         let peek = null;
         if (!low) {
           // Step past the nearer face end to shoot around the wall.
           const end = along - lo[t] < hi[t] - along ? lo[t] - .7 : hi[t] + .7;
           const px = axis === 0 ? x : end, pz = axis === 2 ? z : end;
-          if (Math.abs(end - along) <= 2.5 && isFree(px, pz)) peek = [px, pz];
+          if (Math.abs(end - along) <= 2.5 && isFree(px, pz, ground)) peek = [px, pz];
           else continue;
         }
-        const p = {id: points.length, x, z, nx, nz, low, top, peek};
+        const p = {id: points.length, x, y: ground, z, nx, nz, low, top, peek};
         points.push(p);
         const k = key(x, z); if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(p);
       }

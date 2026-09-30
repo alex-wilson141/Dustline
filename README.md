@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 25)
+# DUSTLINE — Operation Broken Signal (Build 26)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -6,7 +6,7 @@ A desktop browser first-person squad combat prototype in a fictional arid mounta
 
 ## Maps (Build 21)
 
-Kohar Valley is described in `dist/map-kohar.js`: the ground, the edges, the navigation grid, what is built and where, the starts, the objectives, the enemy posts and routes and the Ambush arena. The game builds its world from the active map (`dist/maps.js`). Kohar Valley is the only map; nothing about it changed when it moved into data (`tests/test-mapdata-b21.mjs` compares it with Build 20 number for number). A second map, Dehrun Terraces (a working name), has one street block to walk and look at (Build 22): add `?map=dehrun` to the address. It has no mission yet. Since Build 24 the body has a real height there: stairs, ladders, a jump, falls with damage, pulling up onto ledges and crouching under things. Since Build 25 the street's south gate opens onto a walled square with the customs house: 26 by 18 m, three storeys of rooms and corridors, two stairs and a roof, the building meant to be the Ambush arena; walk in by any of its four doors. Its description is `dist/map-dehrun.js`, its building kit `dist/terraces.js`; its assets are fetched only when it is asked for.
+Kohar Valley is described in `dist/map-kohar.js`: the ground, the edges, the navigation grid, what is built and where, the starts, the objectives, the enemy posts and routes and the Ambush arena. The game builds its world from the active map (`dist/maps.js`). Kohar Valley is the only map; nothing about it changed when it moved into data (`tests/test-mapdata-b21.mjs` compares it with Build 20 number for number). A second map, Dehrun Terraces (a working name), has one street block to walk and look at (Build 22): add `?map=dehrun` to the address. It has no mission yet. Since Build 24 the body has a real height there: stairs, ladders, a jump, falls with damage, pulling up onto ledges and crouching under things. Since Build 25 the street's south gate opens onto a walled square with the customs house: 26 by 18 m, three storeys of rooms and corridors, two stairs and a roof, the building meant to be the Ambush arena; walk in by any of its four doors. Since Build 26 enemies know height there: add `&foes=1` to the address and six of them patrol the customs house and the square, climb its stairs and the block's ladders, fight you through windows and stairwells, and fall. Its description is `dist/map-dehrun.js`, its building kit `dist/terraces.js`; its assets are fetched only when it is asked for.
 
 ## Modes
 
@@ -230,6 +230,7 @@ node tests/test-lookslice-b22.mjs
 node tests/test-kit-b23.mjs
 node tests/test-height-b24.mjs
 node tests/test-arena-b25.mjs
+node tests/test-foes-b26.mjs
 ```
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
