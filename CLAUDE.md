@@ -25,6 +25,16 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 24 (local, 2026-09-30): player height on Dehrun Terraces, map build 3 of 9. **A map that brings a `space` (the kit builds one from
+its boxes: `dist/space.js`) gives the body a real height; Kohar Valley brings none and runs its flat lines, which T34 checks as
+unchanged text: never edit the `else` branch of the movement, the camera jump or `blocked` for a height feature.** The body:
+`BODY` in `space.js` (radius .34, standing 1.8, crouched 1.1, step .35, pull-up 1.35); falls `FALL` (none to 3 m, fatal at 12,
+power 1.5). Every kit box has a top and a bottom; `body: false` lets a body through (glass, casements, ladder rails); large props
+are in the space by `hardProps`; the map's edges hold at every height. Stairs are boxes and are walked tread by tread; `wells`
+cut floors and ceilings; `ladders` are climbed by walking into them (`exit` must stand clear of copings and hatches). Space
+lets go of a ladder, pulls onto a ledge ahead, or jumps. Nothing fires, stabs or throws on a ladder. Measurements are bench
+URLs the user opens (B20 awaits them). **E40: the kit cannot build the Ambush arena yet** (no partitions, rooms, corridors,
+turning stairs, roof doors): its own build, recommended before the layout build.
 Build 23 (local, 2026-09-29): look slice critique and fixes. **The user approved the look slice: build Dehrun Terraces this way.**
 **A fault in the kit is a fault in every block**: T33 checks the kit's work. No two different surfaces may lie in one plane where
 they can be seen (it flickers): a terrace's ground ends behind the face of its retaining wall, a roof lies above the walls it rests
@@ -248,15 +258,16 @@ node tests/test-revive-b20.mjs
 node tests/test-mapdata-b21.mjs
 node tests/test-lookslice-b22.mjs
 node tests/test-kit-b23.mjs
+node tests/test-height-b24.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 23 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 24 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice and 6 building-kit checks (244 in 26 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit and 8 height checks (252 in 27 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

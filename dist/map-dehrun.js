@@ -118,7 +118,7 @@ export const DEHRUN = {
         {height: 2.8, surface: 'plaster', band: 'white', room: true, east: [win(4.4, {sill: .8}), door(7.5, {width: .95, leaf: 'blue', closed: true}), win(10.6, {sill: .8, open: [1.1, 2.75]})], south: [win(-8.5, {sill: .8})], north: [win(-9, {sill: .8})], west: [win(7.5, {sill: .8})]}]},
       // B: the shop across the street, open, with its counter and rolling shutter.
       {id: 'B', x: [4.2, 11], z: [6, 14], base: 1.6, enter: true, beamEnds: ['west'], roof: {parapet: .5, gaps: [{side: 'west', from: 7.4, to: 9}], tanks: [[9, 12]]}, storeys: [
-        {height: 3.1, surface: 'ochre', floor: 'floor', west: [door(7.1, {leaf: 'blue', open: 1.9}), {kind: 'shop', at: 10.9, width: 3.4, head: 2.45, drop: .75, counter: true, awning: ['#4f6672', 1.7, 'posts']}], south: [win(8, {bars: true, shutters: false})], east: [win(10, {sill: 1})]}]},
+        {height: 3.1, surface: 'ochre', floor: 'floor', west: [door(7.1, {leaf: 'blue', open: 1.9}), {kind: 'shop', at: 10.9, width: 3.4, head: 2.45, drop: .3, counter: true, awning: ['#4f6672', 1.7, 'posts']}], south: [win(8, {bars: true, shutters: false})], east: [win(10, {sill: 1})]}]},
       // C: two storeys on the lowest terrace, with a stair up its south side.
       {id: 'C', x: [5, 13], z: [24, 34], base: 0, beamEnds: ['west'], roof: {parapet: .55}, storeys: [
         {height: 3, surface: 'plaster', west: [door(26.8, {leaf: 'blue'}), win(31, {bars: true, open: [2.75, .9]})], north: [win(9)], south: []},

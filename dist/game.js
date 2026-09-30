@@ -91,7 +91,7 @@ function heightStep(dt,mx,mz,mag,speed){const B=SPACE.body;let moving=false;
  if(mantling){const m=mantling;m.t+=dt/.45;const k=Math.min(1,m.t),e=k*k*(3-2*k);player.x=m.from.x+(m.to.x-m.from.x)*e;player.z=m.from.z+(m.to.z-m.from.z)*e;player.y=m.from.y+(m.to.y-m.from.y)*Math.min(1,k*1.5);if(k>=1){mantling=null;grounded=true;vy=0;stoodOn=m.on?.tag||'ledge';}return true;}
  if(climbing){const l=climbing,up=(keys.has('KeyW')?1:0)-(keys.has('KeyS')?1:0);player.x=THREE.MathUtils.damp(player.x,l.standX,18,dt);player.z=THREE.MathUtils.damp(player.z,l.standZ,18,dt);player.y+=up*B.climb*dt;
   if(player.y>=l.top-.02&&up>0){const f=SPACE.floor(l.exit[0],l.exit[1],l.top+.6);player.set(l.exit[0],f.y,l.exit[1]);climbing=null;grounded=true;vy=0;stoodOn=f.on?.tag||'ground';}else if(player.y<=l.bottom&&up<0){player.y=l.bottom;climbing=null;grounded=true;vy=0;}return up!==0;}
- const fx=-Math.sin(yaw),fz=-Math.cos(yaw);mustCrouch=SPACE.headroom(player.x,player.z,player.y)<B.stand;const H=bodyHeight();
+ const fx=-Math.sin(yaw),fz=-Math.cos(yaw);mustCrouch=SPACE.headroom(player.x,player.z,player.y)<B.stand||(mustCrouch&&!SPACE.mayStand(player.x,player.z,player.y));const H=bodyHeight();
  if(mag){const before=player.y,moved=SPACE.move(player,(mx*Math.cos(yaw)+mz*Math.sin(yaw))*speed*dt,(-mx*Math.sin(yaw)+mz*Math.cos(yaw))*speed*dt,H);moving=moved>.002;if(player.y>before)grounded=true;
   if(grounded&&mz<0){const l=SPACE.ladderAt(player,fx,fz);if(l){climbing=l;vy=0;stoodOn='ladder';return true;}}
   if(grounded&&mz>0){const l=SPACE.ladderAt(player,fx,fz,true);if(l){climbing=l;player.y=l.top-.05;vy=0;stoodOn='ladder';return true;}}}

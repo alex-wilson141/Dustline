@@ -277,14 +277,15 @@ export function buildTerraces(ctx, map) {
   if (B.outside) { const m = materials[B.outside.surface], g = ctx.ground.material; g.map = m.map.clone(); g.normalMap = m.normalMap.clone(); g.roughnessMap = m.roughnessMap.clone(); for (const t of [g.map, g.normalMap, g.roughnessMap]) { t.repeat.set(B.outside.repeat, B.outside.repeat); t.needsUpdate = true; } g.color.set(B.outside.tint || '#ffffff'); g.needsUpdate = true; }
 
   // ======== The props: one model per kind, drawn once per part for all that stand in the block.
+  const propBoxes = [];   // what the large props stand in the way of, for the space too
   const kinds = new Map(); for (const p of B.props) { if (!kinds.has(p[0])) kinds.set(p[0], []); kinds.get(p[0]).push(p); }
   stats.propKinds = kinds.size; stats.props = B.props.length;
   const gltf = new GLTFLoader(), holder = new THREE.Object3D(), ready = [];
   for (const [kind, list] of kinds) {
     const url = assetURL('assets/dehrun/models/' + kind + '.glb'); stats.requested.push(url);
     // What stands in the way stands from the start, whether or not its model has arrived.
-    const hard = B.hardProps?.[kind]; if (hard) for (const [, x, z, turn = 0] of list) { const q = Math.abs(Math.sin(turn * Math.PI / 180)) > .7, w = q ? hard[1] : hard[0], d = q ? hard[0] : hard[1]; solid(x - w / 2, x + w / 2, z - d / 2, z + d / 2);
-      const o = new THREE.Mesh(new THREE.BoxGeometry(w, hard[2], d)); o.position.set(x, groundY(x, z) + hard[2] / 2, z); o.updateMatrixWorld(true); o.userData.round = true; occluders.push(o); }
+    const hard = B.hardProps?.[kind]; if (hard) for (const [, x, z, turn = 0, lift = 0] of list) { const q = Math.abs(Math.sin(turn * Math.PI / 180)) > .7, w = q ? hard[1] : hard[0], d = q ? hard[0] : hard[1], base = groundY(x, z) + lift; if (lift < .5) solid(x - w / 2, x + w / 2, z - d / 2, z + d / 2);
+      const o = new THREE.Mesh(new THREE.BoxGeometry(w, hard[2], d)); o.position.set(x, base + hard[2] / 2, z); o.updateMatrixWorld(true); o.userData.round = true; occluders.push(o); propBoxes.push({min: [x - w / 2, base, z - d / 2], max: [x + w / 2, base + hard[2], z + d / 2], solid: true, tag: 'prop'}); }
     ready.push(fetch(url).then(r => { if (!r.ok) throw new Error(`${kind}: ${r.status}`); return r.arrayBuffer(); }).then(buffer => new Promise((done, fail) => gltf.parse(buffer, '', done, fail))).then(model => {
       model.scene.updateMatrixWorld(true); let triangles = 0;
       model.scene.traverse(o => { if (!o.isMesh) return; const m = o.material; if (B.tints?.[kind]) m.color.multiply(new THREE.Color(B.tints[kind])); if (m.transmission) { m.transmission = 0; m.transparent = true; m.opacity = .35; m.depthWrite = false; } if (m.map) m.map.anisotropy = aniso;
@@ -294,6 +295,6 @@ export function buildTerraces(ctx, map) {
       stats.propTriangles += triangles; ctx.changed?.(); return kind; }).catch(e => { console.warn('DUSTLINE: a model did not arrive:', kind, e?.message || e); stats.failed = (stats.failed || []).concat(kind); return null; }));
   }
   // What a body can stand on, walk into and climb: every box with its top and bottom, the ground, the ladders.
-  const space = makeSpace({boxes: stats.list.filter(b => !b.turned).map(b => ({min: b.min, max: b.max, solid: b.solid, tag: b.tag || b.surface})), ground: groundY, ladders});
+  const space = makeSpace({boxes: stats.list.filter(b => !b.turned).map(b => ({min: b.min, max: b.max, solid: b.solid, tag: b.tag || b.surface})).concat(propBoxes), ground: groundY, ladders, edges: map.edges});
   return {stats, materials, roofs, space, ready: Promise.all(ready)};
 }

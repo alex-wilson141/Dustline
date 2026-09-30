@@ -2,7 +2,21 @@
 
 _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 24 (map build 3 of 9, player height) is IN PROGRESS, committed locally, NOT pushed, and not finished: the session stopped at the usage limit.** What is built and working headless on the block (`?map=dehrun`): a body with a real height on boxes with tops and bottoms (`dist/space.js`), steps and stairs walked tread by tread, a real jump (.7 m) and falls, fall damage (none to 3 m, 100 × ((h − 3) / 9)^1.5 up to 12 m: 6 m 19, 9 m 54), mantling onto ledges and through windows without bars (Space), three ladders (walk into one to climb, back onto it from the top, Space lets go, nothing fires on a ladder), crouching in three dimensions (1.8 / 1.1 m; the workshop's shutter must be crouched under), the level line on the M map, a stair well and roof hatch in the open house. **Kohar Valley keeps its old code path** (the flat lines are unchanged text; T1, T20, T26, T32, T33 passed after the change; the full run of all suites has NOT been done). **The new suite `tests/wip-height-b24.mjs` is unfinished** (it is named `wip-` so that it does not run in the workflow): kohar, stand and stairs pass; the ladder check fails at its "let go" step; falls, mantle, crouch and bounds are written but unproven. Not done: the breakage pass, the bench URLs, the roadmap entry, the report on inescapable places and on the kit's largest building. **Next session: finish T34, run every suite, then file and report.**
+**Build 24 is committed locally and NOT pushed** (map build 3 of 9, player height). **Build 23 is LIVE.** Pushing publishes; wait for the user's word.
+
+**Build 24 in short: height on the look-slice block** (`http://localhost:8765/?map=dehrun`, WALK THE BLOCK; Kohar Valley is untouched: no space, its flat lines are the same text, the three traces pass).
+- **What to try:** walk up both flights and watch your feet take the treads. Jump (Space) on the spot: .7 m. Into the open house (left, middle terrace), up the stair on the far wall to the upper room, the ladder by the east wall to the roof; walk to the parapet, press Space to pull yourself onto it, step off and fall to the street (about a quarter of your health). Back onto a ladder by walking backwards over its top; Space lets go. The counter of the shop: Space pulls you onto it, crouch (C) under the shutter to get in. The south window of the open house (from the yard behind it): Space pulls you onto the sill, walk in. The workshop (left, lowest terrace): its shutter is half down, crouch to get under it and try to stand up. Walk off the balcony over the street. Press M: the map says what you stand on and how high.
+- **Rules:** standing 1.8 m, crouched 1.1; steps up to .35 m are walked; up to 1.35 m is pulled up with Space where there is room to crouch on top; falls hurt from 3 m and kill at 12 (6 m costs 19, 9 m 54); nothing fires, stabs or throws on a ladder.
+- **Checks:** 27 suites, 252 checks, all pass (headless). T34 is new (8 checks); 34 of 34 deliberate breakages caught.
+- **Safari (B20): awaiting the user**, three bench pages.
+- **Reports:** E39 (no inescapable place in the block; a build-time check and a CLIMB BACK last resort recommended for the map); E40 (the kit cannot build the Ambush arena as it stands: no partitions, rooms, corridors, turning stairs or roof doors; 4 to 6 hours as its own build, recommended before the layout build).
+- **Found, not fixed (MAP-04):** sloping pieces hold and stop nobody; small props are walked through; the teammate and enemies do not know height yet.
+
+**Decisions for the user (Build 24):**
+- The fall curve (none to 3 m, fatal at 12, gentle start) and the jump (.7 m).
+- No firing on ladders: keep?
+- Next build: the kit's interiors and the arena (recommended), or enemy height first.
+- Push Build 24, and when.
 
 **Build 23 is LIVE** (Builds 22 and 23 pushed together on 2026-09-30 UTC; GitHub run 36652816925 passed; the live page says BUILD 23, token `7f8e1ae1dd02`). The block is at the live address with `?map=dehrun`. Pushing publishes; wait for the user's word.
 
@@ -211,7 +225,7 @@ Not verified: whether the map and the markings read well to a person in play, an
 - Co-op: the teammate is blue with a marker; friendly fire is on; enemies fire at both players alike.
 - Every key hint reads `KEYS`; every Ambush marking and map element reads `ambushState()`; the map draws only what `mapLayout()` returns.
 
-**Commands:** `node tests/test-<name>.mjs` for kit-b23, lookslice-b22, mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
+**Commands:** `node tests/test-<name>.mjs` for height-b24, kit-b23, lookslice-b22, mapdata-b21, sprint-m1, framefire-m1, diagnostics-m1, combatfeel-m2, combatfeel-m3, enemies-b07, perf02-b07, pausekeys-b07, build08, cache-deploy01, engage-ai04, ambush-b09, ambush-b10, ambush-b11, ambush-b12, ambush-b13, ambush-b14, coop-handshake, ambush-coop-b16, squad-b17, fair-b18, equipment-b19 and revive-b20. `node tools/stamp-build.mjs` after any change in `dist/`. `node` is not on PATH on this Mac; the Codex-bundled v24.19.0 at `~/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node` works. Serve with `python3 -m http.server 8765 --directory dist`.
 
 **Rules:**
 - Never reintroduce stamina.

@@ -11,7 +11,7 @@ export const BODY = {radius: .34, stand: 1.8, crouch: 1.1, step: .35, mantle: 1.
 export const FALL = {safe: 3, fatal: 12, power: 1.5};
 export const fallDamage = h => h <= FALL.safe ? 0 : h >= FALL.fatal ? 100 : 100 * ((h - FALL.safe) / (FALL.fatal - FALL.safe)) ** FALL.power;
 
-export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2}) {
+export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, edges = null}) {
   // The boxes, indexed by the 2 m squares they cover, so that a body asks only about what is near it.
   const grid = new Map(), key = (i, j) => i * 100003 + j, at = v => Math.floor(v / cell);
   const list = boxes.filter(b => b.solid !== false).map((b, i) => ({...b, i}));
@@ -19,7 +19,8 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2}) 
   const near = (x, z) => grid.get(key(at(x), at(z))) || [];
   const inside = (b, x, z, r) => x > b.min[0] - r && x < b.max[0] + r && z > b.min[2] - r && z < b.max[2] + r;
   // Whether a body standing at (x, z) with its feet at y0 and its head at y1 hits anything.
-  function clear(x, z, y0, y1, r = body.radius) { for (const b of near(x, z)) if (b.min[1] < y1 && b.max[1] > y0 && inside(b, x, z, r)) return false; return true; }
+  // The map's edges hold at every height: nothing walks, jumps or falls past them.
+  function clear(x, z, y0, y1, r = body.radius) { if (edges && (x < edges.x[0] || x > edges.x[1] || z < edges.z[0] || z > edges.z[1])) return false; for (const b of near(x, z)) if (b.min[1] < y1 && b.max[1] > y0 && inside(b, x, z, r)) return false; return true; }
   // The highest floor under (x, z) that is no higher than yTop: a box top the body's middle stands over (it may lean
   // `lean` past an edge), or the ground.
   // What the body's middle is straight over counts first; only past every edge does the lean count, so that a foot on a
@@ -30,7 +31,8 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2}) 
   function ceiling(x, z, yFrom, r = body.radius) { let best = Infinity; for (const b of near(x, z)) if (b.min[1] >= yFrom && b.min[1] < best && inside(b, x, z, r)) best = b.min[1]; return best; }
   // How much room there is over a body's feet at (x, z): up to the lowest thing that is at least a crouching body's
   // height above them (what is lower than that is in the way, not overhead).
-  const headroom = (x, z, y) => ceiling(x, z, y + body.crouch) - y;
+  // Only what is over the body's middle counts: a body is held down under a thing, not made to duck as it approaches one.
+  const headroom = (x, z, y, r = .12) => ceiling(x, z, y + body.crouch, r) - y;
   // A horizontal move of a body whose feet are at y and whose head is at y + height, in steps of .25 m, each axis on
   // its own; it steps up onto anything within `step` of its feet. Returns the distance moved and the new floor.
   function move(p, dx, dz, height, r = body.radius) {
@@ -52,8 +54,10 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2}) 
   // above: standing near its top and backing onto it (walking backwards, facing away from it); `back` says which.
   function ladderAt(p, fx, fz, back = false) { for (const l of ladders) { const dx = p.x - l.x, dz = p.z - l.z, facing = fx * l.dir[0] + fz * l.dir[1];
     if (!back) { if (Math.hypot(dx, dz) > .75 || p.y < l.bottom - .4 || p.y > l.top - .6 || facing > -.35) continue; return l; }
-    else { if (Math.hypot(p.x - l.exit[0], p.z - l.exit[1]) > .8 || Math.abs(p.y - l.top) > .8 || facing < .35) continue; return l; } } return null; }
+    else { if (Math.hypot(p.x - l.exit[0], p.z - l.exit[1]) > .8 || p.y < l.top - 1.3 || p.y > l.top + .3 || facing < .35) continue; return l; } } return null; }
   return {boxes: list, clear, floor, ceiling, headroom, move, ledge, ladderAt, ladders, body,
+    // Whether a body under something may stand up yet: only once the whole of it is out from under (else it is held down).
+    mayStand: (x, z, y) => headroom(x, z, y, body.radius) >= body.stand,
     // Everything a body can stand on within a square, for the checks: box tops and the ground.
     floors(x0, x1, z0, z1, stepBy = .5) { const out = []; for (let x = x0; x <= x1; x += stepBy) for (let z = z0; z <= z1; z += stepBy) out.push([x, z, floor(x, z, 1e9).y]); return out; }};
 }
