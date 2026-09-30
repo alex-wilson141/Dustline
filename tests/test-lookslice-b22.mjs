@@ -49,7 +49,7 @@ await check('kohar', 'Kohar Valley fetches nothing of the new map: the modules i
   const game = SOURCE ? fs.readFileSync(SOURCE, 'utf8') : read('game.js'), {KOHAR} = await import(new URL('dist/map-kohar.js', projectRoot));
   for (const t of ['WORLD.sky.environment??.35', 'WORLD.sky.background??.75', 'WORLD.sky.ambient??1.6', 'WORLD.sun.colour??0xffe6c2', 'WORLD.sun.power??3.6', 'WORLD.terrain.surface||groundY', 'LOOK=WORLD.look||null']) assert(game.includes(t), `the game keeps ${t}`);
   for (const k of ['environment', 'background', 'ambient']) assert(!(k in KOHAR.sky)); for (const k of ['colour', 'power']) assert(!(k in KOHAR.sun)); assert(!('surface' in KOHAR.terrain) && !('look' in KOHAR) && !('build' in KOHAR) && !('block' in KOHAR));
-  assert.match(read('index.html'), /BUILD 23/);
+  assert.match(read('index.html'), /BUILD 24/);
   report.kohar = {modulesLoaded: graph.length, assetsAskedFor: asked.length, drawn: d, note: 'that its world is Build 20\'s, number for number, is checked by T31 on this same build'};
 });
 
@@ -108,7 +108,7 @@ await check('walk', 'the block can be walked as its description says: the viewer
   run(.3); assert.equal(g.el('objective-label').textContent, DEHRUN.look.title); assert.equal(g.el('objtext').textContent, DEHRUN.look.line); assert.equal(g.actors.filter(a => a.g.visible || a.hp > 0).length, 0);
   // Up the street: forward from the start to the top terrace, by both flights.
   const heights = new Set(); let top = 0; g.set({yaw: 0, pitch: 0}); g.press('KeyW'); run(24, () => { heights.add(+g.groundY(g.player.x, g.player.z).toFixed(1)); top = Math.max(top, g.player.y); }); g.release('KeyW');
-  assert(g.player.z < -20, `reached z ${g.player.z.toFixed(1)}`); assert.equal(g.player.y, L[2]); assert(heights.has(0) && heights.has(1.6) && heights.has(3.2) && heights.has(.8) && heights.has(2.4), 'by way of the steps'); assert(top <= L[2] + 1e-9, 'never above the ground');
+  assert(g.player.z < -20, `reached z ${g.player.z.toFixed(1)}`); assert(Math.abs(g.player.y - L[2]) < .03, `on the top terrace (${g.player.y})`); assert(heights.has(0) && heights.has(1.6) && heights.has(3.2) && heights.has(.8) && heights.has(2.4), 'by way of the steps'); assert(top <= L[2] + .03, 'never above the top terrace\'s paving (Build 24: the body stands on the stone, a centimetre or two above the walked ground)');
   for (const [x, z, y] of [[0, 30, 0], [10, 30, 0], [0, 18.5, .8], [5, 18.5, 0], [0, 10, 1.6], [-10, 10, 1.6], [0, -4.5, 2.4], [8, -4.5, 1.6], [0, -20, 3.2]]) assert(Math.abs(g.groundY(x, z) - y) < 1e-9, `height at ${x}, ${z}`);
   // Doors let through, windows and walls do not; the edges hold.
   const free = (x, z) => !g.blocked(x, z); for (const h of DEHRUN.block.houses.filter(h => h.enter)) { const mx = (h.x[0] + h.x[1]) / 2, mz = (h.z[0] + h.z[1]) / 2; assert(free(mx + (h.id === 'A' ? 2 : 0), mz + (h.id === 'A' ? -2 : 0)) || free(mx, mz), `${h.id}: its room can be stood in`); }

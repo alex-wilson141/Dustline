@@ -11,6 +11,7 @@
 import * as THREE from './three.module.js';
 import {GLTFLoader} from './GLTFLoader.js';
 import {assetURL} from './build.js';
+import {makeSpace} from './space.js';
 
 // The surfaces: the file, the size in metres of one repeat, and how it is used.
 export const SURFACES = {
@@ -77,7 +78,9 @@ export function buildTerraces(ctx, map) {
 
   // A box whose surface repeats by its size in metres and continues from one box to the next. Large boxes are made
   // of several faces a side so that their shade can change along them.
-  function block(w, h, d, x, y, z, surface, {solid = false, seen = true, turn = 0, tilt = 0, lean = 0, shadow = true} = {}) {
+  // Surfaces a body passes through: glass and a casement's glazing bars stand in a window a body can climb through.
+  const PASSABLE = new Set(['pane', 'clear', 'glow']);
+  function block(w, h, d, x, y, z, surface, {solid = false, seen = true, turn = 0, tilt = 0, lean = 0, shadow = true, tag = null, body = null} = {}) {
     const m = typeof surface === 'string' ? materials[surface] : surface, name = m.userData.surface, tile = SURFACES[name]?.tile || 1, turned = !!(turn || tilt || lean);
     assert(m && w > 0 && h > 0 && d > 0, `a box of ${surface}: ${w} x ${h} x ${d}`);
     const cut = v => turned || !m.vertexColors ? 1 : Math.min(6, Math.max(1, Math.ceil(v / 3.2))), g = new THREE.BoxGeometry(w, h, d, cut(w), cut(h), cut(d)), uv = g.attributes.uv, pos = g.attributes.position, nor = g.attributes.normal;
@@ -86,7 +89,7 @@ export function buildTerraces(ctx, map) {
     if (m.vertexColors) { const c = new Float32Array(pos.count * 3), o = new THREE.Object3D(); o.position.set(x, y, z); o.rotation.set(tilt, turn, lean); o.updateMatrix(); const q = new THREE.Vector3();
       for (let i = 0; i < pos.count; i++) { q.fromBufferAttribute(pos, i).applyMatrix4(o.matrix); const v = stain(q.x, q.y, q.z, !turned && Math.abs(nor.getY(i)) < .5); c[i * 3] = v; c[i * 3 + 1] = v * .985; c[i * 3 + 2] = v * .96; }
       g.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
-    stats.list.push({at: [x, y, z], size: [w, h, d], surface: name || 'plain', turned});
+    stats.list.push({at: [x, y, z], size: [w, h, d], surface: name || 'plain', turned, min: [x - w / 2, y - h / 2, z - d / 2], max: [x + w / 2, y + h / 2, z + d / 2], solid: body ?? (!turned && !PASSABLE.has(name)), tag});
     const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.rotation.set(tilt, turn, lean); o.castShadow = shadow; o.receiveShadow = true; scene.add(o); stats.boxes++;
     if (solid) solids.push({x, z, w: w / 2, d: d / 2});
     if (seen && !turned) occluders.push(o);
@@ -132,15 +135,16 @@ export function buildTerraces(ctx, map) {
     if (plain) { if (o.kind === 'window' && o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue'); } return; }
     if (o.kind === 'window') { const glass = o.closed || o.back ? pane : clear, y = (sill + head) / 2, rail = .055;
       P(mid, set, y, w - .17, tall - .08, .012, glass, {shadow: false, seen: false});
-      for (const e of [a + .08 + rail / 2, b - .08 - rail / 2]) P(e, set, y, rail, tall - .06, .05, frame, {seen: false, shadow: false}); for (const e of [sill + .04 + rail / 2, head - .04 - rail / 2]) P(mid, set, e, w - .17 - 2 * rail, rail, .05, frame, {seen: false, shadow: false});
-      P(mid, set, y, .035, tall - .08 - 2 * rail, .04, frame, {seen: false, shadow: false}); if (tall > 1) P(mid, set, sill + tall * .62, w - .17 - 2 * rail, .035, .038, frame, {seen: false, shadow: false});
+      // The casement stops no body: a window without bars can be climbed through (its glass gives way to the story).
+      for (const e of [a + .08 + rail / 2, b - .08 - rail / 2]) P(e, set, y, rail, tall - .06, .05, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); for (const e of [sill + .04 + rail / 2, head - .04 - rail / 2]) P(mid, set, e, w - .17 - 2 * rail, rail, .05, frame, {seen: false, shadow: false, body: false, tag: 'casement'});
+      P(mid, set, y, .035, tall - .08 - 2 * rail, .04, frame, {seen: false, shadow: false, body: false, tag: 'casement'}); if (tall > 1) P(mid, set, sill + tall * .62, w - .17 - 2 * rail, .035, .038, frame, {seen: false, shadow: false, body: false, tag: 'casement'});
       if (o.shutters !== false) { const open = o.open ?? 2.75, half = w / 2 - .06, [l, r] = Array.isArray(open) ? open : [open, open]; hinge(a + .04, 1, l, half, o.leaf || 'blue'); hinge(b - .04, -1, r, half, o.leaf || 'blue'); }
       if (o.bars) { for (let i = 1; i < 5; i++) P(a + w * i / 5, face - out * .05, y, .022, tall - .05, .022, iron, {shadow: false, seen: false}); for (const e of [sill + tall * .3, sill + tall * .7]) P(mid, face - out * .05, e, w - .16, .02, .03, iron, {shadow: false, seen: false}); } }
     if (o.kind === 'door' && o.door !== false) { const shut = !!o.closed && o.open == null, L = w - .17, plank = o.leaf || 'planks';
       const d = shut ? hinge(a + .085, 1, 0, L, plank, 1, set, sill + .06, head - .04, .05) : hinge(a + .085, 1, o.open ?? 1.75, L, plank, -1, at - out * (thick / 2 + .03), sill + .06, head - .04, .05);
       // Battens across the planks and a handle, on the leaf's outer side, turned with it.
       const side = shut ? out : 1, put = (u, y, len, hgt, fat, surface, off) => { const c = block(len, hgt, fat, 0, y, 0, surface, {turn: d.rotation.y, seen: false, shadow: false}), ux = Math.cos(d.rotation.y), uz = -Math.sin(d.rotation.y), nx = -uz, nz = ux, k = (axis === 'x' ? nz : nx) * side > 0 ? 1 : -1;
-        c.position.set(d.position.x + ux * u + nx * k * off, y, d.position.z + uz * u + nz * k * off); stats.list.at(-1).at = [c.position.x, y, c.position.z]; return c; };
+        c.position.set(d.position.x + ux * u + nx * k * off, y, d.position.z + uz * u + nz * k * off); const rec = stats.list.at(-1); rec.at = [c.position.x, y, c.position.z]; rec.min = [c.position.x - len / 2, y - hgt / 2, c.position.z - fat / 2]; rec.max = [c.position.x + len / 2, y + hgt / 2, c.position.z + fat / 2]; return c; };
       for (const t of [.2, .55, .85]) put(0, sill + tall * t, L - .06, .09, .025, frame, .037); put(L * .36, sill + tall * .46, .04, .14, .04, iron, .045); }
     if (o.kind === 'shop') { const drop = o.drop ?? .9, slats = Math.max(1, Math.round(drop / .11));
       for (let i = 0; i < slats; i++) P(mid, face - out * (.1 + (i % 2) * .012), head - drop * (i + .5) / slats, w - .02, drop / slats - .004, .04, 'shutter', {seen: i === 0, shadow: i % 3 === 0});          // slats, every other one a little forward
@@ -164,22 +168,30 @@ export function buildTerraces(ctx, map) {
     P(mid, front, edge + .005, w + .2, .06, .06, 'beams', {seen: false});                                                                // the pole at the front
     for (const e of [a - .3, b + .3]) { if (carried === 'posts') { P(e, front, (ground + edge) / 2, .075, edge - ground, .075, 'beams', {seen: false}); P(e, front, ground + .06, .16, .12, .16, 'slab', {seen: false}); }
       else { const len = Math.hypot(reach, reach * .75), ang = Math.atan2(reach * .75, reach), s = axis === 'x' ? block(.06, .06, len, e, edge - reach * .375, face + out * reach / 2, 'beams', {tilt: -out * ang, seen: false}) : block(len, .06, .06, face + out * reach / 2, edge - reach * .375, e, 'beams', {lean: out * ang, seen: false}); void s; }
-      P(e, face + out * reach / 2, (high + edge) / 2 + .03, .05, .05, reach, 'beams', {seen: false}).rotation[axis === 'x' ? 'x' : 'z'] = (axis === 'x' ? out : -out) * Math.atan2(fall, reach); }   // the arms from the rail to the pole
+      P(e, face + out * reach / 2, (high + edge) / 2 + .03, .05, .05, reach, 'beams', {seen: false, [axis === 'x' ? 'tilt' : 'lean']: (axis === 'x' ? out : -out) * Math.atan2(fall, reach)}); }   // the arms from the rail to the pole
   }
 
+  // A horizontal slab with rectangular holes cut in it (a stair well, a roof hatch): what is left is built in pieces.
+  function slab(x0, x1, z0, z1, y, thick, surface, holes = [], opt = {}) {
+    let pieces = [[x0, x1, z0, z1]];
+    for (const h of holes) { const next = []; for (const [a, b, c, d] of pieces) { if (h.x[1] <= a || h.x[0] >= b || h.z[1] <= c || h.z[0] >= d) { next.push([a, b, c, d]); continue; }
+      const hx0 = Math.max(a, h.x[0]), hx1 = Math.min(b, h.x[1]), hz0 = Math.max(c, h.z[0]), hz1 = Math.min(d, h.z[1]);
+      if (hz0 > c) next.push([a, b, c, hz0]); if (hz1 < d) next.push([a, b, hz1, d]); if (hx0 > a) next.push([a, hx0, hz0, hz1]); if (hx1 < b) next.push([hx1, b, hz0, hz1]); } pieces = next; }
+    for (const [a, b, c, d] of pieces) if (b - a > .01 && d - c > .01) block(b - a, thick, d - c, (a + b) / 2, y, (c + d) / 2, surface, opt);
+  }
   // ---- A house: storeys of four walls, floors between them, beam ends under each floor, a flat roof behind a parapet.
   function house(H) {
     const {x: [x0, x1], z: [z0, z1], base, storeys} = H, t = H.thick || .34, enter = !!H.enter; let y = base;
     const faces = {north: {axis: 'x', at: z0 + t / 2, from: x0, to: x1, out: -1}, south: {axis: 'x', at: z1 - t / 2, from: x0, to: x1, out: 1}, west: {axis: 'z', at: x0 + t / 2, from: z0 + t, to: z1 - t, out: -1}, east: {axis: 'z', at: x1 - t / 2, from: z0 + t, to: z1 - t, out: 1}};
     block(x1 - x0 + .3, 1.4, z1 - z0 + .3, (x0 + x1) / 2, base - .74, (z0 + z1) / 2, 'masonry', {seen: false});    // the footing, down into the ground
     storeys.forEach((S, n) => {
-      const ground = n === 0, inside = enter && (ground || S.room) ? (S.lining || 'room') : null;
+      const ground = n === 0, inside = enter && (ground || S.room) ? (S.lining || 'room') : null, holes = (H.wells || []).filter(w => w.storeys.includes(n));
       for (const [name, f] of Object.entries(faces)) wall({...f, base: y, height: S.height, thick: t, surface: S.surface, lining: inside, openings: (S[name] || []).map(o => ({...o, closed: o.closed ?? (!enter && o.kind !== 'shop'), back: o.back ?? (enter && !ground && !S.room ? .02 : 0)})), hard: ground && enter, plain: !!H.plain});
-      if (ground && enter) block(x1 - x0 - 2 * t, .08, z1 - z0 - 2 * t, (x0 + x1) / 2, y + .01, (z0 + z1) / 2, S.floor || 'floor', {shadow: false});
-      if (inside) { block(x1 - x0 - 2 * t, .05, z1 - z0 - 2 * t, (x0 + x1) / 2, y + S.height - .235, (z0 + z1) / 2, 'ceiling', {shadow: false});                // the ceiling and its beams
-        for (let z = z0 + .8; z < z1 - .4; z += 1.1) block(x1 - x0 - 2 * t, .16, .14, (x0 + x1) / 2, y + S.height - .34, z, 'beams', {shadow: false, seen: false}); }
+      if (ground && enter) block(x1 - x0 - 2 * t, .08, z1 - z0 - 2 * t, (x0 + x1) / 2, y + .01, (z0 + z1) / 2, S.floor || 'floor', {shadow: false, tag: 'floor'});
+      if (inside) { slab(x0 + t, x1 - t, z0 + t, z1 - t, y + S.height - .235, .05, 'ceiling', holes, {shadow: false});                // the ceiling and its beams
+        for (let z = z0 + .8; z < z1 - .4; z += 1.1) slab(x0 + t, x1 - t, z - .07, z + .07, y + S.height - .34, .16, 'beams', holes, {shadow: false, seen: false}); }
       y += S.height;
-      n === storeys.length - 1 ? block(x1 - x0 - .3, .2, z1 - z0 - .3, (x0 + x1) / 2, y - .07, (z0 + z1) / 2, H.roof?.surface || 'gravel') : block(x1 - x0 - 2 * t - .02, .2, z1 - z0 - 2 * t - .02, (x0 + x1) / 2, y - .1, (z0 + z1) / 2, 'planks');                        // the floor above, or the roof
+      n === storeys.length - 1 ? slab(x0 + .15, x1 - .15, z0 + .15, z1 - .15, y - .07, .2, H.roof?.surface || 'gravel', holes, {tag: 'roof'}) : slab(x0 + t + .01, x1 - t - .01, z0 + t + .01, z1 - t - .01, y - .1, .2, 'planks', holes, {tag: 'floor'});                        // the floor above, or the roof
       for (const side of S.beamEnds || H.beamEnds || []) { const f = faces[side];                                     // beam ends through the wall: no two alike, as hewn timber is
         for (let p = f.from + .35 + .3 * chance(f.at, y, f.from); p < f.to - .25; p += .62 + .5 * chance(p, y, f.at, 1)) { const k = chance(p, y, f.at, 2), reach = .26 + .22 * k, fat = .12 + .06 * chance(p, y, f.at, 3), drop = .02 * chance(p, y, f.at, 4);
           if ((B.balconies || []).some(v => v.axis === f.axis && Math.abs(v.at - (f.at + f.out * t / 2)) < .05 && Math.abs(v.y - y) < .4 && p > v.from - .1 && p < v.to + .1)) continue;   // a balcony's own beams are there
@@ -198,7 +210,7 @@ export function buildTerraces(ctx, map) {
   // ---- A balcony: a deck on beams with posts and rails, hung on a face of a house at height y.
   function balcony({axis, at, from, to, y, out, depth = 1.15, surface = 'planks'}) {
     const mid = at + out * depth / 2, P = (p, across, yy, w, h, d, s, opt) => axis === 'x' ? block(w, h, d, p, yy, across, s, opt) : block(d, h, w, across, yy, p, s, opt);
-    P((from + to) / 2, mid, y - .04, to - from, .07, depth, surface);
+    P((from + to) / 2, mid, y - .04, to - from, .07, depth, surface, {tag: 'balcony'});
     // The beams that carry it come out of the wall, and every other one is propped from the wall below.
     let n = 0; for (let p = from + .15; p <= to - .1; p += Math.max(.6, (to - from - .3) / Math.round((to - from) / .9)), n++) { P(p, mid - out * .1, y - .16, .13, .16, depth + .25, 'beams', {seen: false});
       if (n % 2 === 0) { const run = depth - .25, len = Math.hypot(run, run), c = at + out * run / 2; axis === 'x' ? block(.09, .09, len, p, y - .24 - run / 2, c, 'beams', {tilt: out * Math.PI / 4, seen: false}) : block(len, .09, .09, c, y - .24 - run / 2, p, 'beams', {lean: out * Math.PI / 4, seen: false}); } }
@@ -210,7 +222,7 @@ export function buildTerraces(ctx, map) {
   // ---- Steps: `count` treads from the low end to the high end. Walked as the ramp the map's height describes.
   function steps({x: [x0, x1], z: [zHigh, zLow], low, high, count, surface = 'slab', sides}) {
     const rise = (high - low) / count, run = (zLow - zHigh) / count;
-    for (let i = 0; i < count; i++) { const zc = zLow - run * (i + .5), top = low + rise * (i + 1); block(x1 - x0, top - low + 1.2, run + .02, (x0 + x1) / 2, (top + low - 1.2) / 2, zc, surface); block(x1 - x0 + .04, .05, run + .06, (x0 + x1) / 2, top + .005, zc + .02, surface, {seen: false, shadow: false}); }
+    for (let i = 0; i < count; i++) { const zc = zLow - run * (i + .5), top = low + rise * (i + 1); block(x1 - x0, top - low + 1.2, run + .02, (x0 + x1) / 2, (top + low - 1.2) / 2, zc, surface, {tag: 'steps'}); block(x1 - x0 + .04, .05, run + .06, (x0 + x1) / 2, top + .005, zc + .02, surface, {seen: false, shadow: false, tag: 'steps'}); }
     if (sides) for (const x of [x0 - sides.thick / 2, x1 + sides.thick / 2]) for (let i = 0; i < 3; i++) { const a = zLow - (zLow - zHigh) * (i + 1) / 3, b = zLow - (zLow - zHigh) * i / 3, top = low + (high - low) * (i + 1) / 3 + sides.above;
       block(sides.thick, top - low + 1.2, b - a, x, (top + low - 1.2) / 2, (a + b) / 2, sides.surface, {solid: true}); block(sides.thick + .1, .07, b - a + .06, x, top + .035, (a + b) / 2, 'slab', {seen: false}); }
   }
@@ -218,7 +230,7 @@ export function buildTerraces(ctx, map) {
   function flight({axis, at, from, to, low, high, width = 1, count = 12, out = 1, surface = 'masonry', tread = 'slab', landing = 0}) {
     const rise = (high - low) / count, run = (to - from) / count, across = at + out * width / 2;
     for (let i = 0; i < count; i++) { const c = from + run * (i + .5), top = low + rise * (i + 1), P = (h, yy, s, w, opt) => axis === 'x' ? block(Math.abs(run) + .01, h, w, c, yy, across, s, opt) : block(w, h, Math.abs(run) + .01, across, yy, c, s, opt);
-      P(top - low, (top + low) / 2, surface, width, {seen: i % 3 === 0}); P(.05, top + .025, tread, width + .06, {seen: false, shadow: false}); }
+      P(top - low, (top + low) / 2, surface, width, {seen: i % 3 === 0, tag: 'stair'}); P(.05, top + .025, tread, width + .06, {seen: false, shadow: false, tag: 'stair'}); }
     const a = Math.min(from, to), b = Math.max(from, to); axis === 'x' ? solid(a, b, Math.min(at, at + out * width), Math.max(at, at + out * width)) : solid(Math.min(at, at + out * width), Math.max(at, at + out * width), a, b);
     if (landing) { const L = landing, c = to + Math.sign(run) * L / 2, P = (h, yy, s, w) => axis === 'x' ? block(L, h, w, c, yy, across, s) : block(w, h, L, across, yy, c, s); P(high - low, (high + low) / 2, surface, width); P(.05, high + .025, tread, width + .06);
       axis === 'x' ? solid(Math.min(to, to + Math.sign(run) * L), Math.max(to, to + Math.sign(run) * L), Math.min(at, at + out * width), Math.max(at, at + out * width)) : solid(Math.min(at, at + out * width), Math.max(at, at + out * width), Math.min(to, to + Math.sign(run) * L), Math.max(to, to + Math.sign(run) * L)); }
@@ -236,7 +248,7 @@ export function buildTerraces(ctx, map) {
   }
 
   // ======== The block, from the map.
-  for (const g of B.grounds) block(g.x[1] - g.x[0], g.deep || 1.4, g.z[1] - g.z[0], (g.x[0] + g.x[1]) / 2, g.level - (g.deep || 1.4) / 2 + (g.lift || 0), (g.z[0] + g.z[1]) / 2, g.surface, {shadow: false});
+  for (const g of B.grounds) block(g.x[1] - g.x[0], g.deep || 1.4, g.z[1] - g.z[0], (g.x[0] + g.x[1]) / 2, g.level - (g.deep || 1.4) / 2 + (g.lift || 0), (g.z[0] + g.z[1]) / 2, g.surface, {shadow: false, tag: g.surface === 'cobble' ? 'street' : g.surface === 'slab' ? 'paving' : 'yard'});
   for (const w of B.walls) { const top = w.base + w.height; along(w.axis, w.at, w.from, w.to, w.thick, w.base - (w.foot ?? 1.2), top, w.surface, {solid: w.axis === 'x' ? false : false});
     w.axis === 'x' ? solid(w.from, w.to, w.at - w.thick / 2, w.at + w.thick / 2) : solid(w.at - w.thick / 2, w.at + w.thick / 2, w.from, w.to);
     if (w.coping) along(w.axis, w.at, w.from - .04, w.to + .04, w.thick + .14, top, top + .08, w.coping, {seen: false}); }
@@ -248,6 +260,12 @@ export function buildTerraces(ctx, map) {
   for (const b of B.balconies || []) balcony(b);
   for (const f of B.flights || []) flight(f);
   for (const l of B.leanTos || []) leanTo(l);
+  // Ladders: two rails and rungs, standing against something; a body climbs them (dist/space.js). `dir` points from the
+  // ladder to where the climber stands; `exit` is where the climber steps off at the top.
+  const ladders = [];
+  for (const l of B.ladders || []) { const [dx, dz] = l.dir, h = l.top - l.bottom, w = l.width || .45, rail = (s) => block(Math.abs(dz) > .5 ? w * 0 + .06 : .06, h, Math.abs(dz) > .5 ? .06 : .06, l.x + (Math.abs(dz) > .5 ? s * w / 2 : 0), (l.top + l.bottom) / 2, l.z + (Math.abs(dz) > .5 ? 0 : s * w / 2), 'beams', {seen: false, body: false, tag: 'ladder'});
+    rail(-1); rail(1); for (let y = l.bottom + .28; y < l.top - .05; y += .3) Math.abs(dz) > .5 ? block(w, .04, .04, l.x, y, l.z, 'beams', {seen: false, body: false, tag: 'ladder', shadow: false}) : block(.04, .04, w, l.x, y, l.z, 'beams', {seen: false, body: false, tag: 'ladder', shadow: false});
+    ladders.push({x: l.x + dx * .3, z: l.z + dz * .3, dir: [dx, dz], bottom: l.bottom, top: l.top, exit: l.exit, standX: l.x + dx * .42, standZ: l.z + dz * .42}); }
   for (const p of B.pieces || []) block(p.size[0], p.size[1], p.size[2], p.at[0], p.at[1], p.at[2], p.surface, {turn: p.turn || 0, tilt: p.tilt || 0, lean: p.lean || 0, solid: !!p.solid, seen: p.seen !== false});
   for (const a of B.arches || []) { const mid = (a.from + a.to) / 2, half = a.width / 2; along(a.axis, a.at, a.from, mid - half, a.thick, a.base - 1.2, a.base + a.height, a.surface); along(a.axis, a.at, mid + half, a.to, a.thick, a.base - 1.2, a.base + a.height, a.surface); along(a.axis, a.at, mid - half, mid + half, a.thick, a.base + a.clear, a.base + a.height, a.surface); along(a.axis, a.at, mid - half - .15, mid + half + .15, a.thick + .1, a.base + a.clear - .16, a.base + a.clear, 'beams', {seen: false});
     along(a.axis, a.at, a.from - .04, a.to + .04, a.thick + .14, a.base + a.height, a.base + a.height + .08, 'slab', {seen: false}); const s = (u, v) => a.axis === 'x' ? solid(u, v, a.at - a.thick / 2, a.at + a.thick / 2) : solid(a.at - a.thick / 2, a.at + a.thick / 2, u, v); s(a.from, mid - half); s(mid + half, a.to);
@@ -275,5 +293,7 @@ export function buildTerraces(ctx, map) {
         inst.instanceMatrix.needsUpdate = true; inst.computeBoundingSphere(); scene.add(inst); triangles += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * list.length; });
       stats.propTriangles += triangles; ctx.changed?.(); return kind; }).catch(e => { console.warn('DUSTLINE: a model did not arrive:', kind, e?.message || e); stats.failed = (stats.failed || []).concat(kind); return null; }));
   }
-  return {stats, materials, roofs, ready: Promise.all(ready)};
+  // What a body can stand on, walk into and climb: every box with its top and bottom, the ground, the ladders.
+  const space = makeSpace({boxes: stats.list.filter(b => !b.turned).map(b => ({min: b.min, max: b.max, solid: b.solid, tag: b.tag || b.surface})), ground: groundY, ladders});
+  return {stats, materials, roofs, space, ready: Promise.all(ready)};
 }

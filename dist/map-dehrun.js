@@ -50,6 +50,8 @@ export const DEHRUN = {
   edges: {x: [-23.6, 23.6], z: [-29.6, 43.6]},
   nav: {origin: -46, step: 2, cells: 46},
   reach: {x: 30, z: 50},
+  // Heights on the M map are given above this (the lowest terrace).
+  levels: {base: 0},
   // Nothing of Kohar Valley's village stands here.
   buildings: [], lowWalls: [], sandbags: [], poles: [], brickWalls: [], stalls: [], crates: [], trucks: [], trees: [], props: [],
   rocks: {count: 0, x: [-20, 20], z: [-20, 20], clear: 0}, shrubs: {count: 0, x: [-20, 20], z: [-20, 20], clear: 0},
@@ -110,9 +112,10 @@ export const DEHRUN = {
     ],
     houses: [
       // A: the open house, west of the middle terrace. Stone below, plaster above, a balcony over the street.
-      {id: 'A', x: [-13, -4.2], z: [2, 13], base: 1.6, enter: true, beamEnds: ['east', 'south'], roof: {parapet: .6, tanks: [[-10.5, 4.5]]}, storeys: [
+      // Build 24: its upper floor is a room, reached by the stair through a well in the floor; a hatch and a ladder lead to the roof.
+      {id: 'A', x: [-13, -4.2], z: [2, 13], base: 1.6, enter: true, beamEnds: ['east', 'south'], roof: {parapet: .6, tanks: [[-10.5, 4.5]]}, wells: [{x: [-12.66, -11.5], z: [6.2, 11.7], storeys: [0]}, {x: [-5.7, -4.62], z: [3, 4.2], storeys: [1]}], storeys: [
         {height: 3, surface: 'masonry', east: [door(5, {awning: ['#7c5a48', 1.4, 'brackets'], open: 1.8}), win(9.5, {width: 1.3, bars: true})], south: [win(-9)], north: [win(-8.5, {open: [2.75, 1.3]})]},
-        {height: 2.8, surface: 'plaster', band: 'white', east: [win(4.4, {sill: .8}), door(7.5, {width: .95, leaf: 'blue', closed: true}), win(10.6, {sill: .8, open: [1.1, 2.75]})], south: [win(-8.5, {sill: .8})], north: [win(-9, {sill: .8})], west: [win(7.5, {sill: .8})]}]},
+        {height: 2.8, surface: 'plaster', band: 'white', room: true, east: [win(4.4, {sill: .8}), door(7.5, {width: .95, leaf: 'blue', closed: true}), win(10.6, {sill: .8, open: [1.1, 2.75]})], south: [win(-8.5, {sill: .8})], north: [win(-9, {sill: .8})], west: [win(7.5, {sill: .8})]}]},
       // B: the shop across the street, open, with its counter and rolling shutter.
       {id: 'B', x: [4.2, 11], z: [6, 14], base: 1.6, enter: true, beamEnds: ['west'], roof: {parapet: .5, gaps: [{side: 'west', from: 7.4, to: 9}], tanks: [[9, 12]]}, storeys: [
         {height: 3.1, surface: 'ochre', floor: 'floor', west: [door(7.1, {leaf: 'blue', open: 1.9}), {kind: 'shop', at: 10.9, width: 3.4, head: 2.45, drop: .75, counter: true, awning: ['#4f6672', 1.7, 'posts']}], south: [win(8, {bars: true, shutters: false})], east: [win(10, {sill: 1})]}]},
@@ -122,7 +125,7 @@ export const DEHRUN = {
         {height: 2.8, surface: 'white', band: 'ochre', west: [win(26.2, {sill: .8}), win(29, {sill: .8}), win(32, {sill: .8, open: [1.4, 2.75]})], south: [door(6.2, {leaf: 'planks'})], north: [win(9, {sill: .8})]}]},
       // D: an open-fronted workshop.
       {id: 'D', x: [-12, -5.2], z: [25, 32], base: 0, enter: true, roof: {parapet: .4, surface: 'gravel'}, storeys: [
-        {height: 2.7, surface: 'ochre', lining: 'room', floor: 'slab', east: [{kind: 'shop', at: 28.5, width: 4.2, head: 2.3, drop: .35}], south: [win(-8.5, {shutters: false, bars: true})]}]},
+        {height: 2.7, surface: 'ochre', lining: 'room', floor: 'slab', east: [{kind: 'shop', at: 28.5, width: 4.2, head: 2.3, drop: .9}], south: [win(-8.5, {shutters: false, bars: true})]}]},
       // E: the tall house at the top, three storeys.
       {id: 'E', x: [-14, -5], z: [-22, -10], base: 3.2, beamEnds: ['east', 'south'], roof: {parapet: .6, tanks: [[-11, -19]]}, storeys: [
         {height: 3, surface: 'masonry', east: [door(-13, {leaf: 'planks', width: 1.2, head: 2.2, awning: ['#a08343', 1.3, 'brackets']}), win(-17.5, {bars: true}), win(-20, {bars: true})], south: [win(-9.5, {bars: true})]},
@@ -145,7 +148,13 @@ export const DEHRUN = {
     // Outside and inside stairs: geometry until height is built.
     flights: [
       {axis: 'x', at: 34, from: 12.8, to: 7.4, low: 0, high: 3, width: 1.05, count: 15, out: 1, landing: 1.9},
-      {axis: 'z', at: -12.66, from: 11.6, to: 6.6, low: 1.6, high: 4.45, width: .9, count: 14, out: 1, surface: 'room', tread: 'planks'},
+      {axis: 'z', at: -12.66, from: 11.6, to: 6.6, low: 1.6, high: 4.6, width: .9, count: 14, out: 1, surface: 'room', tread: 'planks'},
+    ],
+    // Ladders [where it stands, which way the climber faces it from, its foot and top, where the climber steps off].
+    ladders: [
+      {x: -4.72, z: 3.6, dir: [-1, 0], bottom: 4.6, top: 7.55, exit: [-5.15, 4.75]},
+      {x: -9, z: .3, dir: [0, 1], bottom: 1.6, top: 4.75, exit: [-9, -.4]},
+      {x: 8, z: -5.9, dir: [0, 1], bottom: 1.6, top: 4.25, exit: [8, -7.15]},
     ],
     leanTos: [
       {x: [4.5, 10.6], z: [.4, 5.8], base: 1.6, high: 2.95, low: 2.3, fall: 'z-'},
