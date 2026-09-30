@@ -18,7 +18,8 @@ const {ASSET_VERSIONS, assetURL} = await import(new URL('dist/build.js', project
 const SOURCE = process.env.DUSTLINE_GAME_SOURCE ? new URL('file://' + process.env.DUSTLINE_GAME_SOURCE) : undefined;
 const ONLY = process.env.DUSTLINE_T32_ONLY?.split(',');
 const dist = fileURLToPath(new URL('dist/', projectRoot));
-const CEILING = {draws: 500, triangles: 350000}, CAP_MB = 30, NEW = ['map-dehrun.js', 'terraces.js', 'GLTFLoader.js'];
+// The ceilings were raised in Build 23 after the Safari measurement (B19): 350,000 triangles ran at 2.7 ms a frame.
+const CEILING = {draws: 700, triangles: 700000}, CAP_MB = 30, NEW = ['map-dehrun.js', 'terraces.js', 'GLTFLoader.js'];
 const results = [], report = {};
 async function check(tag, name, fn) { if (ONLY && !ONLY.includes(tag)) return; await fn(); results.push(name); }
 const page = () => createGame(SOURCE ? {sourcePath: SOURCE} : {});
@@ -91,9 +92,9 @@ await check('served', 'every file of the new map is served: a web server over di
   report.served = {addressesAnswered: n, limit: 'a server on this machine; that GitHub Pages serves them is checked on the live page after a push'};
 });
 
-await check('ceilings', 'the block stays under the ceilings with every model in place: draw calls under 500 and triangles under 350,000, counted over everything that is drawn; each kind of prop is drawn once per part however many stand there', async () => {
+await check('ceilings', 'the block stays under the ceilings with every model in place: draw calls under 700 and triangles under 700,000 (raised after B19), counted over everything that is drawn; each kind of prop is drawn once per part however many stand there', async () => {
   const g = await dehrun(), d = drawn(g), props = DEHRUN.block.props.length;
-  assert(d.calls <= CEILING.draws, `${d.calls} draw calls`); assert(d.triangles <= CEILING.triangles, `${d.triangles} triangles`); assert(d.calls > 40 && d.triangles > 150000, 'the block is there');
+  assert(d.calls <= CEILING.draws, `${d.calls} draw calls`); assert(d.triangles <= CEILING.triangles, `${d.triangles} triangles`); assert(d.calls > 40 && d.triangles > 150000, 'the block is there'); assert(d.triangles < 400000, 'the block itself has not grown past what was measured in B19 without a new measurement');
   assert.equal(d.propKinds, kinds.length); const parts = []; g.scene.traverse(o => { if (o.userData.prop) parts.push(o); }); assert(parts.every(o => o.isInstancedMesh && o.count === DEHRUN.block.props.filter(p => p[0] === o.userData.prop).length), 'one drawing per part for all of a kind'); assert(parts.length < props, `${parts.length} drawings for ${props} props`);
   assert.equal(Math.round(g.built.stats.propTriangles), Math.round(parts.reduce((s, o) => s + (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count, 0)));
   assert.equal(g.scene.children.filter(o => o.isLight).length, 3, 'no light source is added (sky, sun, the lamp in the open house)');

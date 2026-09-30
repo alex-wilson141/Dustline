@@ -8,7 +8,7 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 
 **Layout requirement (user, E38):** Dehrun Terraces gets a large multi-storey building designed as the Ambush arena from the start (internal stairs, a roof, a street around it; start upstairs, buy your way down and out). Never carved out of another layout. If it cannot work within the map, report it; the user will then consider a dedicated Ambush map.
 
-**SAFARI: never take it without asking first and waiting for the answer; never retry if the window does not come forward.** Build 23 did not use Safari. The block's measurement (B18) is still outstanding.
+**SAFARI: never take it without asking first and waiting for the answer; never retry if the window does not come forward.** Build 23's measurement was done by the user opening the bench pages in their own Safari (B19); Claude's own window would not come forward and was stopped without a retry.
 
 **Build 23 in short: look slice critique and fixes.**
 - **Flicker:** gone. 442 exposed places where two surfaces shared a plane, the largest 151 m² each side of the street; most were in the kit.
@@ -19,14 +19,13 @@ _Updated 2026-09-29. The master tracker is `DUSTLINE-ROADMAP.md`; this file is t
 - **Light:** the sun in the sky is where the shadows say; shade is lit.
 - **Ground:** trodden yards, paving along the fronts.
 - **Beyond the walls:** twelve plain houses, field walls on the hill.
-- **Cost:** 91 draw calls, about 341,000 triangles from the street. **No room left under the 350,000 ceiling.**
+- **Cost:** 91 to 119 draw calls, about 341,000 to 356,000 triangles from the street. **Safari (B19), measured by the user opening the bench pages:** the block 2.2 to 2.75 ms a frame, p99 4 ms; Kohar Valley in the same session 3.0 to 3.3 ms, p99 6 to 8. **The block runs faster than Kohar Valley. The 350,000 ceiling was too low; the ceilings are now 700 draw calls and 700,000 triangles.**
 - **Checks:** 26 suites, 244 checks, all pass (headless). T33 is new (6 checks); 40 deliberate breakages caught.
 - **Left (MAP-03):** heavy props, everything always drawn, bullets through small things, doors too narrow for enemies, blank boundary walls, plain hill, one lamp a room, no plants.
 
 **Decisions for the user (Build 23):**
 - Look again: is anything still wrong?
-- The triangle ceiling: fewer props, lighter copies of the heaviest, or a higher ceiling after a Safari measurement.
-- When to measure in Safari.
+- Keep the props as they are (the ceiling was raised after the measurement), or still lighten the heaviest for a whole map.
 - Push Builds 22 and 23, and when.
 
 **Build 22 in short: the look slice of Dehrun Terraces (map build 2 of 9).**

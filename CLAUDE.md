@@ -32,7 +32,7 @@ on, lintels and sills stand off the wall's planes, walls end inside their corner
 `clear` open), shut doors stand in the opening; awnings are woven cloth that sags, carried by posts or brackets, in the block's
 colours; beam ends come from `chance`, never evenly; balconies are propped; surfaces carry shade in their geometry's colours
 (`stain`). The light comes from where the sun stands in the sky's picture (`sky.turn`). Houses `beyond` the walls are `plain`.
-**The block is at 341,000 of 350,000 triangles: nothing can be added without taking something out** (MAP-03). **Layout
+**Measured in Safari (B19): the block at 350,000 triangles runs at 2.2 to 2.75 ms a frame, faster than Kohar Valley's 3.0 to 3.3; the ceilings were raised to 700 draw calls and 700,000 triangles.** A Safari measurement is run by the user opening the bench pages in their own window when Claude's window will not come forward. **Layout
 requirement (user, E38): the Ambush arena of Dehrun Terraces is a large multi-storey building designed for it from the start
 (internal stairs, a roof, a street around it); if that cannot work within the map, say so and do not compromise.** Doors must be
 wide enough for enemies before any mode is played there.
@@ -43,7 +43,7 @@ module in full so that the import map versions it. The kit holds no place: every
 `build`, `terrain.surface` (the drawn ground, below what is built), its own light and `look` (a map to walk and look at: nobody
 else, no mission); where a map names none of these the game's old values stand, and Kohar Valley names none. Models are one
 `.glb` each with their pictures inside, asked for with `fetch(assetURL(...))` and handed to the loader as bytes; each kind of prop
-is one `InstancedMesh` per part. Ceilings for a block: 500 draw calls, 350,000 triangles, everything drawn (T32); the new map's
+is one `InstancedMesh` per part. Ceilings for a block: 700 draw calls, 700,000 triangles, everything drawn (T32; raised after B19: the block at 350,000 runs at 2.7 ms in Safari, faster than Kohar Valley); the new map's
 assets stay under 30 MB unless the user raises the cap. No light source is added by the kit. **Safari: never take it without
 asking the user first and waiting for their word** (user, 2026-09-29: the Build 22 measurement took Safari from their work every
 few seconds and was stopped); a measurement must run as one blocking step, never from a background job. The block's Safari
