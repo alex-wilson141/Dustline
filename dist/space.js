@@ -18,7 +18,8 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   const list = boxes.filter(b => b.solid !== false).map((b, i) => ({...b, i, thin: b.max[0] - b.min[0] < body.stance || b.max[2] - b.min[2] < body.stance, tread: b.tag === 'stair' || b.tag === 'steps'}));
   // Each box is filed under every square within `reach` of it: the widest body that asks (the enemies', .45), not the player's.
   const reach = Math.max(body.radius, .5) + .01;
-  for (const b of list) for (let i = at(b.min[0] - reach); i <= at(b.max[0] + reach); i++) for (let j = at(b.min[2] - reach); j <= at(b.max[2] + reach); j++) { const k = key(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(b); }
+  const file = b => { for (let i = at(b.min[0] - reach); i <= at(b.max[0] + reach); i++) for (let j = at(b.min[2] - reach); j <= at(b.max[2] + reach); j++) { const k = key(i, j); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(b); } };
+  for (const b of list) file(b);
   const near = (x, z) => grid.get(key(at(x), at(z))) || [];
   // A box's footprint includes its edges: on the seam between two slabs a body stands on both, not on neither (Build 25).
   // A box switched `off` is not there (Build 30: what went with a broken window's pane).
@@ -84,13 +85,17 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
       const f = floor(nx, nz, p.y + body.step, body.lean, p.y), drop = f.y < p.y - body.step, feet = drop ? p.y : f.y;
       if (passable(p.x, p.z, nx, nz, feet + body.step, feet + height, r, stairs, p.y + body.step, p.y + height) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y || !drop) p.y = f.y; return true; } return false; };   // up a step, or down one within `step` (Build 28: as the game settles a body every frame; a drop is left to gravity)
     const ax = dx / steps, az = dz / steps, L = Math.hypot(ax, az);
-    for (let i = 0; i < steps; i++) { const sx = p.x, sy = p.y, sz = p.z; if (ax) step(ax, 0); if (az) step(0, az); if (!nudge || !L) continue;
+    for (let i = 0; i < steps; i++) { const sx = p.x, sy = p.y, sz = p.z, wentX = ax ? step(ax, 0) : true, wentZ = az ? step(0, az) : true; if (!nudge || !L || wentX && wentZ) continue;
       // Hardly any way made (under a quarter of the step, measured along what was asked): the same step from a little to
       // one side or the other, whichever makes the most way, and only if it makes more. Sliding along a plain wall makes
       // seven tenths of the way and is never nudged; a body square against a wall gains nothing to either side and stays.
       const way = () => (Math.max(0, (p.x - sx) * Math.sign(ax)) * Math.abs(ax) + Math.max(0, (p.z - sz) * Math.sign(az)) * Math.abs(az)) / L, made = way();   /* way made on each axis asked for; stepping aside costs nothing */ if (made >= .25 * L) continue;
+      // Build 33: a nudge must free a step that was stopped. From a little to the side, the step along an axis that made
+      // no way must now be taken, or the body stays where the plain step left it: a body walking into a flat wall at a
+      // slant has nothing to be freed from, and is no longer slid along the wall (Build 30's nudge took the step aside
+      // itself for way made, and dragged it).
       let best = made, at = [p.x, p.y, p.z];
-      for (let d = .04; d <= nudge + 1e-9; d += .04) for (const [lx, lz] of [[d, 0], [-d, 0], [0, d], [0, -d]]) { p.x = sx; p.y = sy; p.z = sz; if (!step(lx, lz)) continue; if (ax) step(ax, 0); if (az) step(0, az); if (way() > best + 1e-6) { best = way(); at = [p.x, p.y, p.z]; } }
+      for (let d = .04; d <= nudge + 1e-9; d += .04) for (const [lx, lz] of wentZ && !wentX ? [[0, d], [0, -d]] : wentX && !wentZ ? [[d, 0], [-d, 0]] : [[d, 0], [-d, 0], [0, d], [0, -d]]) {   /* to the side of the step that was stopped: never back from the wall to take a run at it */ p.x = sx; p.y = sy; p.z = sz; if (!step(lx, lz)) continue; const gotX = ax ? step(ax, 0) : true, gotZ = az ? step(0, az) : true; if (!(!wentX && gotX || !wentZ && gotZ)) continue; if (way() > best + 1e-6) { best = way(); at = [p.x, p.y, p.z]; } }
       [p.x, p.y, p.z] = at; }
     return Math.hypot(p.x - ox, p.z - oz);
   }
@@ -106,6 +111,8 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
     if (!back) { if (Math.hypot(dx, dz) > .75 || p.y < l.bottom - .4 || p.y > l.top - .6 || facing > -.35) continue; return l; }
     else { if (Math.hypot(p.x - l.exit[0], p.z - l.exit[1]) > .8 || p.y < l.top - 1.3 || p.y > l.top + .3 || facing < .35) continue; return l; } } return null; }
   return {boxes: list, clear, stands, floor, ceiling, headroom, move, ledge, ladderAt, ladders, body, settle, dispose() { list.length = 0; grid.clear(); },
+    // Build 33: a box put into the space after it was made (an Ambush barricade, a crate). It is there until switched `off`.
+    add(b) { const n = {...b, i: list.length, thin: false, tread: false}; list.push(n); file(n); return n; },
     // Whether a body under something may stand up yet: only once the whole of it is out from under (else it is held down).
     mayStand: (x, z, y) => headroom(x, z, y, body.radius) >= body.stand,
     // Everything a body can stand on within a square, for the checks: box tops and the ground.

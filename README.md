@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 32)
+# DUSTLINE — Operation Broken Signal (Build 33)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -120,6 +120,16 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 3. **Host:** paste the answer and press ACCEPT ANSWER. Keep both pages open and do not reload in between.
 
 Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the game connects players directly and has no relay server. Both players must be on the same build.
+
+## Ambush on Dehrun Terraces (Build 33)
+
+- **The customs house is the arena.** Choose DEHRUN TERRACES in the menu, then Ambush. You start on the top floor. Barricades are bought with points to open the roof (500), the first floor (750), the ground floor (1,000), the square (1,250), and from the square the lower town and the west and east districts (1,500 each).
+- **A barricade** closes a stair, a door or a gateway to you, to bullets and to the hostiles. Beside every barricade one way stays open and is marked with the striped line: the hostiles come in there, and five seconds beyond a line ends the run.
+- **They come** up the stairs, up a ladder to the roof and down from it, and through ground-floor windows once the glass is shot out.
+- **Crates:** CQB on the top floor, carbine on the first floor, DMR on the roof, automatic rifle on the ground floor, at Kohar Valley's prices.
+- **The waves** are Kohar Valley's with one more hostile alive at once and arrivals a fifth closer together. Kohar Valley's Ambush is unchanged. Personal bests are kept per map.
+- **M** shows the house's four levels one under another above the town.
+- Also in Build 33: walking into a wall at a slant no longer slides you along it (Dehrun Terraces), and a breaking window throws out pieces of glass.
 
 ## Ambush map and markings (Build 14)
 

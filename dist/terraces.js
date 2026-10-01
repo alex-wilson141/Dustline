@@ -423,7 +423,7 @@ export function buildTerraces(ctx, map) {
   const space = makeSpace({boxes: stats.list.filter(b => !b.turned).map(b => ({min: b.min, max: b.max, solid: b.solid, tag: b.tag || b.surface, ...(owned.has(b) ? {src: b} : {})})).concat(propBoxes, tankBoxes), ground: groundY, ladders, edges: map.edges});
   // Build 26: where the enemies can go, made from the space when first asked for (a body of their width, their stair rule).
   for (const b of space.boxes) if (b.src) owned.get(b.src).box = b;   // a loose part's box in the space, switched off with it
-  let nav = null; const navigation = () => nav ??= makeNav(space, {region: map.edges, doors: stats.doors, ladders, starts: [map.starts.player, ...(map.enemies?.spawns || [])].map(([x, z]) => ({x, y: groundY(x, z), z}))});
+  let nav = null; const navigation = () => nav ??= makeNav(space, {region: map.edges, doors: stats.doors, ladders, panes: panes.map((q, pane) => ({pane, min: q.min, max: q.max})), starts: [map.starts.player, ...(map.enemies?.spawns || [])].map(([x, z]) => ({x, y: groundY(x, z), z}))});
   // Build 32: thrown away with the game that asked for it (a map change): what it listed and found is let go.
   const dispose = () => { stats.list.length = 0; panes.length = 0; loose.length = 0; space.dispose(); nav = null; };
   return {stats, materials, roofs, space, navigation, glass, dispose, ready: Promise.all(ready)};

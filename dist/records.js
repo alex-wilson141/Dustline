@@ -7,6 +7,9 @@ import './build.js'; // DEPLOY-01 upgrade guard
 export const BEST_KEY = 'dustline.ambush.best';
 // Build 16: a two-player run is recorded under its own key, so it can never overwrite or be compared with the solo best.
 export const BEST_KEY_COOP = 'dustline.ambush.best.coop';
+// Build 33: a best belongs to its map. Kohar Valley's keep the two keys they always had (a record made before Build 33
+// is still Kohar Valley's); any other map's are the same keys with the map's id after them.
+export const bestKey = (map, coop = false) => (coop ? BEST_KEY_COOP : BEST_KEY) + (!map || map === 'kohar' ? '' : '.' + map);
 // The browser's localStorage when it can be used, else null (Safari with cookies blocked throws on access).
 export function storageOf() { try { const s = globalThis.localStorage; return s && typeof s.getItem === 'function' && typeof s.setItem === 'function' ? s : null; } catch { return null; } }
 // The stored best, validated, or null when there is none or it cannot be read.

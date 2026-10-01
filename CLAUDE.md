@@ -28,6 +28,29 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 33 (local, 2026-10-01): Ambush on Dehrun Terraces, in the customs house. **An arena may have height (`ambush.levels` in
+the map; `LEVELS` in `dist/ambush.js`): every line in `game.js` and `ambush.js` that says `LEVELS` leaves Kohar Valley's flat arena
+on its own code, and T43 compares Kohar Valley's Ambush (both curves for forty waves, every price, both keys of the bests, a played
+solo run and a two-player run) with Build 32 taken from its commit. Never change Kohar Valley's side of such a line.** On Dehrun: an
+area is a rectangle with a height (`y`, the feet); a barricade closes openings (`blocks`) with boxes put into the body's space
+(`SPACE.add`, switched `off` when bought or when another mode is played), an occluder each, and the places they cover shut in the
+navigation (`LAYERS.close`); a `passage` is a way through the arena's edge that nothing closes (the striped line lies there, the
+hostiles come in by it). **Every barricade must leave the hostiles a way in** (T43 `reach`). Eight areas, seven barricades (500,
+750, 1,000, 1,250, 1,500 × 3), four crates at Kohar's prices, the start on the top floor facing along the corridor. The hostiles'
+ways come from one field per player (`LAYERS.field`, `follow`: a reverse flood of the navigation, 5 ms, rebuilt when the player
+has moved 4 m, a barricade is bought or a pane breaks); a path of their own (`planRoute`) only within 14 m (`NEAR3`), two a frame
+(`navJobs`). **Never plan a path per hostile across the town: one costs 13 to 18 ms.** Arrivals stand on places of the navigation
+with a way in, unseen, 35 m off and 6 m outside the open arena; where none is in the wave's direction any direction serves, then
+any distance. A map may change the curve (`ambush.curve`: `alive`, `gap`; `curved` in `ambush.js`); Dehrun's is one more alive and
+a fifth sooner. **Windows are ways for enemies once their pane is broken** (`navmesh.js` `vault` edges for openings with a place
+on both sides and a sill no higher than 1.3 m; `vaultStep` in `game.js`; `LAYERS.vaultOpen`), in every mode on a map with glass.
+A ladder climbs the customs house's east face to its roof. Bests are per map (`bestKey(map, coop)` in `dist/records.js`; Kohar
+Valley's two keys are the old ones). The map (M) draws an area where its `shift` puts it (the house's four levels one under
+another). **The nudge (`space.js` `move`) is taken only when it frees a step that was stopped, and only to the side of that
+step:** a body walked into a flat wall at a slant ends where it would without it (T43 `nudge`); do not let a step aside count as
+way made again. **Glass breaks in pieces (`PIECES` in `game.js`):** one `InstancedMesh` of 144 made with the game, twelve to a
+pane, Math.random only, in no sight, shot or body test; a pane stops nothing from the instant it breaks. Sight rays on Dehrun
+are costly (MAP-13): ask as few as possible per frame.
 Build 32 (local, 2026-10-01): changing map in a running page, map build 8 (MAP-01 done). **The game is a function of the page:
 everything in `game.js` below its imports is inside `function dustline(PAGE){...}`, called when the page loads and again for
 every map (`PAGE.boot()`, the last lines of the file). A game shares nothing with the one before it but what is the page's on
@@ -409,15 +432,16 @@ node tests/test-windows-b29.mjs
 node tests/test-frames-b30.mjs
 node tests/test-corners-b31.mjs
 node tests/test-mapchange-b32.mjs
+node tests/test-ambush-dehrun-b33.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 32 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 33 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs and 7 map-change checks (311 in 35 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change and 11 Dehrun-Ambush checks (322 in 36 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

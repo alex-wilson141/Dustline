@@ -166,7 +166,60 @@ export const DEHRUN = {
     reinforceLoops: {0: ['SQUARE'], 1: ['SQUARE'], 2: ['LOWER'], skirmish: ['SQUARE', 'LOWER', 'WEST', 'EAST']},
     reinforcePoints: [{chain: [[0, 98], [0, 84]], stages: [0, 1, 2]}, {chain: [[-50, 62], [-30, 62]], stages: [0, 1, 2]}, {chain: [[50, 62], [30, 62]], stages: [0, 1, 2]}, {chain: [[-48, 24], [-30, 30]], stages: [1]}, {chain: [[48, 24], [30, 30]], stages: [1]}],
   },
-  ambush: {start: [0, 30], firstArea: 1, walls: [], areas: [{id: 1, name: 'Lower street', x: [-23, 23], z: [20, 79]}], gates: [], stations: [], chart: {x: [-72, 72], z: [-100, 105]}, spots: {x: [-70, 70], z: [-98, 103], step: 4}},
+  // Build 33: Ambush in the customs house. The run starts on the top floor; barricades are bought to open the roof, the way
+  // down floor by floor, the street doors onto the square, and the square's gateways into the lower town and the two
+  // districts. An area is a rectangle with, in and over the house, a height (`y`: the feet, from one half landing to the
+  // next); a barricade closes openings (`blocks`) to bodies, bullets and the enemies' paths until it is bought; a
+  // `passage` is a way through the arena's edge that nothing closes, where the hostiles come in and the striped line
+  // lies. `shift` is where the map (M) draws a floor's plan: the house's four levels one under another north of the town's plan, the roof first.
+  ambush: {levels: true, start: [0, 61.3, 6.6], face: -Math.PI / 2, firstArea: 1, walls: [], title: 'AMBUSH · THE CUSTOMS HOUSE', hold: 'the top floor', maxRoute: 260,
+    areas: [
+      {id: 1, name: 'Top floor', x: K.x, z: K.z, y: [4.95, 8.25], shift: [0, -130]},
+      {id: 2, name: 'Roof', x: K.x, z: K.z, y: [8.15, 14], shift: [0, -165]},
+      {id: 3, name: 'First floor', x: K.x, z: K.z, y: [1.65, 5.05], shift: [0, -95]},
+      {id: 4, name: 'Ground floor', x: K.x, z: K.z, y: [-.5, 1.75], shift: [0, -60]},
+      {id: 5, name: 'Square', x: [-22.3, 22.3], z: [44, 80], y: [-1, 8]},
+      {id: 6, name: 'Lower town', x: [-72, 72], z: [80, 105]},
+      {id: 7, name: 'West district', x: [-72, -22.3], z: [20, 80]},
+      {id: 8, name: 'East district', x: [22.3, 72], z: [20, 80]},
+    ],
+    gates: [
+      // The east stair's flight up to the roof, at its foot on the top floor.
+      {id: 'roof', from: 1, opens: 2, price: 500, y: 6.6, station: [8.76, 62.68], a: [7.5, 62.8], b: [10.02, 62.8], span: 2.5, blocks: [{x: [7.5, 10.02], y: [6.6, 9.4], z: [62.8, 63.4]}]},
+      // The west stair's flight down to the first floor, at its head on the top floor.
+      {id: 'first', from: 1, opens: 3, price: 750, y: 6.6, station: [-8.76, 59.92], a: [-10.02, 59.8], b: [-7.5, 59.8], span: 2.5, blocks: [{x: [-10.02, -7.5], y: [5.4, 9.4], z: [59.2, 59.8], foot: 6.6}]},
+      // The east stair's flight down to the ground floor, at its head on the first floor.
+      {id: 'ground', from: 3, opens: 4, price: 1000, y: 3.4, station: [11.28, 62.68], a: [10.02, 62.8], b: [12.54, 62.8], span: 2.5, blocks: [{x: [10.02, 12.54], y: [2.2, 6.2], z: [62.8, 63.4], foot: 3.4}]},
+      // The south, west and east street doors (the north door stays open: the hostiles' way in).
+      {id: 'square', from: 4, opens: 5, price: 1250, y: .05, station: [0, 70.42], a: [-.75, 70.55], b: [.75, 70.55], span: 1.5, blocks: [{x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
+      // The square's south gateway, and the arches in its west and east walls.
+      {id: 'lower', from: 5, opens: 6, price: 1500, y: 0, station: [0, 79.52], a: [-1.7, 79.7], b: [1.7, 79.7], span: 3.4, blocks: [{x: [-1.7, 1.7], y: [-.3, 3], z: [79.7, 80.3], foot: 0}]},
+      {id: 'west', from: 5, opens: 7, price: 1500, y: 0, station: [-21.52, 62], a: [-21.7, 60.4], b: [-21.7, 63.6], span: 3.2, blocks: [{x: [-22.3, -21.7], y: [0, 3], z: [60.4, 63.6]}]},
+      {id: 'east', from: 5, opens: 8, price: 1500, y: 0, station: [21.52, 62], a: [21.7, 60.4], b: [21.7, 63.6], span: 3.2, blocks: [{x: [21.7, 22.3], y: [0, 3], z: [60.4, 63.6]}]},
+    ],
+    // One crate on every floor and one on the roof, the rifles and prices of Kohar Valley's four.
+    stations: [
+      {area: 1, weapon: 'medic', price: 500, at: [4, 55.2], y: 6.6},
+      {area: 3, weapon: 'assault', price: 750, at: [-9, 68.6], y: 3.4},
+      {area: 2, weapon: 'marksman', price: 1000, at: [0, 66], y: 9.83},
+      {area: 4, weapon: 'support', price: 1250, at: [6, 55.2], y: .05},
+    ],
+    passages: [
+      {a: 1, b: 2, line: [-12.54, 59.8, -10.02, 59.8], y: 6.6},          // the west stair up to the roof
+      {a: 1, b: 3, line: [10.02, 62.8, 12.54, 62.8], y: 6.6},            // the east stair down to the first floor
+      {a: 3, b: 4, line: [-10.02, 59.8, -7.5, 59.8], y: 3.4},            // the west stair down to the ground floor
+      {a: 4, b: 5, line: [2.3, 53.05, 3.7, 53.05], y: .05},              // the north street door
+      {a: 2, b: 5, line: [11.1, 53.5, 11.1, 55.1], y: 9.83},             // the head of the ladder on the roof
+      {a: 5, b: 0, line: [-1.6, 44.3, 1.6, 44.3], y: 0},                 // the square's north gateway, to the block
+      {a: 7, b: 0, line: [-23.7, 28.5, -23.7, 31.5], y: 0}, {a: 7, b: 0, line: [-49.7, 20.2, -46.3, 20.2], y: 0},   // the west district: the arch into the block, the lane's steps up the hill
+      {a: 8, b: 0, line: [23.7, 28.5, 23.7, 31.5], y: 0}, {a: 8, b: 0, line: [46.3, 20.2, 49.7, 20.2], y: 0},
+    ],
+    // What the curve changes here (ambush.js `curved`): the ways in are long and narrow, so one more hostile is alive at
+    // once and they follow each other a fifth sooner; counts, prices, points, accuracy and damage are Kohar Valley's.
+    curve: {alive: 1, gap: .8},
+    chart: {x: [-74, 74], z: [-118, 107]}, spots: {x: [-70, 70], z: [-28, 103], step: 4},
+    brief: {title: 'Hold the customs house.', solo: 'Ambush: alone on the top floor of the customs house, survive wave after wave. The hostiles come up the stairs, over the roof and through windows that have been shot out. Kills earn points: clear barricades to open the roof, the floors below, the street doors, the square and the town beyond, and buy rifles, magazines and dressings at the crates. There is no win, only how long you last; from wave 5 you can extract between waves and bank your points, or stay for a bigger bank.', coop: 'Ambush, two players: you and your teammate hold the top floor of the customs house against wave after wave. No AI squad. Each of you earns and spends your own points; a barricade either of you clears is open for both. If one of you goes down the other fights on; the run ends when both are down. From wave 5 you can extract between waves if you both choose to.'},
+    radio: {solo: 'you are on your own. Hold the top floor. They come up the stairs and over the roof. Kills earn points: clear barricades to open the house and the town, buy rifles, magazines and dressings at the crates. Do not cross a striped line.', coop: 'two of you and nobody else. Hold the top floor together. Your kills earn your own points; a barricade either of you clears is open for both. Watch your fire: your teammate wears blue. Do not cross a striped line.'}},
 
   build: ctx => buildTerraces(ctx, DEHRUN),
 
@@ -288,6 +341,8 @@ export const DEHRUN = {
       {x: -4.72, z: 3.6, dir: [-1, 0], bottom: 4.6, top: 7.55, exit: [-5.15, 4.75]},
       {x: -9, z: .3, dir: [0, 1], bottom: 1.6, top: 4.75, exit: [-9, -.4]},
       {x: 8, z: -5.9, dir: [0, 1], bottom: 1.6, top: 4.25, exit: [8, -7.15]},
+      // Build 33: up the customs house's east face to its roof, north of its windows: the way onto the roof from outside.
+      {x: 13.1, z: 54.2, dir: [1, 0], bottom: 0, top: 10.43, exit: [11.8, 54.3]},
     ],
     leanTos: [
       {x: [4.5, 10.6], z: [.4, 5.8], base: 1.6, high: 2.95, low: 2.3, fall: 'z-'},

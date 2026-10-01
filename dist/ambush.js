@@ -57,6 +57,11 @@ export const AMBUSH = {
 // (dist/map-kohar.js, `ambush`); these names follow the active map. AMBUSH above holds the rules, which are the same
 // on every map.
 export let ARENA_WALLS, AREAS, GATES, STATIONS, MAP;
+// Build 33: an arena with height (Dehrun Terraces' customs house). `LEVELS` says the map's arena is one; `PASSAGES` are
+// the ways through its edge that no barricade closes (drawn as the striped line where one side is open ground and the
+// other is not); `CURVE` is what the map changes of the wave curve below. Kohar Valley names none of them: its arena is
+// flat, its edge is worked out from its areas (`arenaEdges`) and its curve is the one written here.
+export let LEVELS = false, PASSAGES = [], CURVE = null;
 // Build 11 economy. A magazine's price follows the damage it can deal (capacity × damage), so every rifle pays about the
 // same per potential kill, and it rises with the wave up to magWaveCap: CQB/carbine 70 → 175, DMR 100 → 250, automatic
 // rifle 160 → 400 points (wave 1 → wave 16+). Rounds are added to the reserve up to the rifle's reserve limit.
@@ -91,14 +96,17 @@ export function waveSpec(n, players = 1) {
   const k = Math.max(0, n - 1);
   if (players > 1) { const s = waveSpec(n), c = AMBUSH.coop; // Build 16: two players up; the solo values below are never touched
     return {...s, count: Math.min(Math.round(s.count * c.countScale), c.countCap), aliveCap: Math.min(c.aliveCeiling, Math.ceil(s.aliveCap * c.capScale)), spawnGap: Math.max(c.gapFloor, s.spawnGap * c.gapScale)}; }
-  return {
+  return curved({
     count: Math.min(4 + 2 * n, 40),                 // 6, 8, 10 ... capped at 40 (wave 18)
     aliveCap: Math.min(AMBUSH.aliveCeiling, 1 + Math.ceil(n / 2)), // 2, 2, 3, 3, 4, 4 ... 9 from wave 15 (Build 12, solo)
     spawnGap: Math.max(1, 4.5 - .3 * k),            // seconds between arrivals (floor 1 s from wave 12; Build 12, solo)
     fightRange: Math.max(14, 26 - k),               // they come this close before stopping to fire
     pauseScale: Math.max(.5, 1 - .05 * k),          // their stops to fire and duck into cover get shorter
-  };
+  });
 }
+// Build 33: a map's own curve. `alive` more hostiles alive at once (never past aliveCeiling) and arrivals `gap` times as
+// far apart (never under a second); count, fight range and pauses are the curve's above. Two players scale what this gives.
+const curved = s => CURVE ? {...s, aliveCap: Math.min(AMBUSH.aliveCeiling, s.aliveCap + (CURVE.alive || 0)), spawnGap: Math.max(1, s.spawnGap * (CURVE.gap || 1))} : s;
 // The enemy AI tunables for wave n: the normal ones (movement speeds, sensing), the Ambush attack values with the
 // wave's aggression applied, and corpse limits that leave the enemyPool room for the alive cap and bodies that still lie in view (20 = 12 alive + 4 lying + 4 spare).
 export function aiTuningFor(n, base) {
@@ -109,9 +117,10 @@ export function aiTuningFor(n, base) {
 // Extracting after surviving wave w banks the points earned times this (x1 at the first offer, +0.25 per wave after).
 export const bankMultiplier = survived => survived < AMBUSH.decisionFrom ? 0 : 1 + AMBUSH.bankStep * (survived - AMBUSH.decisionFrom);
 
-export const inArea = (area, x, z, pad = 0) => x >= area.x[0] - pad && x <= area.x[1] + pad && z >= area.z[0] - pad && z <= area.z[1] + pad;
+// Build 33: an area may have a height (`y`, feet from and to); asked with a height, a body is in it only within that.
+export const inArea = (area, x, z, pad = 0, y) => x >= area.x[0] - pad && x <= area.x[1] + pad && z >= area.z[0] - pad && z <= area.z[1] + pad && (y == null || !area.y || y >= area.y[0] && y <= area.y[1]);
 export const areaById = id => AREAS.find(a => a.id === id);
-export const inArena = (open, x, z, pad = 0) => [...open].some(id => inArea(areaById(id), x, z, pad));
+export const inArena = (open, x, z, pad = 0, y) => [...open].some(id => inArea(areaById(id), x, z, pad, y));
 export function distToArena(open, x, z) {
   let best = Infinity;
   for (const id of open) { const a = areaById(id), dx = Math.max(a.x[0] - x, 0, x - a.x[1]), dz = Math.max(a.z[0] - z, 0, z - a.z[1]); best = Math.min(best, Math.hypot(dx, dz)); }
@@ -145,6 +154,10 @@ export function arenaEdges(open, closedGates) {
 
 const merged = (list, material) => { const g = mergeGeometries(list, false); list.forEach(x => x.dispose()); const m = new THREE.Mesh(g, material); m.castShadow = m.receiveShadow = true; return m; };
 const boxAt = (w, h, d, x, y, z, rot = 0) => { const g = new THREE.BoxGeometry(w, h, d); if (rot) g.rotateY(rot); g.translate(x, y, z); return g; };
+
+// Build 33: the edge of an arena with height: every passage with open ground on one side only, as [x1, z1, x2, z2, y, area]
+// (`area`: the area whose plan the map draws it on).
+export const arenaLines = open => PASSAGES.filter(p => open.has(p.a) !== open.has(p.b)).map(p => [...p.line, p.y, p.on ?? p.a]);
 
 // Edge markers: a hazard-striped ground line (unlit, so it reads in shade and at distance) and a marker post every
 // 3 m with a red cap, like a cordon without the tape: enemies walk between the posts, nothing is faked.
@@ -198,6 +211,22 @@ export function buildBarricade(gate, groundY, mats) {
   return {group, solids, occluders};
 }
 
+// Build 33: a barricade in an arena with height. It closes openings (`gate.blocks`: a stair's flight at its mouth, a street
+// door, a gateway), each to its full height, since a body pulls itself over anything lower: close boards between two posts
+// with three rails across and sandbags at the foot. One box per opening for bodies, and one for bullets and sight.
+export function buildBlockade(gate, mats) {
+  const bags = [], timber = [], boxes = [], occluders = [];
+  for (const b of gate.blocks) { const [x0, x1] = b.x, [y0, y1] = b.y, [z0, z1] = b.z, along = x1 - x0 > z1 - z0, len = along ? x1 - x0 : z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, foot = b.foot ?? y0, h = y1 - foot;
+    timber.push(boxAt(along ? len : .1, y1 - y0, along ? .1 : len, cx, (y0 + y1) / 2, cz));
+    for (const r of [.4, .5 * h, h - .35]) timber.push(boxAt(along ? len : .2, .2, along ? .2 : len, cx, foot + r, cz));
+    for (const e of [-1, 1]) timber.push(boxAt(.16, h, .16, cx + (along ? e * (len / 2 - .08) : 0), foot + h / 2, cz + (along ? 0 : e * (len / 2 - .08))));
+    for (let i = 0, n = Math.max(1, Math.round(len / .95)); i < n; i++) for (let row = 0; row < 3; row++) { const t = (i + .5 + (row % 2 ? .2 : -.2)) / n * len - len / 2, w = len / n * .98; bags.push(boxAt(along ? w : .58, .27, along ? .58 : w, cx + (along ? Math.max(-len / 2 + w / 2, Math.min(len / 2 - w / 2, t)) : 0), foot + .135 + row * .27, cz + (along ? 0 : Math.max(-len / 2 + w / 2, Math.min(len / 2 - w / 2, t))))); }
+    boxes.push({min: [x0, y0, z0], max: [x1, y1, z1]});
+    const o = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mats.plaster); o.position.set(cx, (y0 + y1) / 2, cz); o.userData.noDecal = true; o.updateMatrixWorld(true); o.geometry.computeBoundingBox(); occluders.push(o); }
+  const group = new THREE.Group(); group.add(merged(bags, mats.sand)); group.add(merged(timber, mats.wood));
+  return {group, solids: [], boxes, occluders};
+}
+
 // A weapon crate: a timber crate with the rifle laid on top and a metal band, at the station.
 export function buildStation(st, groundY, mats) {
   const [x, z] = st.at, y = groundY(x, z);
@@ -213,10 +242,10 @@ export function buildStation(st, groundY, mats) {
 export function ambushState(open, standing) {
   const has = id => (standing.has ? standing.has(id) : standing.includes(id));
   return {
-    gates: GATES.map(g => ({id: g.id, a: g.a, b: g.b, station: g.station, price: g.price, from: g.from, opens: g.opens, name: areaById(g.opens).name, fromName: areaById(g.from).name,
+    gates: GATES.map(g => ({id: g.id, a: g.a, b: g.b, station: g.station, y: g.y, span: g.span, price: g.price, from: g.from, opens: g.opens, name: areaById(g.opens).name, fromName: areaById(g.from).name,
       state: !has(g.id) ? 'open' : open.has(g.from) ? 'purchasable' : 'locked'})),
-    areas: AREAS.map(a => ({id: a.id, name: a.name, x: a.x, z: a.z, open: open.has(a.id)})),
-    crates: STATIONS.map(s => ({weapon: s.weapon, at: s.at, area: s.area, price: s.price, open: open.has(s.area)})),
+    areas: AREAS.map(a => ({id: a.id, name: a.name, x: a.x, z: a.z, y: a.y, shift: a.shift, open: open.has(a.id)})),
+    crates: STATIONS.map(s => ({weapon: s.weapon, at: s.at, y: s.y, area: s.area, price: s.price, open: open.has(s.area)})),
   };
 }
 // ---- Build 14: the full-screen map. One layout, worked out from the state alone, is what the map draws and what the tests
@@ -226,17 +255,20 @@ const CHART = {w: 1000, h: 1600, pad: 70, fontArea: 32, fontLabel: 28, fontState
 // The recorded Build 15 game that the trace suite replays asks the rules for the start: it is given the map's.
 Object.defineProperty(AMBUSH, 'start', {get: () => ARENA_START, enumerable: false});
 let ARENA_START;
-onMap(map => { ARENA_START = map.ambush.start; ({walls: ARENA_WALLS, areas: AREAS, gates: GATES, stations: STATIONS} = map.ambush); MAP = {...CHART, bounds: map.ambush.chart}; });
+onMap(map => { ARENA_START = map.ambush.start; ({walls: ARENA_WALLS, areas: AREAS, gates: GATES, stations: STATIONS} = map.ambush); MAP = {...CHART, bounds: map.ambush.chart}; LEVELS = !!map.ambush.levels; PASSAGES = map.ambush.passages || []; CURVE = map.ambush.curve || null; });
 // Width of `text` at `size` px, estimated generously for bold Arial capitals and digits (the draw also limits the width).
 export const textWidth = (text, size) => Math.ceil([...String(text)].reduce((w, ch) => w + (ch === ' ' ? .3 : ch === '·' ? .4 : /[0-9]/.test(ch) ? .6 : .74), 0) * size);
 const overlaps = (a, b, gap = 0) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
 export function mapLayout(state, segs, player, weaponName) {
   const {w, h, pad, bounds: {x: [x0, x1], z: [z0, z1]}} = MAP, scale = Math.min((w - 2 * pad) / (x1 - x0), (h - 2 * pad) / (z1 - z0));
-  const ox = (w - scale * (x1 - x0)) / 2, oy = (h - scale * (z1 - z0)) / 2, X = x => ox + (x - x0) * scale, Y = z => oy + (z - z0) * scale;
-  const areas = state.areas.map(a => ({id: a.id, name: a.name, open: a.open, rect: {x: X(a.x[0]), y: Y(a.z[0]), w: (a.x[1] - a.x[0]) * scale, h: (a.z[1] - a.z[0]) * scale}}));
-  const gates = state.gates.filter(g => g.state !== 'open').map(g => ({id: g.id, state: g.state, price: g.price, name: g.name, line: [X(g.a[0]), Y(g.a[1]), X(g.b[0]), Y(g.b[1])], at: [X(g.station[0]), Y(g.station[1])]}));
-  const crates = state.crates.map(c => ({weapon: c.weapon, open: c.open, price: c.price, at: [X(c.at[0]), Y(c.at[1])]}));
-  const edge = segs.map(([ax, az, bx, bz]) => [X(ax), Y(az), X(bx), Y(bz)]);
+  const ox = (w - scale * (x1 - x0)) / 2, oy = (h - scale * (z1 - z0)) / 2;
+  // Build 33: the floors of an arena with height lie one over another; the map draws each area's plan where its `shift`
+  // puts it (the floors side by side), and everything that belongs to an area with it. No area of Kohar Valley has one.
+  const S = id => state.areas.find(a => a.id === id)?.shift, X = (x, s) => ox + (x + (s ? s[0] : 0) - x0) * scale, Y = (z, s) => oy + (z + (s ? s[1] : 0) - z0) * scale;
+  const areas = state.areas.map(a => ({id: a.id, name: a.name, open: a.open, rect: {x: X(a.x[0], a.shift), y: Y(a.z[0], a.shift), w: (a.x[1] - a.x[0]) * scale, h: (a.z[1] - a.z[0]) * scale}}));
+  const gates = state.gates.filter(g => g.state !== 'open').map(g => { const s = S(g.from); return {id: g.id, state: g.state, price: g.price, name: g.name, line: [X(g.a[0], s), Y(g.a[1], s), X(g.b[0], s), Y(g.b[1], s)], at: [X(g.station[0], s), Y(g.station[1], s)]}; });
+  const crates = state.crates.map(c => ({weapon: c.weapon, open: c.open, price: c.price, at: [X(c.at[0], S(c.area)), Y(c.at[1], S(c.area))]}));
+  const edge = segs.map(([ax, az, bx, bz, , on]) => [X(ax, S(on)), Y(az, S(on)), X(bx, S(on)), Y(bz, S(on))]);
   // Markers and barricade lines are obstacles for labels; a label may sit beside its own marker but never on any.
   const blocks = [...gates.map(g => ({x: Math.min(g.line[0], g.line[2]) - 5, y: Math.min(g.line[1], g.line[3]) - 5, w: Math.abs(g.line[2] - g.line[0]) + 10, h: Math.abs(g.line[3] - g.line[1]) + 10})), ...gates.map(g => ({x: g.at[0] - 11, y: g.at[1] - 11, w: 22, h: 22})), ...crates.map(c => ({x: c.at[0] - 11, y: c.at[1] - 11, w: 22, h: 22}))];
   const labels = [], free = box => box.x >= 8 && box.y >= 8 && box.x + box.w <= w - 8 && box.y + box.h <= h - 8 && !labels.some(l => overlaps(l, box, MAP.gap)) && !blocks.some(b => overlaps(b, box, 2));
@@ -247,8 +279,8 @@ export function mapLayout(state, segs, player, weaponName) {
     put('state', a.id, a.open ? 'OPEN' : 'CLOSED', MAP.fontState, (tw, th) => [[name.x + name.w / 2 - tw / 2, name.y + name.h + 2], ...inside(tw, th)]); }
   for (const g of gates) put('gate', g.id, `${g.price} PTS`, MAP.fontLabel, around(...g.at));
   for (const c of crates) put('crate', c.weapon, `${weaponName(c.weapon)} · ${c.price}`, MAP.fontLabel, around(...c.at));
-  const dir = [-Math.sin(player.yaw), -Math.cos(player.yaw)], at = [X(player.x), Y(player.z)];
-  return {w, h, scale, origin: [ox, oy], areas, gates, crates, edge, labels, player: {at, dir, tip: [at[0] + dir[0] * MAP.arrow, at[1] + dir[1] * MAP.arrow]}, toMap: (x, z) => [X(x), Y(z)]};
+  const dir = [-Math.sin(player.yaw), -Math.cos(player.yaw)], at = [X(player.x, player.shift), Y(player.z, player.shift)];
+  return {w, h, scale, origin: [ox, oy], areas, gates, crates, edge, labels, player: {at, dir, tip: [at[0] + dir[0] * MAP.arrow, at[1] + dir[1] * MAP.arrow]}, toMap: (x, z, s) => [X(x, s), Y(z, s)]};
 }
 // The legend beside the map: short lines, one per area with its state and what opening it costs, and a second line for a
 // barricade that cannot be bought yet saying where it is bought from. Rifles and their prices are on the map itself.
@@ -262,12 +294,12 @@ export function mapLegend(state) {
 // carries a band of green paint, a painted board with its rifle's name and a lantern on a short post beside it. The lantern
 // is lit (unlit glass material, no light source) while the thing can be bought: a barricade whose area of purchase is open,
 // a crate whose area is open. `label` is the painted text; mats.label(text, kind) makes the board's material.
-export function buildMarking(kind, id, [x, z], along, groundY, mats, label, lit) {
+export function buildMarking(kind, id, [x, z], along, groundY, mats, label, lit, span = 3.62) {
   const y = groundY(x, z), group = new THREE.Group(), paint = kind === 'gate' ? mats.tape : mats.crateFlag, gate = kind === 'gate';
   const lx = gate ? x : x + .85, lz = z, top = gate ? 2.3 : 1.85, by = gate ? 1.72 : 1.08, bz = gate ? 0 : -.27, bw = gate ? 1.0 : .95, bh = .42;
   group.add(merged([boxAt(.07, gate ? top - 1.5 : top, .07, lx, y + (gate ? 1.5 + (top - 1.5) / 2 : top / 2), lz), boxAt(.2, .04, .2, lx, y + top + .02, lz), boxAt(.2, .04, .2, lx, y + top + .3, lz), boxAt(.05, .1, .05, lx, y + top + .37, lz),
     boxAt(gate && !along ? .05 : bw + .08, bh + .08, gate && !along ? bw + .08 : .05, x, y + by, z + bz), ...(gate ? [] : [boxAt(.05, .3, .05, x - .4, y + .9, z + bz), boxAt(.05, .3, .05, x + .4, y + .9, z + bz)])], mats.wood));
-  group.add(merged(gate ? [boxAt(along ? 3.62 : .16, .05, along ? .16 : 3.62, x, y + 1.385, z)] : [boxAt(1.13, .12, .63, x, y + .5, z)], paint));
+  group.add(merged(gate ? [boxAt(along ? span : .16, .05, along ? .16 : span, x, y + 1.385, z)] : [boxAt(1.13, .12, .63, x, y + .5, z)], paint));
   const glass = new THREE.Mesh(new THREE.BoxGeometry(.15, .24, .15), lit ? mats.lampLit : mats.lampOff); glass.position.set(lx, y + top + .16, lz); glass.userData.lantern = true; group.add(glass);
   for (const side of [1, -1]) { const face = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), mats.label(label, kind)); face.position.set(x + (gate && !along ? side * .03 : 0), y + by, z + bz + (gate && !along ? 0 : side * .03)); face.rotation.y = (gate && !along ? Math.PI / 2 : 0) + (side < 0 ? Math.PI : 0); face.userData.board = true; group.add(face); }
   group.children.forEach(m => { m.castShadow = false; m.userData.marking = true; });
