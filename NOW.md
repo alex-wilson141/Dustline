@@ -2,7 +2,26 @@
 
 _Updated 2026-09-30. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
 
-**Build 31 is committed locally and NOT pushed** (stair width and glass corners). **Build 24 is LIVE.** **The user plays locally and says when a build is to be published: do not push. Do not take Safari: give bench URLs.**
+**Build 32 is committed locally and NOT pushed** (map build 8: changing map in a running page). **Build 24 is LIVE.** **The user plays locally and says when a build is to be published: do not push. Do not take Safari: give bench URLs.**
+
+**Build 32 in short: the map is chosen in the menu and changed without reloading, alone or with your teammate** (`http://localhost:8765/`).
+- **What was added to the menu:** two buttons under the mode tabs, KOHAR VALLEY and DEHRUN TERRACES; the one in use is lit. Pressing the other puts up LOADING MAP for a second or two and you are in the menu of the other map: its header, its brief, its modes (Ambush only on Kohar Valley). The address `?map=dehrun` still works for a page that should start there.
+- **How it works:** the whole game is now a function the page calls once per map. Leaving a map throws that game away entirely (its listeners, its frame loop, everything it drew with, its canvas) and makes a new one; only the connection and your chosen class are carried over. So nothing of the last map can be left behind, and Kohar Valley built again runs exactly the code Kohar Valley loaded fresh runs.
+- **In co-op:** the host chooses from the menu; the guest follows on the same connection, wherever it is; each guest game tells the host when it stands on the map, and the host cannot deploy before that. A guest cannot choose. The codes are never exchanged again.
+- **What it costs:** building the world blocks the page about 1.1 s for Dehrun Terraces and 0.2 s for Kohar Valley; in the desktop app's browser the first frame came 2.9 s and 1.3 s after the click. Safari is yours to measure (B28).
+- **The customs house's rooms:** four were too small to fight in (under 5 m across or under 30 m²) and are now part of their neighbours: the south-east room on every storey (27 m², the one you noticed, left narrow by the wider stairs) and the first floor's north-west room (29 m²). New sizes: ground south hall 11.5 by 7.8 m (90 m²); first-floor north room 12.5 by 6.4 (80) and south room 12.5 by 7.8 (97); second-floor south room 10.5 by 7.8 (82). The smallest room left is the ground floor's north-west room, 5.5 by 6.4 m (35 m²).
+- **What to try:** in the menu press DEHRUN TERRACES, walk or play Skirmish, break some windows, leave to the menu (L), press KOHAR VALLEY, play a Story mission, go back: the town is whole again. With your teammate: connect on Kohar Valley as always, then as host press DEHRUN TERRACES in the menu: both of you should be in Dehrun's menu, still connected; deploy; afterwards go back to Kohar Valley together the same way. As a guest, try the map buttons: nothing should happen but a line saying the host chooses.
+- **Checks:** 35 suites, 311 checks, all pass (headless), the three traces identical. T42 is new (7 checks). Breakage pass: see the roadmap's change log.
+- **Safari (B28): awaiting the user.** `http://localhost:8770/b32/?bench=change` (**the cost of a map change**, four changes, results in the title) · `http://localhost:8770/b32/?bench=1&case=none` · `http://localhost:8770/b32/?map=dehrun&bench=look&case=town` · `http://localhost:8770/b32/?map=dehrun&bench=look&case=skirmish` · `http://localhost:8770/b32/?map=dehrun&bench=look&case=stairs` · `http://localhost:8770/b32/?map=dehrun&bench=look&case=holes`.
+- **Filed for later, not built:** F.16 free models for hands, soldiers and distinct rifles (**the build after next**; it begins with research and your approval of the list, and with F.19: whether the enemies are a neutral army or terrorists, which decides their look; fictional either way, and always distinct from your squad and teammate); F.17 the HUD equipment panel (icons and counts, Siege-style); F.18 glass that breaks with an animation and in parts.
+- **Found, not fixed (MAP-12):** the page is blocked while a world is built; Dehrun's models are prepared again at every visit; a guest in a mission when the host changes map is taken out without a report; Dehrun has no Story operation, so its menu still says the walk.
+
+**Decisions for the user (Build 32):**
+- The ground floor's north-west room (35 m², 5.5 m across): kept as the smallest room; say if it should go into the north hall too.
+- The next build (the one before the models build): dressing (map build 9 of the old count), Ambush on the customs house, or the HUD panel.
+- F.19 can be decided any time before the models build: neutral army or terrorists.
+
+**Build 31 is committed locally and NOT pushed** (stair width and glass corners).
 
 **Build 31 in short: every stair is 2.4 m, and every part of a window breaks it and is clear once broken** (`http://localhost:8765/?map=dehrun`; `&foes=1` for enemies on the walk).
 - **Stairs, the number: 2.4 m clear** (2.39 to 2.51 measured on the 23 flights): a player and an enemy side by side with .8 m to spare, two enemies with .6, three players abreast. Nothing downstream is tighter: the customs house's half landings are 3.45 and 4.85 m deep and 4.9 m across, the way into each stair 4.84 m, the roof doors 2.4 m (2.19 clear, were 1.69), house A's well as wide as its flight. The eye fix is untouched (its text is pinned by T41 and its behaviour measured again on the wider stair).

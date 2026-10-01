@@ -424,5 +424,7 @@ export function buildTerraces(ctx, map) {
   // Build 26: where the enemies can go, made from the space when first asked for (a body of their width, their stair rule).
   for (const b of space.boxes) if (b.src) owned.get(b.src).box = b;   // a loose part's box in the space, switched off with it
   let nav = null; const navigation = () => nav ??= makeNav(space, {region: map.edges, doors: stats.doors, ladders, starts: [map.starts.player, ...(map.enemies?.spawns || [])].map(([x, z]) => ({x, y: groundY(x, z), z}))});
-  return {stats, materials, roofs, space, navigation, glass, ready: Promise.all(ready)};
+  // Build 32: thrown away with the game that asked for it (a map change): what it listed and found is let go.
+  const dispose = () => { stats.list.length = 0; panes.length = 0; loose.length = 0; space.dispose(); nav = null; };
+  return {stats, materials, roofs, space, navigation, glass, dispose, ready: Promise.all(ready)};
 }

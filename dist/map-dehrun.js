@@ -258,18 +258,18 @@ export const DEHRUN = {
         stairs: [{axis: 'z', x: K.stairW.x, z: [K.stairW.z[1], K.stairW.z[0]], storeys: [0, 1, 2], landing: 3.4, head: {door: 2.4}}, {axis: 'z', x: K.stairE.x, z: [K.stairE.z[0], K.stairE.z[1]], storeys: [0, 1, 2], landing: 4.8, head: {door: 2.4}}],   // Build 31: flights 2.4 m clear, the half landings 3.4 and 4.8 m deep (the treads .36 m on both stairs), the roof doors 2.4 m
         storeys: [
         {height: 3.4, surface: 'masonry', room: true, floor: 'slab',
-          rooms: kRooms([nRoom('north-west room', [-7.5, -2]), nRoom('north hall', [-2, 12.6])], [sRoom('south-west room', [-12.6, -4]), sRoom('south hall', [-4, 4]), sRoom('south-east room', [4, 7.5])]),
-          doors: [way(-6, 59.8), way(0, 59.8), way(8, 59.8), way(-8, 62.8), way(0, 62.8), way(5.8, 62.8), way(4, 67, {width: 1.3}), way(-2, 56.5, {width: 1.3}), way(-4, 67, {width: 1.3})],
+          rooms: kRooms([nRoom('north-west room', [-7.5, -2]), nRoom('north hall', [-2, 12.6])], [sRoom('south-west room', [-12.6, -4]), sRoom('south hall', [-4, 7.5])]),   // Build 32: the south-east room (3.5 m wide) is part of the hall
+          doors: [way(-6, 59.8), way(0, 59.8), way(8, 59.8), way(-8, 62.8), way(0, 62.8), way(5.8, 62.8), way(-2, 56.5, {width: 1.3}), way(-4, 67, {width: 1.3})],
           west: [wide(61.3), win(64, {bars: true}), win(66.5, {bars: true}), win(69, {bars: true})], east: [wide(61.3), win(56, {bars: true}), win(58.4, {bars: true})],
           north: [wide(3), win(-6.2, {bars: true}), win(-.5, {bars: true}), win(7, {bars: true}), win(11, {bars: true})], south: [wide(0), win(-10, {bars: true}), win(-7, {bars: true}), win(2, {bars: true}), win(6.2, {bars: true})]},
         {height: 3.2, surface: 'plaster', band: 'white', room: true,
-          rooms: kRooms([nRoom('north-west room', [-7.5, -3]), nRoom('north room', [-3, 5]), nRoom('north-east room', [5, 12.6])], [sRoom('south-west room', [-12.6, -5]), sRoom('south room', [-5, 4]), sRoom('south-east room', [4, 7.5])]),
-          doors: [way(-6, 59.8), way(1, 59.8), way(9, 59.8), way(-3, 56.5, {width: 1.3}), way(-8, 62.8), way(0, 62.8), way(5.8, 62.8), way(4, 67, {width: 1.3})],
+          rooms: kRooms([nRoom('north room', [-7.5, 5]), nRoom('north-east room', [5, 12.6])], [sRoom('south-west room', [-12.6, -5]), sRoom('south room', [-5, 7.5])]),   // Build 32: the north-west room (4.5 m) and the south-east room (3.5 m) are part of their neighbours
+          doors: [way(-6, 59.8), way(1, 59.8), way(9, 59.8), way(-8, 62.8), way(0, 62.8), way(5.8, 62.8)],
           west: [dwin(64.8, {sill: .8}), win(69, {sill: .8, open: [2.75, 1.2]})], east: [win(56, {sill: .8}), win(58.4, {sill: .8, open: [1.1, 2.75]})],
           north: [win(-6.2, {sill: .8}), dwin(0, {sill: .8}), win(3, {sill: .8}), win(8, {sill: .8}), win(11, {sill: .8})], south: [win(-10.5, {sill: .8}), win(-7.5, {sill: .8}), win(-3, {sill: .8, open: [1.3, 2.75]}), dwin(.8, {sill: .8}), win(6.2, {sill: .8})]},
         {height: 3.2, surface: 'white', band: 'ochre', room: true,
-          rooms: kRooms([nRoom('loft', [-7.5, 12.6])], [sRoom('south-west room', [-12.6, -3]), sRoom('south room', [-3, 4]), sRoom('south-east room', [4, 7.5])]),
-          doors: [way(-5, 59.8), way(7, 59.8), way(-8, 62.8), way(0, 62.8), way(5.8, 62.8), way(4, 67, {width: 1.3}), way(-3, 67, {width: 1.3})],
+          rooms: kRooms([nRoom('loft', [-7.5, 12.6])], [sRoom('south-west room', [-12.6, -3]), sRoom('south room', [-3, 7.5])]),   // Build 32: the south-east room is part of the south room
+          doors: [way(-5, 59.8), way(7, 59.8), way(-8, 62.8), way(0, 62.8), way(5.8, 62.8), way(-3, 67, {width: 1.3})],
           west: [dwin(65, {sill: .8}), win(69, {sill: .8})], east: [win(56, {sill: .8, open: [2.75, 1]}), win(58.4, {sill: .8})],
           north: [win(-6.2, {sill: .8}), dwin(-2.5, {sill: .8}), win(2, {sill: .8}), dwin(6.5, {sill: .8}), win(11, {sill: .8})], south: [win(-10, {sill: .8}), dwin(-6, {sill: .8}), win(-1.5, {sill: .8}), win(1.5, {sill: .8}), win(6.2, {sill: .8, open: [2.75, 1.3]})]}]},
       ...DIST.houses,

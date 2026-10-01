@@ -53,7 +53,7 @@ await check('kohar', 'Kohar Valley\'s co-op is what it was: a scripted two-playe
     p.place('host', host.remote.g.position.x + 1.95, 0, host.remote.g.position.z); host.press('KeyE'); p.run(5); host.release('KeyE'); p.run(3);   /* at the edge of the revive's reach */
     const row = () => [at(host.player), at(guest.player), at(host.remote.g.position), at(guest.remote.g.position), +host.coop.hp().toFixed(2), +host.remote.hp.toFixed(2), host.kills(), target.hp, host.fall.fallen.mate.down, +host.fall.fallen.mate.progress.toFixed(3), host.state().state, guest.state().state];
     for (let i = 0; i < 6; i++) { rows.push(row()); p.run(.5); }
-    const strip = m => { const c = wire(m); delete c.cl; delete c.dc; return c; };   /* `cl` is new; a decal (`dc`) is cosmetic and drawn by Math.random, never the same twice */
+    const strip = m => { const c = wire(m); delete c.cl; delete c.dc; delete c.map; return c; };   /* Build 32: `mode` and `start` name the host's map */   /* `cl` is new; a decal (`dc`) is cosmetic and drawn by Math.random, never the same twice */
     return {rows, wasDown, toHost: p.log.toHost.map(strip), toGuest: p.log.toGuest.map(strip), n: [p.log.toHost.length, p.log.toGuest.length]}; };
   const now = await run(createGame), was = await run(old.createGame);
   assert.deepEqual(now.rows, was.rows, 'the same run'); assert.deepEqual(now.n, was.n, 'as many messages'); assert.deepEqual(now.toHost, was.toHost, 'the guest\'s messages'); assert.deepEqual(now.toGuest, was.toGuest, 'the host\'s messages');

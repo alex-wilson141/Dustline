@@ -105,7 +105,7 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   function ladderAt(p, fx, fz, back = false) { for (const l of ladders) { const dx = p.x - l.x, dz = p.z - l.z, facing = fx * l.dir[0] + fz * l.dir[1];
     if (!back) { if (Math.hypot(dx, dz) > .75 || p.y < l.bottom - .4 || p.y > l.top - .6 || facing > -.35) continue; return l; }
     else { if (Math.hypot(p.x - l.exit[0], p.z - l.exit[1]) > .8 || p.y < l.top - 1.3 || p.y > l.top + .3 || facing < .35) continue; return l; } } return null; }
-  return {boxes: list, clear, stands, floor, ceiling, headroom, move, ledge, ladderAt, ladders, body, settle,
+  return {boxes: list, clear, stands, floor, ceiling, headroom, move, ledge, ladderAt, ladders, body, settle, dispose() { list.length = 0; grid.clear(); },
     // Whether a body under something may stand up yet: only once the whole of it is out from under (else it is held down).
     mayStand: (x, z, y) => headroom(x, z, y, body.radius) >= body.stand,
     // Everything a body can stand on within a square, for the checks: box tops and the ground.

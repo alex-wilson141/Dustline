@@ -10,3 +10,5 @@ body.in-play header{display:none}#squad,#map,#controls{display:none}body.tactica
 body.tactical #stance{display:block!important}body.solo #squad{display:none!important}body.tactical #vitals{bottom:38px}
 #hit{font-size:26px;line-height:1;color:#ece8de;text-shadow:0 0 2px #000b;transition:opacity .08s}#hit.head{color:#ff5a47}
 #killalert{position:absolute;left:50%;top:calc(50% + 30px);transform:translateX(-50%);font-size:11px;letter-spacing:2px;color:#e9e4d6;text-shadow:0 0 3px #000c;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+
+.map-tabs{margin-top:6px}#maploading{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(18,21,22,.92);color:#f1d49b;font:bold 15px/1 Arial,Helvetica,sans-serif;letter-spacing:.3em}#maploading[hidden]{display:none}

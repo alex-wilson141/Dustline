@@ -10,7 +10,8 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - Static HTML/CSS/JavaScript using bundled Three.js r169; no npm install or build
   step is required. `dist/` contains the authored source and bundled assets. It
   is not disposable generated output.
-- `dist/game.js`: input, movement, simulation, missions and co-op integration.
+- `dist/game.js`: input, movement, simulation, missions and co-op integration. Since Build 32 its body is one function,
+  `dustline(PAGE)`, booted once per map; the file's last lines boot it for the page.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
@@ -27,6 +28,26 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 32 (local, 2026-10-01): changing map in a running page, map build 8 (MAP-01 done). **The game is a function of the page:
+everything in `game.js` below its imports is inside `function dustline(PAGE){...}`, called when the page loads and again for
+every map (`PAGE.boot()`, the last lines of the file). A game shares nothing with the one before it but what is the page's on
+purpose: `PAGE.peer` (the connection: a new game only gives it its hooks; nothing but DISCONNECT and a lost connection closes it,
+Build 20) and `PAGE.keep` (the chosen class). Never keep anything else on `PAGE`, on `window` or in a module: a thing kept is a
+thing left over from the last map (T42 hunts it).** `dispose()` throws a game away: every listener is registered with `on(target,
+type, fn)` (one `AbortController`, and inert once `dead`), the frame loop returns when `dead`, every geometry, material and texture
+in the scene is released, the kit's lists are let go (`built.dispose()`), the renderer loses its context and its canvas leaves the
+page. `changeMap(id, told)`: alone, from the menu only; connected, the host from the menu (it sends `map`), the guest only when told
+(wherever it is: a mission is left first); `loadMap(id)` from `maps.js`, `dispose()`, `PAGE.boot()`. A guest's game sends `ready`
+with its map when it stands and on connecting; the host keeps it (`mateMap`), answers with `mode` (or `start` in a mission, or
+`map` if the guest is elsewhere) and does not deploy a linked mission while it knows its guest to be on another map; `mode` and
+`start` carry `map`. **No `import()` in `game.js`, and no `import.meta`** (the harness runs it as a function body). The menu has a
+button for each map (`[data-map]`, `#maploading`); `lookMenu()` sets the header and the map marks on every map. The harness boots
+the function itself (`/*#harness*/` and `/*#page*/` mark where its exports go and where the page's last lines begin; old builds
+without them load as before); `g.page.game` is the page's current game, `g.changeMap(id)` resolves to the new one, and imported
+`let` exports are read again at every boot. **Building a world blocks the page (about 1.1 s for Dehrun Terraces).** The customs
+house: the south-east room on every storey and the first floor's north-west room are part of their neighbours (rule: under 5 m or
+30 m² is too small to fight in); eleven rooms. Filed, not built: F.16 models (the build after next; F.19 the enemies' faction is
+decided there first), F.17 the HUD panel, F.18 glass in pieces with an animation. B28 awaits the user.
 Build 31 (local, 2026-10-01): stair width and glass corners. **Stairs are 2.4 m (the user asked for wider four times: widen, do not
 investigate again; the Build 30 eye is untouched, T41 pins its text).** Every flight 2.4 m (2.39 to 2.51 clear). The customs
 house's wells are 5.1 m wide (x ±7.5 to ±12.6) and take the house's whole depth beside the corridor (`stairW` z 53.4..59.8,
@@ -387,15 +408,16 @@ node tests/test-town-b28.mjs
 node tests/test-windows-b29.mjs
 node tests/test-frames-b30.mjs
 node tests/test-corners-b31.mjs
+node tests/test-mapchange-b32.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 31 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 32 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye and 7 corners-and-stairs checks (304 in 34 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs and 7 map-change checks (311 in 35 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
