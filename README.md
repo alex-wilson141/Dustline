@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 34)
+# DUSTLINE — Operation Broken Signal (Build 35)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -120,6 +120,14 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 3. **Host:** paste the answer and press ACCEPT ANSWER. Keep both pages open and do not reload in between.
 
 Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the game connects players directly and has no relay server. Both players must be on the same build.
+
+## Hostile variety on Dehrun Terraces (Build 35)
+
+- **No two hostiles come the same way:** each has its own speed, its own lane across the corridor or stair, its own distance to hold at and its own place beside you; some never stop until they are close.
+- **Rushers** (red cloth on head and chest) run straight at you, never shoot, and strike with a blade in reach.
+- **Bombers** (black vest, blinking amber light, a beep that quickens) go off like a grenade when they reach you. Shoot them first: a dead bomber does not go off. You hear them from 30 m.
+- **The mix shifts:** wave 1 is mostly rifles; by wave 12 fewer than half are.
+- Kohar Valley's Ambush is unchanged.
 
 ## Ambush difficulty and movement fixes (Build 34)
 

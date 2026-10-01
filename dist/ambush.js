@@ -62,6 +62,18 @@ export let ARENA_WALLS, AREAS, GATES, STATIONS, MAP;
 // other is not); `CURVE` is what the map changes of the wave curve below. Kohar Valley names none of them: its arena is
 // flat, its edge is worked out from its areas (`arenaEdges`) and its curve is the one written here.
 export let LEVELS = false, PASSAGES = [], CURVE = null;
+// Build 35: kinds of hostile and how each one differs (the map's `ambush.kinds` and `ambush.vary`; Kohar Valley names
+// neither and has one kind, as ever). KIND_IDS is what a snapshot sends.
+export let KINDS = null, VARY = null;
+export const KIND_IDS = ['rifle', 'rusher', 'bomber'];
+// The kinds of a wave's arrivals, in the order they arrive: `count` of them at wave n. Bombers: one for every `every`
+// waves of the wave's number (none in wave 1), never more than a quarter; rushers: a share of the wave that grows with
+// it (`share`: at wave 0, a wave, at most); the rest rifles. Each kind is spread evenly through the wave, a bomber never
+// among the first two. Worked out from the numbers alone: host, guest and the checks get the same list.
+export function waveKinds(n, count) { const out = Array(count).fill('rifle'); if (!KINDS) return out;
+  const B = KINDS.bomber, R = KINDS.rusher, bombers = B ? Math.min(Math.floor(n / B.every), Math.round(count / 4)) : 0, rushers = R ? Math.round(count * Math.min(R.share[2], R.share[0] + R.share[1] * n)) : 0;
+  const put = (kind, k, first) => { for (let i = 0; i < k; i++) { let at = Math.min(count - 1, first + Math.floor((i + .5) * (count - first) / k)); while (at < count && out[at] !== 'rifle') at++; if (at >= count) { at = out.lastIndexOf('rifle'); if (at < first) break; } out[at] = kind; } };
+  put('bomber', bombers, 2); put('rusher', rushers, 0); return out; }
 // Build 11 economy. A magazine's price follows the damage it can deal (capacity × damage), so every rifle pays about the
 // same per potential kill, and it rises with the wave up to magWaveCap: CQB/carbine 70 → 175, DMR 100 → 250, automatic
 // rifle 160 → 400 points (wave 1 → wave 16+). Rounds are added to the reserve up to the rifle's reserve limit.
@@ -257,7 +269,7 @@ const CHART = {w: 1000, h: 1600, pad: 70, fontArea: 32, fontLabel: 28, fontState
 // The recorded Build 15 game that the trace suite replays asks the rules for the start: it is given the map's.
 Object.defineProperty(AMBUSH, 'start', {get: () => ARENA_START, enumerable: false});
 let ARENA_START;
-onMap(map => { ARENA_START = map.ambush.start; ({walls: ARENA_WALLS, areas: AREAS, gates: GATES, stations: STATIONS} = map.ambush); MAP = {...CHART, bounds: map.ambush.chart}; LEVELS = !!map.ambush.levels; PASSAGES = map.ambush.passages || []; CURVE = map.ambush.curve || null; });
+onMap(map => { ARENA_START = map.ambush.start; ({walls: ARENA_WALLS, areas: AREAS, gates: GATES, stations: STATIONS} = map.ambush); MAP = {...CHART, bounds: map.ambush.chart}; LEVELS = !!map.ambush.levels; PASSAGES = map.ambush.passages || []; CURVE = map.ambush.curve || null; KINDS = map.ambush.kinds || null; VARY = map.ambush.vary || null; });
 // Width of `text` at `size` px, estimated generously for bold Arial capitals and digits (the draw also limits the width).
 export const textWidth = (text, size) => Math.ceil([...String(text)].reduce((w, ch) => w + (ch === ' ' ? .3 : ch === '·' ? .4 : /[0-9]/.test(ch) ? .6 : .74), 0) * size);
 const overlaps = (a, b, gap = 0) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;

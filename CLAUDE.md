@@ -28,6 +28,26 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 35 (local, 2026-10-01): hostile variety on Dehrun Terraces (F.20's first part). **User decisions: Kohar Valley's Ambush must NOT
+change (variety is Dehrun's only; T45, T44 and T43 compare Kohar's with Builds 34, 33 and 32); the roof arena comes after the
+hostiles differ, not alongside; simultaneous shooters stay 3, 4, 5; the open door leaves stay.** Kinds and variation are the
+map's (`ambush.kinds`, `ambush.vary`; `KINDS`, `VARY`, `waveKinds(n, count)` in `ambush.js`); every line in `game.js` that uses them
+is behind `LEVELS`, `KINDS`, `VARY` or `ai.v`, none of which Kohar Valley has. A wave's kinds are a list worked out from the wave's
+number and count (bombers `floor(n / every)` up to a quarter, none in wave 1; rushers a share that grows; the rest rifles); two
+players have a list each (`amb.kindsFor`): never deal one list in turn. Each arrival draws `ai.v` (`varyDraw`: speed, hold,
+fight, pause, bold, lane, seed) from `aiRng`. **A rusher (`rusherPlan`) never stops and never fires; it strikes (`kindStrike`)
+within `reach` with a clear line. A bomber (`bomberPlan`) may not begin its fuse before it has been within `hear` of its player for
+`warn` seconds; it goes off by `blast(P, 'enemy')` (nobody's kill, no points, no grenade notice) and not at all when killed
+first.** What tells kinds apart is made once per enemy at the start of a run (`kindMarks`; `setKind` only shows and hides) and
+sent to the guest with every snapshot (`kd`); `kindFx` (the light, the beep) runs on both pages and decides nothing. **Dispersal:
+a lane across the real width of the way (`laneRoute`), its own choice among equally short ways (`follow(..., seed)`), a place of
+its own beside the player that can see the player (`ambushSpot3`: never make for a place without a line to the player), no stop
+within 1.6 m of one already firing (`ambushCrowded`), slower when close behind another (`ambushBehind`).** Three stalls were
+found by measuring and must not come back: a way starts from a place the body can walk to (`LAYERS.sure`, never the merely
+nearest: it may be through a wall); one near its player that has not seen it for `HUNT` seconds goes to the player; progress
+with height is metres of way left (`ai.left`, `ai.bestLeft`), never a shorter list of places. The ladder: a way with `most` takes
+that many bound for it, `apart` seconds between them; one that waits a second there takes another way. **Measure dispersal
+against the build before, played on the spot (`spread()` in T45); do not assert it from the code.**
 Build 34 (local, 2026-10-01): Ambush difficulty and movement fixes, after the user's playtest of Dehrun's Ambush (fun, far too
 easy, all from one side). **A body in the air is not a walking body (`air` in `space.js` `move`; the game passes `air: !grounded`):
 it is not set down a step (Build 28's rule put every moving jump back on the floor: a jump while moving rose 5 cm from Build 28 to
@@ -452,15 +472,16 @@ node tests/test-corners-b31.mjs
 node tests/test-mapchange-b32.mjs
 node tests/test-ambush-dehrun-b33.mjs
 node tests/test-difficulty-b34.mjs
+node tests/test-variety-b35.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 34 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 35 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush and 8 difficulty-and-movement checks (330 in 37 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement and 8 hostile-variety checks (338 in 38 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

@@ -220,13 +220,26 @@ export const DEHRUN = {
     // fire at a player at once from wave 3 and another from wave 6 (three on Kohar Valley, always); and they run (6 m/s for
     // 2.8) while more than 12 m of their way is left and they see nobody. Accuracy, damage and the cadence of each are every map's.
     curve: {cap: [2, 1], ceiling: 10, count: 1.5, gap: .6, tokens: [3, 6], run: 6},
+    // Build 35: the kinds of hostile (ambush.js `waveKinds`, game.js `rusherPlan`, `bomberPlan`) and how one differs from
+    // the next (`vary`). A rusher runs at its player at `speed` whether seen or not, fires at nobody, and strikes for
+    // `strike` (times armor) every `every` seconds within `reach`. A bomber runs at `speed`, is heard from `hear` metres
+    // (a beep that quickens as it nears) and wears a black vest with a blinking amber light; within `trigger` of its player and in sight, and not
+    // before it has been in earshot for `warn` seconds, it stops and after `fuse` goes off as a fragmentation grenade
+    // does. Shot dead, it goes off for nobody. `vary`: what each arrival draws for itself (speed, the distance it holds
+    // at, how far off it stops to fire, how long it stops, whether it stops at all before it is close, its lane to one
+    // side of the way, the gap before the next arrival).
+    kinds: {
+      rusher: {speed: 6, reach: 1.9, strike: 28, every: 1, share: [.15, .025, .4]},
+      bomber: {speed: 4.6, trigger: 2.4, fuse: .7, hear: 30, warn: 3, every: 2},
+    },
+    vary: {speed: [.85, 1.2], hold: [3.5, 8.5], fight: [.55, 1.1], pause: [.5, 1.7], bold: .25, lane: .9, gap: [.5, 1.5]},
     // The ways in (game.js `WAYS`): each arrival is given one in turn, by these shares, and keeps to it until it is near its
     // player. By the doors and the stairs; by the ladder to the roof (no door and no window is a way for these); through a
     // ground-floor window, which the hostile breaks itself (no door and no ladder). Two in four go by the roof, so a player on
     // the top floor has as many coming down the west stair as up the east.
     routes: [
       {id: 'door', share: 1, ladders: false, vaults: 'none'},
-      {id: 'roof', share: 2, vaults: 'none', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
+      {id: 'roof', share: 2, most: 2, apart: 2.5, vaults: 'none', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
       {id: 'window', share: 1, ladders: false, vaults: 'all', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
     ],
     chart: {x: [-74, 74], z: [-118, 107]}, spots: {x: [-70, 70], z: [-28, 103], step: 4},

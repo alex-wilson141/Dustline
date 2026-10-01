@@ -72,9 +72,13 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], p
   function nearest(x, z, y, reach = 6) { let best = null, bd = 1e9; const cx = Math.floor(x / 2), cz = Math.floor(z / 2), r = Math.ceil(reach / 2);
     for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) for (const n of cells.get(`${cx + i},${cz + j}`) || []) { if (n.shut) continue; const d = Math.hypot(n.x - x, n.z - z) + 2 * Math.abs(n.y - y); if (d < bd && Math.hypot(n.x - x, n.z - z) <= reach) { bd = d; best = n; } }
     return best; }
+  // Build 35: the place a body at p can walk to: the nearest of the places round it that it reaches on its feet, and not
+  // merely the nearest (which may lie beyond the wall it stands against: T45 found a hostile sent through one for good).
+  function sure(p) { const near = []; const cx = Math.floor(p.x / 2), cz = Math.floor(p.z / 2); for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const n of cells.get(`${cx + i},${cz + j}`) || []) { if (n.shut || Math.abs(n.y - p.y) > .7) continue; const d = Math.hypot(n.x - p.x, n.z - p.z); if (d <= 1.6) near.push([d, n]); }
+    near.sort((u, v) => u[0] - v[0]); for (const [, n] of near.slice(0, 8)) if (walkable(p, n)) return n; return nearest(p.x, p.z, p.y); }
   // A* from one place to another; where the far place cannot be reached, the way to the nearest place reached.
   function path(from, to, budget = FOE.budget) {
-    const a = nearest(from.x, from.z, from.y), b = nearest(to.x, to.z, to.y); if (!a || !b) return [];
+    const a = from.sure ? sure(from) : nearest(from.x, from.z, from.y), b = nearest(to.x, to.z, to.y); if (!a || !b) return [];
     const h = n => Math.hypot(n.x - b.x, n.z - b.z) + Math.abs(n.y - b.y), open = new Heap(), g = new Map([[a, 0]]), parent = new Map(), closed = new Set(); let best = a, bestH = h(a), seen = 0; open.push({n: a, f: h(a)});
     while (open.length && seen++ < budget) { const {n} = open.pop(); if (closed.has(n)) continue; closed.add(n);
       const hn = h(n); if (hn < bestH) { bestH = hn; best = n; } if (n === b) break;
@@ -119,13 +123,16 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], p
       left -= q.length; q.length = 0; }
     return {to: b, at: [b.x, b.y, b.z], far, via: {get: id => via[id] < 0 ? null : edge[via[id]]}}; }
   // The first `count` places of the way a field gives from where a body is, as a path's (ladders and windows named).
-  function follow(f, from, count = 40) { const out = []; let n = nearest(from.x, from.z, from.y, 3); if (!n || f.far[n.id] < 0) return out;
-    for (let i = 0; i < count && n !== f.to; i++) { const e = f.via.get(n.id); if (!e) break; n = e.to; const v = new THREE.Vector3(n.x, n.y, n.z); v.kind = e.kind; if (e.kind === 'ladder') { v.ladder = e.ladder; v.up = e.up; } if (e.kind === 'vault') { v.vault = e.vault; v.from = e.from; } out.push(v); }
+  // Build 35: `seed` (a number of the walker's own): where more than one walk from a place is on a shortest way, the
+  // walker takes the one its seed picks, so that two who go the same way do not tread the same places.
+  function follow(f, from, count = 40, seed = 0) { const out = []; let n = seed ? sure(from) : nearest(from.x, from.z, from.y, 3); if (!n || f.far[n.id] < 0) return out;
+    for (let i = 0; i < count && n !== f.to; i++) { let e = f.via.get(n.id); if (!e) break;
+      if (seed && e.kind === 'walk') { const far = f.far[n.id], own = n.edges.filter(o => o.kind === 'walk' && !o.to.shut && f.far[o.to.id] >= 0 && far - f.far[o.to.id] === Math.max(1, Math.min(60, Math.round(o.cost * 2)))); if (own.length > 1) e = own[((seed * 2654435761 + n.id * 40503) >>> 0) % own.length]; } n = e.to; const v = new THREE.Vector3(n.x, n.y, n.z); v.kind = e.kind; if (e.kind === 'ladder') { v.ladder = e.ladder; v.up = e.up; } if (e.kind === 'vault') { v.vault = e.vault; v.from = e.from; } out.push(v); }
     return out; }
   // The places a body cannot stand for `boxes` (as `close` finds them), as a mask for a field of its own.
   function masked(boxes) { const m = new Uint8Array(nodes.length); for (const b of boxes) for (let i = Math.floor((b.min[0] - radius) / 2); i <= Math.floor((b.max[0] + radius) / 2); i++) for (let j = Math.floor((b.min[2] - radius) / 2); j <= Math.floor((b.max[2] + radius) / 2); j++) for (const n of cells.get(`${i},${j}`) || [])
       if (n.x >= b.min[0] - radius && n.x <= b.max[0] + radius && n.z >= b.min[2] - radius && n.z <= b.max[2] + radius && n.y < b.max[1] && n.y + height > b.min[1]) m[n.id] = 1; return m; }
-  const api = {close, route, field, follow, masked, vaultOpen: () => false, vaultTime: FOE.vaultTime, nodes, stats, nearest, path, walkable, free, move: moveBody, walk, rest, radius, height, climb: FOE.climb, doors: extras.length,
+  const api = {close, route, field, follow, masked, sure, vaultOpen: () => false, vaultTime: FOE.vaultTime, nodes, stats, nearest, path, walkable, free, move: moveBody, walk, rest, radius, height, climb: FOE.climb, doors: extras.length,
     // Where a body walking at (x, z) with its feet at y stands, as the game's height rules see it.
     floor: (x, z, y) => space.floor(x, z, y + B.step, B.lean, y)};
   return api;
