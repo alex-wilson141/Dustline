@@ -44,9 +44,9 @@ async function pair({map = 'dehrun', delay = 2} = {}) {
     deploy() { const d0 = p.delay; p.delay = 0; host.squad.pref.coop = false; host.setMode('coop'); host.start(); host.play(); guest.play(); p.delay = d0; host.set({hp: 100}); host.remote.hp = 100; for (const a of enemies(host)) { a.hp = 0; a.dead = 999; a.gone = true; a.g.visible = false; a.diedAt = -1e9; } p.sync(); }});
   host.frame(0); guest.frame(0); p.deploy(); return p; }
 const drawn = g => { const geo = new Set(), mat = new Set(); let objects = 0; g.scene.traverse(o => { objects++; if (o.geometry) geo.add(o.geometry.uuid); for (const m of [].concat(o.material || [])) mat.add(m.uuid); }); return {objects, geometries: geo.size, materials: mat.size, children: g.scene.children.length}; };
-// The customs house's west wall (x -13): a barred window on the ground floor at z 54.2 (the closet behind it) and at z 65
+// The customs house's west wall (x -13): a barred window on the ground floor at z 64 (the closet behind it) and at z 66.5
 // (the south-west room), a double window on the first floor at z 64.8.
-const WEST = -12.87, CLOSET = [-10.5, FLOORS[0], 54.2], OUT = [-18, 0, 54.2];
+const WEST = -12.87, CLOSET = [-10.5, FLOORS[0], 64], OUT = [-18, 0, 64];
 
 await check('kohar', 'Kohar Valley has no glass: the game keeps none there, its snapshots carry nothing new and no glass message is ever sent (the three traces, in their own suites, prove the rest)', async () => {
   const g = await createGame(SOURCE ? {sourcePath: SOURCE} : {}); assert.equal(g.glass, undefined, 'no glass on Kohar Valley'); assert.equal(g.built, null);
@@ -67,17 +67,17 @@ await check('stairs', 'every stair is 2 m clear (Build 28: 1.7): on each of the 
   const stops = nudge => { let n = 0; for (const f of flights) { const dir = Math.sign(f.run[1] - f.run[0]), at = (v, u) => f.axis === 'x' ? [u, v] : [v, u];
       for (const [v0, press] of [[f.across[0] + BODY.radius + .12, -1], [f.across[1] - BODY.radius - .12, 1]]) { const p = V(0, 0, 0), [x, z] = at(v0, f.run[0] - dir * .2); p.set(x, sp.floor(x, z, f.low + .5, .2, f.low).y, z); let still = 0;
         for (let i = 0; i < 400; i++) { const b = f.axis === 'x' ? p.x : p.z; sp.move(p, f.axis === 'x' ? dir * .05 : press * .05, f.axis === 'x' ? press * .05 : dir * .05, BODY.stand, BODY.radius, {nudge}); const a = f.axis === 'x' ? p.x : p.z;
-          if (dir * (a - f.run[1]) > -.05) break; still = Math.abs(a - b) < .01 ? still + 1 : 0; if (still === 3) { n++; break; } } } } return n; };
+          if (dir * (a - f.run[1]) > -.05) break; const v = f.axis === 'x' ? p.z : p.x; if (v < f.across[0] - .05 || v > f.across[1] + .05) break;   /* off an open side (house A's stair has one): not a stop */ still = Math.abs(a - b) < .01 ? still + 1 : 0; if (still === 3) { n++; break; } } } } return n; };
   const withNudge = stops(BODY.nudge), without = stops(0); assert.equal(withNudge, 0, `stopped ${withNudge} times with the nudge`); assert(without >= 8, `without it, stopped on ${without} of ${2 * flights.length} walks`); assert(BODY.nudge > 0 && BODY.nudge <= .2);
   // Square against a plain wall (the customs house's south face, outside): pushed at for two seconds, the body stays where it is.
   const q = V(-6, 0, 71 + BODY.radius + .01); q.y = sp.floor(q.x, q.z, 1).y; const q0 = q.clone(); for (let i = 0; i < 120; i++) sp.move(q, 0, -.05, BODY.stand, BODY.radius, {nudge: BODY.nudge}); assert(q.distanceTo(q0) < .02, `against a wall the body stays (${q.distanceTo(q0).toFixed(3)} m)`);
   // The half landing of the west stair and the door of its head on the roof.
   const st = K.stairs[0], zFar = Math.min(...st.z), xm = (st.x[0] + st.x[1]) / 2, span = (fix, from, to, y, alongZ) => { let lo = null, hi = null; for (let v = from; v <= to; v += .01) if (alongZ ? sp.clear(fix, v, y + BODY.step, y + BODY.stand, .02) : sp.clear(v, fix, y + BODY.step, y + BODY.stand, .02)) { lo ??= v; hi = v; } return hi - lo; };
-  const landing = span(st.x[0] + 1, zFar - .5, zFar + 2.05, 1.7, true), across = span(zFar + 1, st.x[0] - .2, st.x[1] + .2, 1.7, false); assert.equal(st.landing, 2); assert(landing >= 1.85 && across >= 4.05, `the half landing ${landing.toFixed(2)} m deep, ${across.toFixed(2)} m across`);
+  const landing = span(st.x[0] + 1, zFar - .5, zFar + st.landing + .1, 1.7, true), across = span(zFar + 1, st.x[0] - .2, st.x[1] + .2, 1.7, false); assert(st.landing >= 2); assert(landing >= 1.85 && across >= 4.05, `the half landing ${landing.toFixed(2)} m deep, ${across.toFixed(2)} m across`);
   const headDoor = span(Math.max(...st.z), st.x[0] - .2, st.x[1] + .2, 9.83, false); assert(headDoor >= 1.65, `the roof door ${headDoor.toFixed(2)} m clear`);
   // In the game: W and A held up the west stair's first flight, the body against its outer wall all the way.
-  g.put(st.x[0] + BODY.radius + .15, FLOORS[0], Math.max(...st.z) + .4, 0); g.press('KeyW'); g.press('KeyA'); let last = g.player.z, stalled = 0; g.run(6, () => { if (Math.abs(g.player.z - last) < 1e-4 && g.player.z > zFar + 2.2) stalled++; last = g.player.z; if (g.player.z < zFar + 1.6) return false; }); g.release('KeyW'); g.release('KeyA');
-  near(g.player.y, 1.7, .03, 'on the half landing'); assert(g.player.z < zFar + 1.7 && stalled < 3, `arrived (${g.player.z.toFixed(2)}), stalled ${stalled} frames`);
+  g.put(st.x[0] + BODY.radius + .15, FLOORS[0], Math.max(...st.z) + .4, 0); g.press('KeyW'); g.press('KeyA'); let last = g.player.z, stalled = 0; g.run(6, () => { if (Math.abs(g.player.z - last) < 1e-4 && g.player.z > zFar + st.landing + .3) stalled++; last = g.player.z; if (g.player.z < zFar + st.landing - .3) return false; }); g.release('KeyW'); g.release('KeyA');
+  near(g.player.y, 1.7, .03, 'on the half landing'); assert(g.player.z < zFar + st.landing - .2 && stalled < 3, `arrived (${g.player.z.toFixed(2)}), stalled ${stalled} frames`);
   report.stairs = {flights: flights.length, narrowestClear: +narrowest.toFixed(2), bodies: {player: 2 * BODY.radius, enemy: 2 * FOE.radius}, stopsWithoutNudge: without, stopsWithNudge: withNudge, nudge: BODY.nudge, halfLanding: +landing.toFixed(2), roofDoorClear: +headDoor.toFixed(2)};
 });
 
@@ -95,87 +95,87 @@ await check('windows', 'windows are bigger and some are double: a window is 1.4 
 });
 
 await check('break', 'a shot breaks glass, and a broken pane stops nothing: through a whole pane nothing is seen from outside in or inside out and a shot ends at the glass with whoever stands behind it untouched; that shot breaks the pane, after which both see each other and the next shot hits, from outside in and (another window) from inside out; the window beside it is still whole and still stops sight and shots; of a double window one half breaks and the other stays', async () => {
-  const g = await world(); g.nobody(); g.put(0, 0, 40); const G = g.G, outside = V(OUT[0], 1.5, OUT[2]), inside = V(CLOSET[0], 1.5, CLOSET[2]), pane = g.pane(WEST, 1.5, 54.2);
+  const g = await world(); g.nobody(); g.put(0, 0, 40); const G = g.G, outside = V(OUT[0], 1.5, OUT[2]), inside = V(CLOSET[0], 1.5, CLOSET[2]), pane = g.pane(WEST, 1.5, 64);
   assert(!g.glass.visible(outside, inside) && !g.glass.visible(inside, outside) && !g.glass.clear(outside, inside), 'whole: no sight either way');
   const victim = g.foe(0, ...CLOSET); victim.blindUntil = Infinity; const e1 = g.hitScan(outside.clone(), X.clone(), RIFLE, 'local'); assert.equal(victim.hp, 100, 'the first shot is stopped'); near(e1.x, G.panes[pane].at[0], .02, 'at the glass'); assert.deepEqual(G.list(), [pane], 'and breaks it');
   assert(g.glass.visible(outside, inside) && g.glass.visible(inside, outside) && g.glass.clear(inside, outside), 'broken: sight both ways');
   g.hitScan(outside.clone(), X.clone(), RIFLE, 'local'); assert(victim.hp < 100, `the second shot hits (${victim.hp})`);
-  // From inside out, at the next window (z 65): an enemy on the square, the shooter in the south-west room.
-  const p2 = g.pane(WEST, 1.5, 65), in2 = V(-10.5, 1.5, 65), out2 = V(-17, 1.5, 65), v2 = g.foe(1, -17, 0, 65); v2.blindUntil = Infinity;
+  // From inside out, at the next window (z 66.5): an enemy on the square, the shooter in the south-west room.
+  const p2 = g.pane(WEST, 1.5, 66.5), in2 = V(-10.5, 1.5, 66.5), out2 = V(-17, 1.5, 66.5), v2 = g.foe(1, -17, 0, 66.5); v2.blindUntil = Infinity;
   assert(!g.glass.visible(in2, out2) && !g.glass.visible(out2, in2), 'the window beside it is whole'); const hp0 = v2.hp; g.hitScan(in2.clone(), NX.clone(), RIFLE, 'local'); assert.equal(v2.hp, hp0); assert(G.broken[p2], 'broken from inside');
   g.hitScan(in2.clone(), NX.clone(), RIFLE, 'local'); assert(v2.hp < hp0, 'and shot through'); assert(g.glass.visible(in2, out2) && g.glass.visible(out2, in2));
-  // A third window nobody shot (z 68.5) still stops both.
-  const p3 = g.pane(WEST, 1.5, 68.5), in3 = V(-10.5, 1.5, 68.5), out3 = V(-17, 1.5, 68.5); assert(!G.broken[p3] && !g.glass.visible(in3, out3) && !g.glass.visible(out3, in3)); assert.equal(G.hit(out3, X, 10).i, p3);
+  // A third window nobody shot (z 69) still stops both.
+  const p3 = g.pane(WEST, 1.5, 69), in3 = V(-10.5, 1.5, 69), out3 = V(-17, 1.5, 69); assert(!G.broken[p3] && !g.glass.visible(in3, out3) && !g.glass.visible(out3, in3)); assert.equal(G.hit(out3, X, 10).i, p3);
   // A double window: one half shot out, the other whole.
   const da = g.pane(WEST, FLOORS[1] + 1.5, 64.2), db = g.pane(WEST, FLOORS[1] + 1.5, 65.4); g.hitScan(V(-20, FLOORS[1] + 1.5, 64.2), X.clone(), RIFLE, 'local'); assert(G.broken[da] && !G.broken[db], 'one half'); assert(g.glass.visible(V(-20, 4.9, 64.2), V(-11, 4.9, 64.2)) && !g.glass.visible(V(-20, 4.9, 65.4), V(-11, 4.9, 65.4)));
-  // What is drawn: the pane's instance is hidden, its teeth are shown; a whole pane the other way round.
-  const m = new THREE.Matrix4(), scale = (mesh, slot) => { mesh.getMatrixAt(slot, m); return m.elements[0] ** 2 + m.elements[5] ** 2 + m.elements[10] ** 2; }, rest = g.scene.children.find(o => o.userData.glass === 'shards');
-  assert(scale(G.panes[pane].mesh, G.panes[pane].slot) === 0 && scale(rest, pane) > 0, 'a broken pane: teeth in the frame, no pane'); assert(scale(G.panes[p3].mesh, G.panes[p3].slot) > 0 && scale(rest, p3) === 0, 'a whole pane: no teeth');
-  assert.equal(g.scene.children.filter(o => o.userData.glass).length, 5, 'five drawings for all the glass and what stands in the windows with it (Build 30: three before)');
-  report.break = {panes: G.count, broken: G.list().length, teethPerPane: G.teeth, drawings: 5};
+  // What is drawn: a broken pane's instance is hidden and nothing is put in its place (Build 31: the teeth of glass are gone); a whole pane is drawn.
+  const m = new THREE.Matrix4(), scale = (mesh, slot) => { mesh.getMatrixAt(slot, m); return m.elements[0] ** 2 + m.elements[5] ** 2 + m.elements[10] ** 2; };
+  assert(scale(G.panes[pane].mesh, G.panes[pane].slot) === 0, 'a broken pane: not drawn'); assert(scale(G.panes[p3].mesh, G.panes[p3].slot) > 0, 'a whole pane: drawn'); assert(!g.scene.children.some(o => o.userData.glass === 'shards') && G.teeth === 0, 'no teeth of glass');
+  assert.equal(g.scene.children.filter(o => o.userData.glass).length, 4, 'four drawings for all the glass and what stands in the windows with it');
+  report.break = {panes: G.count, broken: G.list().length, teethPerPane: G.teeth, drawings: 4};
 });
 
 await check('ways', 'everything that should break glass does: a grenade thrown at a window goes through it and the pane is broken; a blast breaks the panes within 5 m and none further; a player\'s body through a window breaks its pane; an ally seeing an enemy through glass shoots the pane out; and a guest page breaks nothing by itself', async () => {
   const g = await world(), G = g.G; g.nobody(); g.put(0, 0, 40);
-  const p1 = g.pane(WEST, 1.5, 54.2); g.equip.throwItem('frag', V(-16, 1.5, 54.2), V(1, .05, 0).normalize(), 0, false, 'local'); let through = false; g.run(1.2, () => { if (g.equip.nades.some(n => n.p.x > -12.5)) through = true; }); assert(G.broken[p1], 'the grenade broke the pane'); assert(through, 'and went in');
+  const p1 = g.pane(WEST, 1.5, 64); g.equip.throwItem('frag', V(-16, 1.5, 64), V(1, .05, 0).normalize(), 0, false, 'local'); let through = false; g.run(1.2, () => { if (g.equip.nades.some(n => n.p.x > -12.5)) through = true; }); assert(G.broken[p1], 'the grenade broke the pane'); assert(through, 'and went in');
   g.run(5); const near5 = G.list().filter(i => i !== p1); G.reset(); g.run(.5);
   const P = V(-15, .4, 66.7), within = G.panes.map((p, i) => Math.hypot(p.at[0] - P.x, p.at[1] - P.y, p.at[2] - P.z) <= 5 ? i : -1).filter(i => i >= 0); assert(within.length >= 2 && within.length < 12, `${within.length} panes within 5 m`); g.glass.blast(P, 'local'); assert.deepEqual(G.list(), within, 'a blast takes the panes within 5 m, no others');
-  G.reset(); const up = g.pane(WEST, FLOORS[1] + 1.5, 68.5), at = G.panes[up].at; g.put(at[0] + .1, FLOORS[1] + .45, at[2]); g.glass.bodies(); assert.deepEqual(G.list(), [up], 'a body in the window breaks it');
-  G.reset(); g.nobody(); g.put(0, 0, 40); const foe = g.foe(0, -17, 0, 65); foe.blindUntil = Infinity; const ally = g.actors.find(a => a.team === 'ally' && !a.remote); Object.assign(ally, {hp: 100, dead: 0, gone: false}); ally.g.visible = true; ally.g.position.set(-10.5, FLOORS[0], 65); ally.cool = .1; ally.senseTimer = .05;
-  const p2 = g.pane(WEST, 1.5, 65); let t = null; g.run(6, s => { ally.g.position.set(-10.5, FLOORS[0], 65); if (G.broken[p2]) { t = s; return false; } }); assert(t != null, 'an ally shot the pane out');
+  G.reset(); const up = g.pane(WEST, FLOORS[1] + 1.5, 69), at = G.panes[up].at; g.put(at[0] + .1, FLOORS[1] + .45, at[2]); g.glass.bodies(); assert.deepEqual(G.list(), [up], 'a body in the window breaks it');
+  G.reset(); g.nobody(); g.put(0, 0, 40); const foe = g.foe(0, -17, 0, 66.5); foe.blindUntil = Infinity; const ally = g.actors.find(a => a.team === 'ally' && !a.remote); Object.assign(ally, {hp: 100, dead: 0, gone: false}); ally.g.visible = true; ally.g.position.set(-10.5, FLOORS[0], 66.5); ally.cool = .1; ally.senseTimer = .05;
+  const p2 = g.pane(WEST, 1.5, 66.5); let t = null; g.run(6, s => { ally.g.position.set(-10.5, FLOORS[0], 66.5); if (G.broken[p2]) { t = s; return false; } }); assert(t != null, 'an ally shot the pane out');
   report.ways = {grenade: true, blastPanes: within.length, grenadeBlastAlso: near5.length, body: true, allyAfter: +t.toFixed(2)};
 });
 
 await check('enemies', 'enemies see and shoot through broken windows, theirs or mine: an enemy on the square with a player behind a whole window does not see the player, shoots the pane out (hurting nobody) and then sees and fires at the player through it; behind a window the player has already broken it sees the player at once; and with the pane whole and nobody behind it, it shoots at nothing', async () => {
-  const g = await world(), G = g.G; g.nobody(); g.put(...CLOSET, Math.PI / 2); g.set({hp: 100}); const pane = g.pane(WEST, 1.5, 54.2), a = g.foe(0, ...OUT); a.g.rotation.y = -Math.PI / 2;
+  const g = await world(), G = g.G; g.nobody(); g.put(...CLOSET, Math.PI / 2); g.set({hp: 100}); const pane = g.pane(WEST, 1.5, 64), a = g.foe(0, ...OUT); a.g.rotation.y = -Math.PI / 2;
   let brokeAt = null, seenBefore = 0, seenAt = null, firing = 0, hpAtBreak = null; const shots0 = g.sounds.filter(x => x === 'shot').length;
   g.run(14, t => { g.set({hp: Math.max(g.coop.hp(), 40)}); if (!G.broken[pane]) { if (a.seen) seenBefore++; } else { brokeAt ??= t; hpAtBreak ??= g.coop.hp(); if (a.seen) seenAt ??= t; if (a.ai.firing) firing++; } });
   assert.equal(seenBefore, 0, 'not seen through a whole pane'); assert(brokeAt != null && brokeAt < 4, `the enemy shot the pane out (${brokeAt})`); assert.equal(hpAtBreak, 100, 'that shot hurt nobody');
   assert(seenAt != null && seenAt - brokeAt < 1, `then saw the player (${seenAt})`); assert(firing > 10, `and fired through the window (${firing} frames)`); const shots = g.sounds.filter(x => x === 'shot').length - shots0; assert(shots >= 3, `${shots} shots`);
-  // A window the player broke: seen at once. (The window at z 65; the player in the south-west room.)
-  g.nobody(); G.reset(); g.put(-10.5, FLOORS[0], 65, Math.PI / 2); g.set({hp: 100}); const p2 = g.pane(WEST, 1.5, 65); g.hitScan(V(-10.5, 1.5, 65), NX.clone(), RIFLE, 'local'); assert(G.broken[p2]);
-  const b = g.foe(1, -18, 0, 65); let sawAt = null; g.run(3, t => { g.set({hp: 100}); if (b.seen) { sawAt = t; return false; } }); assert(sawAt != null && sawAt < .6, `seen through the player's own hole at once (${sawAt})`); assert.deepEqual(G.list(), [p2], 'no other pane broken');
+  // A window the player broke: seen at once. (The window at z 66.5; the player in the south-west room.)
+  g.nobody(); G.reset(); g.put(-10.5, FLOORS[0], 66.5, Math.PI / 2); g.set({hp: 100}); const p2 = g.pane(WEST, 1.5, 66.5); g.hitScan(V(-10.5, 1.5, 66.5), NX.clone(), RIFLE, 'local'); assert(G.broken[p2]);
+  const b = g.foe(1, -18, 0, 66.5); let sawAt = null; g.run(3, t => { g.set({hp: 100}); if (b.seen) { sawAt = t; return false; } }); assert(sawAt != null && sawAt < .6, `seen through the player's own hole at once (${sawAt})`); assert.deepEqual(G.list(), [p2], 'no other pane broken');
   // Nobody behind the glass: nothing is shot.
   g.nobody(); G.reset(); g.put(0, 0, -20); const c = g.foe(2, ...OUT); g.run(5, () => { c.g.rotation.y = -Math.PI / 2; });   /* facing the window all the while */ assert.deepEqual(G.list(), [], 'no pane shot for nobody');
   report.enemies = {paneShotAfter: +brokeAt.toFixed(2), sawAfter: +seenAt.toFixed(2), firingFrames: firing, shots, throughMine: +sawAt.toFixed(2)};
 });
 
 await check('stays', 'broken stays broken for the mission and is whole for the next: three panes shot out in Skirmish are still the same three after two minutes of the mission with everyone fighting (others may have joined them, none comes back), through a pause and a resume; a new mission starts with every pane whole; the walk keeps its broken panes too until it is begun again', async () => {
-  const g = await world('skirmish'), G = g.G; const mine = [g.pane(WEST, 1.5, 54.2), g.pane(WEST, 1.5, 65), g.pane(WEST, FLOORS[1] + 1.5, 68.5)];
-  g.hitScan(V(-18, 1.5, 54.2), X.clone(), RIFLE, 'local'); g.hitScan(V(-18, 1.5, 65), X.clone(), RIFLE, 'local'); g.hitScan(V(-20, FLOORS[1] + 1.5, 68.5), X.clone(), RIFLE, 'local'); assert.deepEqual(G.list(), [...mine].sort((a, b) => a - b));
+  const g = await world('skirmish'), G = g.G; const mine = [g.pane(WEST, 1.5, 64), g.pane(WEST, 1.5, 66.5), g.pane(WEST, FLOORS[1] + 1.5, 69)];
+  g.hitScan(V(-18, 1.5, 64), X.clone(), RIFLE, 'local'); g.hitScan(V(-18, 1.5, 66.5), X.clone(), RIFLE, 'local'); g.hitScan(V(-20, FLOORS[1] + 1.5, 69), X.clone(), RIFLE, 'local'); assert.deepEqual(G.list(), [...mine].sort((a, b) => a - b));
   let came = 0, prev = new Set(G.list()); g.run(120, () => { g.set({hp: 100}); const now = G.list(); for (const i of prev) if (!now.includes(i)) came++; prev = new Set(now); }); assert.equal(came, 0, 'no pane came back'); assert(mine.every(i => G.broken[i]), 'mine still broken'); const after = G.list().length;
   g.pause(); g.run(1); assert(mine.every(i => G.broken[i])); g.play(); g.run(1); assert(mine.every(i => G.broken[i]), 'through a pause');
-  g.reset(); assert.deepEqual(G.list(), [], 'a new mission: every pane whole'); assert(!g.glass.visible(V(-18, 1.5, 54.2), V(-10.5, 1.5, 54.2)), 'and stopping sight again');
-  const w = await world('story'); w.nobody(); w.hitScan(V(-18, 1.5, 54.2), X.clone(), RIFLE, 'local'); w.run(30); assert.equal(w.G.list().length, 1, 'the walk keeps it'); w.reset(); assert.equal(w.G.list().length, 0);
+  g.reset(); assert.deepEqual(G.list(), [], 'a new mission: every pane whole'); assert(!g.glass.visible(V(-18, 1.5, 64), V(-10.5, 1.5, 64)), 'and stopping sight again');
+  const w = await world('story'); w.nobody(); w.hitScan(V(-18, 1.5, 64), X.clone(), RIFLE, 'local'); w.run(30); assert.equal(w.G.list().length, 1, 'the walk keeps it'); w.reset(); assert.equal(w.G.list().length, 0);
   report.stays = {mine: mine.length, brokenAfterTwoMinutes: after, note: 'the enemies and the squad shot out the others'};
 });
 
 await check('coop', 'host and guest have the same panes broken and agree on sight and shots: a pane the host shoots out is broken on the guest\'s page within a snapshot; a pane the guest shoots out (its shot judged by the host) is broken on both; with both broken, sight through each is the same on both pages, and through a whole pane likewise; the guest\'s next shot through its hole hits the enemy behind it on the host; a guest walking through a window breaks it on both; a guest page cannot break a pane by itself; a pane whose message is lost is put right by the next snapshots, and so is a page with as many panes broken but not the same ones; a new mission makes every pane whole on both', async () => {
   const p = await pair(), {host, guest} = p, H = host.glass.G, Gu = guest.glass.G, pane = (x, y, z) => { let best = -1, bd = 1e9; H.panes.forEach((q, i) => { const d = Math.hypot(q.at[0] - x, q.at[1] - y, q.at[2] - z); if (d < bd) { bd = d; best = i; } }); return best; };
-  assert.equal(H.count, Gu.count); p.place('host', -18, 0, 54.2); p.place('guest', -18, 0, 65); const p1 = pane(WEST, 1.5, 54.2), p2 = pane(WEST, 1.5, 65), p3 = pane(WEST, 1.5, 68.5);
+  assert.equal(H.count, Gu.count); p.place('host', -18, 0, 64); p.place('guest', -18, 0, 66.5); const p1 = pane(WEST, 1.5, 64), p2 = pane(WEST, 1.5, 66.5), p3 = pane(WEST, 1.5, 69);
   const same = what => { assert.deepEqual(Gu.list(), H.list(), `${what}: the same panes on both pages`); assert.deepEqual(Gu.sum(), H.sum()); };
-  host.hitScan(V(-18, 1.5, 54.2), X.clone(), RIFLE, 'local'); assert.deepEqual(H.list(), [p1]); assert.deepEqual(Gu.list(), [], 'not yet on the guest (two frames on the way)'); p.step(p.delay + 1); same('the host\'s shot, by its message (before any snapshot could put it right)'); p.sync();
-  const foe = enemies(host)[0]; Object.assign(foe, {hp: 100, dead: 0, gone: false, sink: null, diedAt: null}); foe.g.visible = true; foe.resetPose(); foe.g.position.set(-10.5, FLOORS[0], 65); foe.blindUntil = Infinity; foe.ai = {role: 'patrol', loop: 'HALLS', dir: 1, lastHp: 100}; host.ai.startPatrol(foe, 'HALLS'); foe.route = []; p.sync();
-  const shot = () => host.receive({type: 'shot', dir: [1, 0, 0], o: [-18, 1.5, 65], w: 0, at: host.coop.elapsed() - .05});
+  host.hitScan(V(-18, 1.5, 64), X.clone(), RIFLE, 'local'); assert.deepEqual(H.list(), [p1]); assert.deepEqual(Gu.list(), [], 'not yet on the guest (two frames on the way)'); p.step(p.delay + 1); same('the host\'s shot, by its message (before any snapshot could put it right)'); p.sync();
+  const foe = enemies(host)[0]; Object.assign(foe, {hp: 100, dead: 0, gone: false, sink: null, diedAt: null}); foe.g.visible = true; foe.resetPose(); foe.g.position.set(-10.5, FLOORS[0], 66.5); foe.blindUntil = Infinity; foe.ai = {role: 'patrol', loop: 'HALLS', dir: 1, lastHp: 100}; host.ai.startPatrol(foe, 'HALLS'); foe.route = []; p.sync();
+  const shot = () => host.receive({type: 'shot', dir: [1, 0, 0], o: [-18, 1.5, 66.5], w: 0, at: host.coop.elapsed() - .05});
   shot(); assert(H.broken[p2] && foe.hp === 100, 'the guest\'s shot broke the pane and went no further'); p.step(p.delay + 1); same('the guest\'s shot'); p.sync();
-  for (const [a, b, open] of [[V(-18, 1.5, 54.2), V(-10.5, 1.5, 54.2), true], [V(-10.5, 1.5, 65), V(-18, 1.5, 65), true], [V(-18, 1.5, 68.5), V(-10.5, 1.5, 68.5), false]]) { assert.equal(host.glass.visible(a, b), open); assert.equal(guest.glass.visible(a, b), open, 'the guest\'s page agrees'); assert.equal(guest.glass.clear(b, a), open); }
+  for (const [a, b, open] of [[V(-18, 1.5, 64), V(-10.5, 1.5, 64), true], [V(-10.5, 1.5, 66.5), V(-18, 1.5, 66.5), true], [V(-18, 1.5, 69), V(-10.5, 1.5, 69), false]]) { assert.equal(host.glass.visible(a, b), open); assert.equal(guest.glass.visible(a, b), open, 'the guest\'s page agrees'); assert.equal(guest.glass.clear(b, a), open); }
   shot(); assert(foe.hp < 100, 'the guest\'s next shot goes through and hits'); assert(!H.broken[p3]);
   // A guest through a window: the host breaks it from the guest's pose.
-  const up = pane(WEST, FLOORS[1] + 1.5, 54.2), at = H.panes[up].at; p.place('guest', at[0] + .1, FLOORS[1] + .45, at[2]); p.run(.3); assert(H.broken[up], 'the guest\'s body broke it on the host'); same('a body');
+  const up = pane(WEST, FLOORS[1] + 1.5, 69), at = H.panes[up].at; p.place('guest', at[0] + .1, FLOORS[1] + .45, at[2]); p.run(.3); assert(H.broken[up], 'the guest\'s body broke it on the host'); same('a body');
   // The guest by itself breaks nothing; a lost message is put right.
-  assert.equal(guest.glass.break(p3), false); assert(!Gu.broken[p3]); p.drop = m => m.type === 'glass'; host.hitScan(V(-18, 1.5, 68.5), X.clone(), RIFLE, 'local'); p.step(3); assert(H.broken[p3] && !Gu.broken[p3], 'the message was lost'); p.drop = null; p.run(1.2); same('after the lost message');
+  assert.equal(guest.glass.break(p3), false); assert(!Gu.broken[p3]); p.drop = m => m.type === 'glass'; host.hitScan(V(-18, 1.5, 69), X.clone(), RIFLE, 'local'); p.step(3); assert(H.broken[p3] && !Gu.broken[p3], 'the message was lost'); p.drop = null; p.run(1.2); same('after the lost message');
   assert(p.log.toHost.some(m => m.type === 'glassAsk') && p.log.toGuest.some(m => m.type === 'glassAll'), 'asked for and sent'); const asks = p.log.toHost.filter(m => m.type === 'glassAsk').length; p.run(2); assert.equal(p.log.toHost.filter(m => m.type === 'glassAsk').length, asks, 'and not asked again once they agree');
   // As many broken but not the same ones (a page that went wrong): put right as well.
   const spare = H.panes.findIndex((q, i) => !H.broken[i]); Gu.set([...H.list().slice(1), spare]); assert.equal(Gu.sum()[0], H.sum()[0]); assert.notDeepEqual(Gu.list(), H.list()); p.run(1.2); same('as many but other panes');
-  const broken = H.list().length; p.deploy(); same('a new mission'); assert.equal(H.list().length, 0); assert(!guest.glass.visible(V(-18, 1.5, 54.2), V(-10.5, 1.5, 54.2)));
+  const broken = H.list().length; p.deploy(); same('a new mission'); assert.equal(H.list().length, 0); assert(!guest.glass.visible(V(-18, 1.5, 64), V(-10.5, 1.5, 64)));
   report.coop = {panes: H.count, brokenOnBoth: broken, delayFrames: p.delay, note: 'one process, a stand-in connection: what two networks do is not shown'};
 });
 
-await check('leak', 'nothing is made or left by breaking: 30 missions of 40 panes each (shots, breaks outright, a blast, then a reset) leave the scene with the objects, geometries and materials it started with, no effect waiting and every pane whole; the glass and its fittings are five drawings throughout', async () => {
+await check('leak', 'nothing is made or left by breaking: 30 missions of 40 panes each (shots, breaks outright, a blast, then a reset) leave the scene with the objects, geometries and materials it started with, no effect waiting and every pane whole; the glass and its fittings are four drawings throughout', async () => {
   const g = await world(), G = g.G; g.nobody(); g.put(0, 0, 40); g.run(1); const before = drawn(g), fx0 = g.glass.effects.length; let broke = 0;
   for (let round = 0; round < 30; round++) { for (let k = 0; k < 40; k++) { const i = (round * 37 + k * 7) % G.count, q = G.panes[i], thinX = q.size[0] < q.size[2], o = V(q.at[0] + (thinX ? -3 : 0), q.at[1], q.at[2] + (thinX ? 0 : -3)); if (k % 3 === 0) g.glass.break(i) && broke++; else { const e = g.hitScan(o, thinX ? X.clone() : V(0, 0, 1), RIFLE, 'local'); void e; if (G.broken[i]) broke++; } }
     g.glass.blast(V(-15, .4, 66.7), 'local'); g.run(.4); assert(G.list().length >= 20, `round ${round}: ${G.list().length} broken`); g.reset(); g.play(); g.nobody(); assert.equal(G.list().length, 0); }
-  g.run(1); const after = drawn(g); assert.deepEqual(after, before, 'the scene as it was'); assert.equal(g.glass.effects.length, fx0, 'no effect left'); assert.equal(g.scene.children.filter(o => o.userData.glass).length, 5);
+  g.run(1); const after = drawn(g); assert.deepEqual(after, before, 'the scene as it was'); assert.equal(g.glass.effects.length, fx0, 'no effect left'); assert.equal(g.scene.children.filter(o => o.userData.glass).length, 4);
   report.leak = {rounds: 30, panesBroken: broke, scene: after};
 });
 

@@ -9,7 +9,7 @@ import * as THREE from './three.module.js';
 import './build.js'; // DEPLOY-01 upgrade guard
 
 // The enemies' body for walking: wider than the player's (the game's NAV_R), as tall; `climb` is their ladder speed.
-export const FOE = {radius: .45, height: 1.8, step: .5, climb: 1.5, safeDrop: 3, budget: 40000};
+export const FOE = {radius: .45, height: 1.8, nudge: .12, step: .5, climb: 1.5, safeDrop: 3, budget: 40000};
 
 // A binary heap of {f} for the A*.
 class Heap { constructor() { this.a = []; } get length() { return this.a.length; }
@@ -52,7 +52,8 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], r
     for (const [tx, tz, exact] of targets) { if (!within(tx, tz)) continue; const dx = tx - n.x, dz = tz - n.z, d = Math.hypot(dx, dz); if (d < .05) continue; p.x = n.x; p.y = n.y; p.z = n.z;
       if (moveBody(p, dx, dz) < d - .02) continue; const r = rest(p.x, p.z, p.y); if (!r || !within(r.x, r.z)) continue;
       if (r.drop > safeDrop || n.y - r.y > safeDrop) continue;   /* the drop as the place above sees it too (the mover may have stepped down a tread on the way) */ if (!exact && r.drop === 0 && (Math.abs(r.x - tx) > 1e-6 || Math.abs(r.z - tz) > 1e-6)) continue; const m = place(r.x, r.z, r.y, exact && r.drop === 0); if (exact) m.exact = true;
-      link(n, m, r.drop > B.step ? 'drop' : 'walk', d + (r.drop > B.step ? r.drop * 2 : Math.abs(r.y - n.y))); if (!m.done) queue.push(m); } } }
+      const fell = Math.min(r.drop, n.y - r.y) > B.step;   /* Build 31: a drop is judged from where the place stood, not from a tread the mover leant up onto on its way off a stair's side */
+      link(n, m, fell ? 'drop' : 'walk', d + (fell ? r.drop * 2 : Math.abs(r.y - n.y))); if (!m.done) queue.push(m); } } }
   // Ladders: from the place at the foot to the place at the top, and back down.
   for (const l of ladders) { const foot = nearest(l.standX, l.standZ, l.bottom, 1.2), top = nearest(l.exit[0], l.exit[1], l.top, 1.2); if (!foot || !top) continue;
     link(foot, top, 'ladder', (l.top - l.bottom) / FOE.climb * 2 + 1.5, {ladder: l, up: true}); link(top, foot, 'ladder', (l.top - l.bottom) / FOE.climb * 2 + 1.5, {ladder: l, up: false}); }
@@ -77,7 +78,10 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], r
   function walkable(a, b) { const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < .01) return true; p.x = a.x; p.y = a.y; p.z = a.z; const n = Math.ceil(d / .1);
     for (let i = 0; i < n; i++) { if (moveBody(p, dx / n, dz / n) < d / n - .005) return false; const f = space.floor(p.x, p.z, p.y + B.step, B.lean, p.y); if (f.y < p.y - B.step) return false; p.y = f.y; }
     return Math.abs(p.y - b.y) < .6; }
-  return {nodes, stats, nearest, path, walkable, free, move: moveBody, rest, radius, height, climb: FOE.climb, doors: extras.length,
+  // Build 31: an actor walking the graph is nudged a little (`FOE.nudge`) past what its path clears by a centimetre (a railing's
+  // last post, a doorpost); the flood above is not: a place is only ever where a body stood without help.
+  const walk = (p, dx, dz) => space.move(p, dx, dz, height, radius, {stairs: true, nudge: FOE.nudge});
+  return {nodes, stats, nearest, path, walkable, free, move: moveBody, walk, rest, radius, height, climb: FOE.climb, doors: extras.length,
     // Where a body walking at (x, z) with its feet at y stands, as the game's height rules see it.
     floor: (x, z, y) => space.floor(x, z, y + B.step, B.lean, y)};
 }

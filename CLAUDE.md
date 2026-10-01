@@ -27,6 +27,20 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 31 (local, 2026-10-01): stair width and glass corners. **Stairs are 2.4 m (the user asked for wider four times: widen, do not
+investigate again; the Build 30 eye is untouched, T41 pins its text).** Every flight 2.4 m (2.39 to 2.51 clear). The customs
+house's wells are 5.1 m wide (x ±7.5 to ±12.6) and take the house's whole depth beside the corridor (`stairW` z 53.4..59.8,
+`stairE` 62.8..70.6): **the six closets are gone**, with their doors and the twelve windows that looked out of them; half landings
+3.4 and 4.8 m (3.45 and 4.85 clear), entries 4.84 m, roof doors 2.4 m (2.19 clear); the north-west and south-east rooms are .8 m
+narrower. The kit keeps a stair's far end .12 m off the house's own wall (`span`). House A's well reaches x −10.2; a district stair
+takes `w − 2.9` (25 treads on a 12 m house, 20 of .29 m rise on a 10 m one: no steeper is possible on a 10 m face). The roof loop
+and foes stand at x ±5.5 (the stair heads are wider). **Further widening needs a bigger customs house or steeper district stairs.**
+Navigation: a drop is judged from where the place stood (`fell`); an actor's step along a path is nudged (`walk`, `FOE.nudge` .12,
+`actorMove(..., onPath)`), its other moves and the flood are not. **Glass: the whole opening is the pane to a ray or a body**
+(`G(..., reach, clear)` in `dress`: post to post, sill to head; on a double window each half reaches to the middle of the post, so a
+shot at the post breaks a half); the drawn glass is unchanged. **The teeth of glass are gone** (four drawings for all windows): they
+stopped nothing but could not be shot away. 283 panes; the customs house's west wall has three ground-floor windows (z 64, 66.5, 69).
+B27 awaits the user.
 Build 30 (local, 2026-09-30): window frames and the eye on stairs. **A broken window is a hole: what stands in the opening with
 the pane is `loose` in the kit (`part()`, `L()` in `dress`): the casement's rails and glazing bars, the iron bars, and the post of a
 double window (owned by both panes: it goes with the second). A loose part is listed in `stats.list` exactly as before (T35), drawn
@@ -372,15 +386,16 @@ node tests/test-coopheight-b27.mjs
 node tests/test-town-b28.mjs
 node tests/test-windows-b29.mjs
 node tests/test-frames-b30.mjs
+node tests/test-corners-b31.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 30 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 31 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs and 6 frames-and-eye checks (297 in 33 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye and 7 corners-and-stairs checks (304 in 34 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
