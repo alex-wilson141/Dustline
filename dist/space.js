@@ -74,7 +74,7 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
   // `nudge` (Build 29, the player's own moves): a step that something small stops (a beam end, a doorpost, a coping a
   // few centimetres proud of the wall the body walks along) is tried again from up to `nudge` metres to any side;
   // the body slips past what it used to stop dead against. Nothing is passed that the body does not fit past.
-  function move(p, dx, dz, height, r = body.radius, {stairs = false, nudge = 0} = {}) {
+  function move(p, dx, dz, height, r = body.radius, {stairs = false, nudge = 0, air = false} = {}) {
     const ox = p.x, oz = p.z, steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / .25));
     const step = (ax, az) => { const nx = p.x + ax, nz = p.z + az;
       // Where the feet would be after the step, what is in the way is judged from there: on a stair the next tread is
@@ -83,7 +83,11 @@ export function makeSpace({boxes, ground, ladders = [], body = BODY, cell = 2, e
       // not step off a crate into a gap narrower than itself (Build 25; before, it landed wedged there).
       // Stepping down, what is in the way is judged from the lower level too (a low thing there is met, not stood in).
       const f = floor(nx, nz, p.y + body.step, body.lean, p.y), drop = f.y < p.y - body.step, feet = drop ? p.y : f.y;
-      if (passable(p.x, p.z, nx, nz, feet + body.step, feet + height, r, stairs, p.y + body.step, p.y + height) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y || !drop) p.y = f.y; return true; } return false; };   // up a step, or down one within `step` (Build 28: as the game settles a body every frame; a drop is left to gravity)
+      // Build 34: a body in the air (`air`: a jump, a fall) is given no step: what is in its way is judged from its feet as
+      // they are. On the ground a thing no higher than a step is walked onto; in the air the same allowance let the body
+      // drift over the edge of a sill or a crate it was not yet above, come down beside it and be pushed out on landing.
+      const low = air && f.y <= p.y ? p.y + .02 : feet + body.step;
+      if (passable(p.x, p.z, nx, nz, low, feet + height, r, stairs, air && f.y <= p.y ? p.y + .02 : p.y + body.step, p.y + height) && (!drop || settle(nx, nz, f.y + body.step, f.y + height, r)) && (f.y <= p.y || ceiling(nx, nz, f.y + body.crouch, r) - f.y >= height)) { p.x = nx; p.z = nz; if (f.y > p.y || !drop && !air) p.y = f.y; return true; } return false; };   // up a step, or down one within `step` (Build 28: as the game settles a body every frame; a drop is left to gravity). Build 34: not a body in the air (`air`): since Build 28 a jump taken while moving was set back on the floor by every step, and rose 5 cm
     const ax = dx / steps, az = dz / steps, L = Math.hypot(ax, az);
     for (let i = 0; i < steps; i++) { const sx = p.x, sy = p.y, sz = p.z, wentX = ax ? step(ax, 0) : true, wentZ = az ? step(0, az) : true; if (!nudge || !L || wentX && wentZ) continue;
       // Hardly any way made (under a quarter of the step, measured along what was asked): the same step from a little to

@@ -26,12 +26,25 @@ export function makeViewmodel(gun,{mat}){
  // Build 19: the sidearm and the knife, from simple shapes (no asset exists for either). setSidearm swaps what is in hand.
  const steel=mat('#2b2e2d',{metalness:.65,roughness:.4}),grip=mat('#1d1f1e',{roughness:.8}),part=(w,h,d,x,y,z,m,parent)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=false;parent.add(o);return o;};
  const pistol=new THREE.Group();part(.03,.036,.2,0,.05,-.16,steel,pistol);part(.024,.018,.05,0,.03,-.27,steel,pistol);part(.028,.11,.046,0,-.02,-.075,grip,pistol).rotation.x=.22;part(.008,.014,.012,0,.075,-.25,steel,pistol);part(.02,.012,.012,0,.075,-.07,steel,pistol);pistol.position.set(.03,.0,.0);pistol.visible=false;gun.add(pistol);
- const blade=new THREE.Group();part(.006,.034,.2,0,0,-.1,mat('#c9ccc8',{metalness:.8,roughness:.25}),blade);part(.022,.03,.1,0,0,.05,grip,blade);blade.visible=false;gun.add(blade);
+ // Build 34: the knife is a blade (it was two boxes). A clip-point blade cut from a profile and ground to an edge all round (the
+ // bevel of the extrusion: a flat of 2 mm between two ground faces), a fuller along each flat, a guard, an oval grip with four
+ // rings, a pommel, and the gloved fist that holds it. Made once with the viewmodel; nothing is made when it is drawn.
+ const blade=new THREE.Group();{const bright=mat('#d4d7d2',{metalness:.9,roughness:.22}),dark=mat('#4a4e4c',{metalness:.7,roughness:.45}),rubber=mat('#232624',{roughness:.9});
+  const outline=new THREE.Shape();outline.moveTo(0,.017);outline.lineTo(.118,.017);outline.quadraticCurveTo(.15,.016,.196,-.004);outline.quadraticCurveTo(.16,-.018,.112,-.019);outline.lineTo(.012,-.019);outline.lineTo(.012,-.012);outline.lineTo(0,-.012);outline.closePath();
+  const cut=new THREE.ExtrudeGeometry(outline,{depth:.0012,bevelEnabled:true,bevelThickness:.0019,bevelSize:.0105,bevelOffset:-.0105,bevelSegments:1,curveSegments:10});cut.translate(0,0,-.0006);cut.rotateY(Math.PI/2);
+  const steelBlade=new THREE.Mesh(cut,bright);steelBlade.castShadow=false;blade.add(steelBlade);
+  for(const side of [1,-1])part(.0006,.005,.1,side*.0024,.006,-.062,dark,blade);                                    // the fuller
+  part(.011,.062,.012,0,-.002,.006,dark,blade);part(.013,.012,.016,0,.028,.006,dark,blade);                          // the guard and its upper quillon
+  const round=(r0,r1,len,z,m,sx=.74)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(r0,r1,len,12),m);o.rotation.x=Math.PI/2;o.scale.x=sx;o.position.set(0,-.002,z);o.castShadow=false;blade.add(o);return o;};
+  round(.0155,.0165,.104,.064,rubber);for(let i=0;i<4;i++)round(.0172,.0172,.005,.03+i*.023,grip);round(.0175,.0165,.012,.122,dark,.8);
+  const fist=new THREE.Group();const palm=capsule(.03,.04,glove);palm.rotation.x=Math.PI/2;palm.scale.set(.8,1.15,1);fist.add(palm);for(let i=0;i<4;i++){const f=capsule(.0115,.03,glove);f.rotation.z=Math.PI/2;f.position.set(-.012,.012,-.036+i*.024);fist.add(f);}const thumb=capsule(.012,.03,glove);thumb.rotation.x=Math.PI/2;thumb.position.set(.012,.026,-.02);fist.add(thumb);
+  const arm=capsule(.04,.2,sleeve);arm.rotation.set(Math.PI/2-.2,0,.2);arm.position.set(.02,-.035,.135);fist.add(arm);fist.traverse(o=>{o.castShadow=false;});fist.position.set(.012,-.004,.066);blade.add(fist);}
+ blade.scale.setScalar(1.25);blade.visible=false;gun.add(blade);
  const can=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),mat('#3c4b34',{roughness:.6}));can.castShadow=false;can.visible=false;gun.add(can);
  let sidearmOn=false;const rifleAnimate=animate;
  function setSidearm(on){sidearmOn=!!on;group.visible=!sidearmOn;pistol.visible=sidearmOn;}
  function animateAll(p){rifleAnimate(p);if(sidearmOn){left.position.set(.0,-.075,-.06);left.rotation.set(0,0,.35);right.position.set(.035,-.07,-.05);}
-  const k=Math.max(0,Math.min(1,p.knife||0));blade.visible=k>0;if(k>0){const f=1-k;blade.position.set(-.34+f*.5,-.02-Math.sin(f*Math.PI)*.04,-.42);blade.rotation.set(.1,1.1-f*1.6,-.5);}
+  const k=Math.max(0,Math.min(1,p.knife||0));blade.visible=k>0;if(k>0){const f=1-k;blade.position.set(-.52+f*.46,.1-Math.sin(f*Math.PI)*.03,.2-Math.sin(f*Math.PI)*.1);blade.rotation.set(.35,.9-f*1.3,-.9+f*.4);}   /* Build 34: a slash from the left across the view, the edge leading and the flat turned to the eye */
   can.visible=!!p.holding;if(p.holding)can.position.set(-.2,.0,-.28);}
  return {ready,configure,animate:animateAll,setSidearm,get sidearm(){return sidearmOn;},resetMotion(){roll=pitchOffset=0;},get loaded(){return !!model;}};
 }

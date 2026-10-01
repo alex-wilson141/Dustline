@@ -106,21 +106,26 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], p
   // `far[id]` half-metres to go from a place (-1: no way from there), `via[id]` the way to take next. Shut places and
   // windows not broken are left out, as on a path.
   let rev = null;
-  function field(to) { const b = nearest(to.x, to.z, to.y); if (!b) return null; const N = nodes.length;
+  // Build 34: a field for one way in. `ladders: false` leaves the ladders out; `vaults: 'all'` takes every window for a way
+  // (one who goes that way breaks the pane itself), `'none'` no window; `mask` shuts places of its own (see `masked`).
+  function field(to, {ladders = true, vaults = 'broken', mask = null} = {}) { const b = nearest(to.x, to.z, to.y); if (!b) return null; const N = nodes.length;
     if (!rev) { const start = new Int32Array(N + 1); let E = 0; for (const n of nodes) for (const e of n.edges) { start[e.to.id + 1]++; E++; } for (let i = 0; i < N; i++) start[i + 1] += start[i];
       const from = new Int32Array(E), cost = new Uint8Array(E), edge = new Array(E), fill = start.slice(0, N); for (const n of nodes) for (const e of n.edges) { const k = fill[e.to.id]++; from[k] = n.id; cost[k] = Math.max(1, Math.min(60, Math.round(e.cost * 2))); edge[k] = e; }
-      rev = {start, from, cost, edge, vault: Uint8Array.from(edge, e => e.kind === 'vault' ? 1 : 0), shut: new Uint8Array(N), buckets: Array.from({length: 64}, () => [])}; }
-    const {start, from, cost, edge, vault, shut, buckets} = rev, far = new Int32Array(N).fill(-1), via = new Int32Array(N).fill(-1); for (let i = 0; i < N; i++) shut[i] = nodes[i].shut ? 1 : 0;
+      rev = {start, from, cost, edge, vault: Uint8Array.from(edge, e => e.kind === 'vault' ? 1 : 0), ladder: Uint8Array.from(edge, e => e.kind === 'ladder' ? 1 : 0), shut: new Uint8Array(N), buckets: Array.from({length: 64}, () => [])}; }
+    const {start, from, cost, edge, vault, ladder, shut, buckets} = rev, far = new Int32Array(N).fill(-1), via = new Int32Array(N).fill(-1); for (let i = 0; i < N; i++) shut[i] = nodes[i].shut || mask && mask[i] ? 1 : 0;
     let left = 1; far[b.id] = 0; buckets[0].push(b.id);
     for (let cur = 0; left > 0; cur++) { const q = buckets[cur & 63]; for (let k = 0; k < q.length; k++) { const id = q[k]; if (far[id] !== cur) continue;
-        for (let r = start[id], end = start[id + 1]; r < end; r++) { const f = from[r], c = cur + cost[r], was = far[f]; if (was >= 0 && was <= c || shut[f] || vault[r] && !api.vaultOpen(edge[r].vault.pane)) continue; far[f] = c; via[f] = r; buckets[c & 63].push(f); left++; } }
+        for (let r = start[id], end = start[id + 1]; r < end; r++) { const f = from[r], c = cur + cost[r], was = far[f]; if (was >= 0 && was <= c || shut[f] || vault[r] && (vaults === 'none' || vaults !== 'all' && !api.vaultOpen(edge[r].vault.pane)) || ladder[r] && !ladders) continue; far[f] = c; via[f] = r; buckets[c & 63].push(f); left++; } }
       left -= q.length; q.length = 0; }
     return {to: b, at: [b.x, b.y, b.z], far, via: {get: id => via[id] < 0 ? null : edge[via[id]]}}; }
   // The first `count` places of the way a field gives from where a body is, as a path's (ladders and windows named).
   function follow(f, from, count = 40) { const out = []; let n = nearest(from.x, from.z, from.y, 3); if (!n || f.far[n.id] < 0) return out;
     for (let i = 0; i < count && n !== f.to; i++) { const e = f.via.get(n.id); if (!e) break; n = e.to; const v = new THREE.Vector3(n.x, n.y, n.z); v.kind = e.kind; if (e.kind === 'ladder') { v.ladder = e.ladder; v.up = e.up; } if (e.kind === 'vault') { v.vault = e.vault; v.from = e.from; } out.push(v); }
     return out; }
-  const api = {close, route, field, follow, vaultOpen: () => false, vaultTime: FOE.vaultTime, nodes, stats, nearest, path, walkable, free, move: moveBody, walk, rest, radius, height, climb: FOE.climb, doors: extras.length,
+  // The places a body cannot stand for `boxes` (as `close` finds them), as a mask for a field of its own.
+  function masked(boxes) { const m = new Uint8Array(nodes.length); for (const b of boxes) for (let i = Math.floor((b.min[0] - radius) / 2); i <= Math.floor((b.max[0] + radius) / 2); i++) for (let j = Math.floor((b.min[2] - radius) / 2); j <= Math.floor((b.max[2] + radius) / 2); j++) for (const n of cells.get(`${i},${j}`) || [])
+      if (n.x >= b.min[0] - radius && n.x <= b.max[0] + radius && n.z >= b.min[2] - radius && n.z <= b.max[2] + radius && n.y < b.max[1] && n.y + height > b.min[1]) m[n.id] = 1; return m; }
+  const api = {close, route, field, follow, masked, vaultOpen: () => false, vaultTime: FOE.vaultTime, nodes, stats, nearest, path, walkable, free, move: moveBody, walk, rest, radius, height, climb: FOE.climb, doors: extras.length,
     // Where a body walking at (x, z) with its feet at y stands, as the game's height rules see it.
     floor: (x, z, y) => space.floor(x, z, y + B.step, B.lean, y)};
   return api;

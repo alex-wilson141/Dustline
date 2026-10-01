@@ -95,24 +95,26 @@ export function weaponTradeoff(config, held) {
 export function waveSpec(n, players = 1) {
   const k = Math.max(0, n - 1);
   if (players > 1) { const s = waveSpec(n), c = AMBUSH.coop; // Build 16: two players up; the solo values below are never touched
-    return {...s, count: Math.min(Math.round(s.count * c.countScale), c.countCap), aliveCap: Math.min(c.aliveCeiling, Math.ceil(s.aliveCap * c.capScale)), spawnGap: Math.max(c.gapFloor, s.spawnGap * c.gapScale)}; }
+    return {...s, count: Math.min(Math.round(s.count * c.countScale), c.countCap), aliveCap: Math.min(Math.max(c.aliveCeiling, CURVE?.coopCeiling || 0), Math.ceil(s.aliveCap * c.capScale)), spawnGap: Math.max(c.gapFloor, s.spawnGap * c.gapScale)}; }
   return curved({
     count: Math.min(4 + 2 * n, 40),                 // 6, 8, 10 ... capped at 40 (wave 18)
     aliveCap: Math.min(AMBUSH.aliveCeiling, 1 + Math.ceil(n / 2)), // 2, 2, 3, 3, 4, 4 ... 9 from wave 15 (Build 12, solo)
     spawnGap: Math.max(1, 4.5 - .3 * k),            // seconds between arrivals (floor 1 s from wave 12; Build 12, solo)
     fightRange: Math.max(14, 26 - k),               // they come this close before stopping to fire
     pauseScale: Math.max(.5, 1 - .05 * k),          // their stops to fire and duck into cover get shorter
-  });
+  }, n);
 }
 // Build 33: a map's own curve. `alive` more hostiles alive at once (never past aliveCeiling) and arrivals `gap` times as
 // far apart (never under a second); count, fight range and pauses are the curve's above. Two players scale what this gives.
-const curved = s => CURVE ? {...s, aliveCap: Math.min(AMBUSH.aliveCeiling, s.aliveCap + (CURVE.alive || 0)), spawnGap: Math.max(1, s.spawnGap * (CURVE.gap || 1))} : s;
+// Build 34: also `cap` ([a, b]: a + b·n alive at once in place of the curve's, up to `ceiling`) and `count` (times as many a wave, up to 60).
+const curved = (s, n) => CURVE ? {...s, count: CURVE.count ? Math.min(60, Math.round(s.count * CURVE.count)) : s.count, aliveCap: Math.min(CURVE.ceiling || AMBUSH.aliveCeiling, CURVE.cap ? CURVE.cap[0] + CURVE.cap[1] * n : s.aliveCap + (CURVE.alive || 0)), spawnGap: Math.max(1, s.spawnGap * (CURVE.gap || 1))} : s;
 // The enemy AI tunables for wave n: the normal ones (movement speeds, sensing), the Ambush attack values with the
 // wave's aggression applied, and corpse limits that leave the enemyPool room for the alive cap and bodies that still lie in view (20 = 12 alive + 4 lying + 4 spare).
 export function aiTuningFor(n, base) {
   const w = waveSpec(n), s = r => [r[0] * w.pauseScale, r[1] * w.pauseScale];
+  // Build 34: a map's curve may let more of them fire at one player at once from given waves on (`tokens`: the waves).
   return {...base, reinforce: false, engageLeash: 200, corpseMax: 4, corpseLife: 20, fightRange: w.fightRange,
-    fightTime: s(AMBUSH.fightTime), coverTime: s(AMBUSH.coverTime), fireTime: s(AMBUSH.fireTime)};
+    fightTime: s(AMBUSH.fightTime), coverTime: s(AMBUSH.coverTime), fireTime: s(AMBUSH.fireTime), ...(CURVE?.tokens ? {attackTokens: base.attackTokens + CURVE.tokens.filter(from => n >= from).length} : {})};
 }
 // Extracting after surviving wave w banks the points earned times this (x1 at the first offer, +0.25 per wave after).
 export const bankMultiplier = survived => survived < AMBUSH.decisionFrom ? 0 : 1 + AMBUSH.bankStep * (survived - AMBUSH.decisionFrom);

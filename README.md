@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 33)
+# DUSTLINE — Operation Broken Signal (Build 34)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -120,6 +120,14 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 3. **Host:** paste the answer and press ACCEPT ANSWER. Keep both pages open and do not reload in between.
 
 Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the game connects players directly and has no relay server. Both players must be on the same build.
+
+## Ambush difficulty and movement fixes (Build 34)
+
+- **Jumping while moving works again** on Dehrun Terraces (it had risen 5 cm since Build 28).
+- **Nothing at eye height is walked into:** a barricade's price board and lantern are solid, and the eye stays under lintels.
+- **Dehrun's Ambush comes from every side:** arrivals are sent by the doors and stairs, by the ladder and the roof, and through ground-floor windows they break themselves. More are alive at once (3 at wave 1, 10 from wave 8), more come per wave, more may fire at you together from waves 3 and 6, and they run until they are near. Kohar Valley's Ambush is unchanged.
+- **L asks before leaving** a mission: press it again to confirm. In co-op the other player is told at the first press.
+- **The knife** is a modelled blade.
 
 ## Ambush on Dehrun Terraces (Build 33)
 

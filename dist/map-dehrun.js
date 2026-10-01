@@ -214,9 +214,21 @@ export const DEHRUN = {
       {a: 7, b: 0, line: [-23.7, 28.5, -23.7, 31.5], y: 0}, {a: 7, b: 0, line: [-49.7, 20.2, -46.3, 20.2], y: 0},   // the west district: the arch into the block, the lane's steps up the hill
       {a: 8, b: 0, line: [23.7, 28.5, 23.7, 31.5], y: 0}, {a: 8, b: 0, line: [46.3, 20.2, 49.7, 20.2], y: 0},
     ],
-    // What the curve changes here (ambush.js `curved`): the ways in are long and narrow, so one more hostile is alive at
-    // once and they follow each other a fifth sooner; counts, prices, points, accuracy and damage are Kohar Valley's.
-    curve: {alive: 1, gap: .8},
+    // What the curve changes here (ambush.js `curved`, `aiTuningFor`; Build 34, after the user's playtest: far too easy, and
+    // nothing demanding before wave 10). Alive at once 2 + the wave's number, up to 10 (3, 4, 5 ... 10 from wave 8; Kohar
+    // Valley 2, 2, 3, 3 ... 9 from wave 15); half as many again a wave; arrivals at six tenths of the gap; one more of them may
+    // fire at a player at once from wave 3 and another from wave 6 (three on Kohar Valley, always); and they run (6 m/s for
+    // 2.8) while more than 12 m of their way is left and they see nobody. Accuracy, damage and the cadence of each are every map's.
+    curve: {cap: [2, 1], ceiling: 10, count: 1.5, gap: .6, tokens: [3, 6], run: 6},
+    // The ways in (game.js `WAYS`): each arrival is given one in turn, by these shares, and keeps to it until it is near its
+    // player. By the doors and the stairs; by the ladder to the roof (no door and no window is a way for these); through a
+    // ground-floor window, which the hostile breaks itself (no door and no ladder). Two in four go by the roof, so a player on
+    // the top floor has as many coming down the west stair as up the east.
+    routes: [
+      {id: 'door', share: 1, ladders: false, vaults: 'none'},
+      {id: 'roof', share: 2, vaults: 'none', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
+      {id: 'window', share: 1, ladders: false, vaults: 'all', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
+    ],
     chart: {x: [-74, 74], z: [-118, 107]}, spots: {x: [-70, 70], z: [-28, 103], step: 4},
     brief: {title: 'Hold the customs house.', solo: 'Ambush: alone on the top floor of the customs house, survive wave after wave. The hostiles come up the stairs, over the roof and through windows that have been shot out. Kills earn points: clear barricades to open the roof, the floors below, the street doors, the square and the town beyond, and buy rifles, magazines and dressings at the crates. There is no win, only how long you last; from wave 5 you can extract between waves and bank your points, or stay for a bigger bank.', coop: 'Ambush, two players: you and your teammate hold the top floor of the customs house against wave after wave. No AI squad. Each of you earns and spends your own points; a barricade either of you clears is open for both. If one of you goes down the other fights on; the run ends when both are down. From wave 5 you can extract between waves if you both choose to.'},
     radio: {solo: 'you are on your own. Hold the top floor. They come up the stairs and over the roof. Kills earn points: clear barricades to open the house and the town, buy rifles, magazines and dressings at the crates. Do not cross a striped line.', coop: 'two of you and nobody else. Hold the top floor together. Your kills earn your own points; a barricade either of you clears is open for both. Watch your fire: your teammate wears blue. Do not cross a striped line.'}},

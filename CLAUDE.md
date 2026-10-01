@@ -28,6 +28,24 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 34 (local, 2026-10-01): Ambush difficulty and movement fixes, after the user's playtest of Dehrun's Ambush (fun, far too
+easy, all from one side). **A body in the air is not a walking body (`air` in `space.js` `move`; the game passes `air: !grounded`):
+it is not set down a step (Build 28's rule put every moving jump back on the floor: a jump while moving rose 5 cm from Build 28 to
+33) and it is given no step allowance (it drifted over a sill's edge and was pushed out on landing).** Do not remove `air` from
+either line. The eye keeps `EYE_GAP` (.16 m) under what is over the body's middle. **Whatever is drawn at eye height where a
+player walks must be in the body's space** (`markBox`: a barricade's board, paint and lantern; a crate's lantern post): the near
+plane cuts anything nearer than about .12 m. **The ways in (`ambush.routes`, `WAYS`, `WAY_ORDER`, `ambushWay`): each arrival is
+given a way in turn by the routes' shares, each player's arrivals taking their own turns (`amb.wayN[k]`), and follows that way's
+own field (`ambushField(k, way)`: `ladders`, `vaults` 'none' | 'broken' | 'all', `shut` places of its own) until 12 m of way is
+left (`NEAR_WAY`), then a path of its own.** One whose way is a window breaks the pane itself (`BREACH` in `vaultStep`).
+`amb.came` and `amb.cameBy` count how each came (the bench reads them). One field is rebuilt a frame (`fieldJobs`). **Dehrun's
+curve (`ambush.curve`): `cap` [2, 1] to `ceiling` 10, `count` 1.5, `gap` .6, `tokens` [3, 6] (one more may fire at a player from
+those waves: `T.attackTokens` from `aiT()` in `assignTokens`; Kohar Valley's is 3 at every wave), `run` 6 m/s while more than `NEAR_WAY` is
+left and the hostile sees nobody.** Kohar Valley names no curve and no routes; T44 compares its Ambush with Build 33 from its
+commit and T43 with Build 32. **Leaving asks first (`leave()`, `LEAVING`, `#leaveask`): never call `goMenu()` from a key or a
+button that a player can press in a mission; `leaving` tells the other player at the first press.** The knife is a profile
+extruded and bevelled in `viewmodel.js`, made once. Breakage scripts: quote the heredoc (`<<'EOF'`: the shell eats `$(...)`),
+and never kill a pass in the middle (it leaves its edit in `dist/`; the script now restores on SIGTERM).
 Build 33 (local, 2026-10-01): Ambush on Dehrun Terraces, in the customs house. **An arena may have height (`ambush.levels` in
 the map; `LEVELS` in `dist/ambush.js`): every line in `game.js` and `ambush.js` that says `LEVELS` leaves Kohar Valley's flat arena
 on its own code, and T43 compares Kohar Valley's Ambush (both curves for forty waves, every price, both keys of the bests, a played
@@ -433,15 +451,16 @@ node tests/test-frames-b30.mjs
 node tests/test-corners-b31.mjs
 node tests/test-mapchange-b32.mjs
 node tests/test-ambush-dehrun-b33.mjs
+node tests/test-difficulty-b34.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 33 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 34 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change and 11 Dehrun-Ambush checks (322 in 36 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush and 8 difficulty-and-movement checks (330 in 37 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
