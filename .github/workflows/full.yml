@@ -1,0 +1,30 @@
+# Every regression suite, the slow ones included (those that play an older build beside the present one for minutes).
+# It publishes nothing and holds nothing up: pages.yml publishes after the quick suites alone (Build 37). It runs after every
+# push to main (a red mark on the commit a few minutes after it went live says a slow suite failed), every Monday, and
+# whenever it is asked for: Actions > Full regression run > Run workflow, or `gh workflow run full.yml`.
+name: Full regression run
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  all-suites:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the suites compare against earlier builds taken from their commits
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build stamp is current
+        run: node tools/stamp-build.mjs --check
+      - name: Every regression suite
+        run: node tools/run-suites.mjs all --jobs 4

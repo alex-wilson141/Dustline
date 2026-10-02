@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 36)
+# DUSTLINE — Operation Broken Signal (Build 37)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -47,7 +47,18 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
 
-## Co-op setup
+## Squad codes (Build 37)
+
+Both players choose **Private co-op**. One presses **CREATE SQUAD** and tells the other the 4-character code; the other types
+it and presses **JOIN SQUAD**. A code works once and lasts ten minutes; both players must be on the same build (a mismatch is
+said, and both reload). Once connected the host chooses the map and mode and deploys, as before.
+
+The code is kept by a small signalling service (`service/` in this repository: a Cloudflare Worker, deployed separately; see
+`service/README.md`). It holds each player's connection description, which contains their network addresses, for ten minutes
+at most and usually seconds, logs nothing, and carries no game data. If it cannot be reached, or a copy of the game has no
+service address set, the game says so and offers **Manual connection**: the long codes below, which need no service.
+
+## Co-op setup (manual connection)
 
 The hosted Site is public, so both players can open the game link without a game account. Co-op sessions still use privately exchanged connection codes. **Both players must run the same build** (the menu shows the build number). Builds 05–07 add host-sent hit, crouch and respawn data for blood, blood splats, reactions, deaths and wall dust; mixing builds still connects but shows those effects incorrectly. Refresh both players before connecting.
 
@@ -279,4 +290,4 @@ Read and update `DUSTLINE-ROADMAP.md` after each development task. It records ve
 
 ## Publishing
 
-Every push to `main` publishes the game to https://alex-wilson141.github.io/Dustline/ through GitHub Actions (`.github/workflows/pages.yml`). Before anything goes live the workflow checks that the build stamp is current and runs every regression suite; if one fails, nothing is published and the previous build stays online. `dist/` is the site root. After changing anything in `dist/`, run `node tools/stamp-build.mjs`, run the suites, commit and push. Players get the new build on their next page load; both co-op players should reload so they are on the same build.
+Every push to `main` publishes the game to https://alex-wilson141.github.io/Dustline/ through GitHub Actions (`.github/workflows/pages.yml`). Before anything goes live the workflow checks that the build stamp is current and runs the quick regression suites, the three traces among them (`node tools/run-suites.mjs quick`); if one fails, nothing is published and the previous build stays live. Since Build 37 the slow suites (listed in `tests/suite-groups.json`; most replay an older build for minutes) no longer hold a publish up: `.github/workflows/full.yml` runs every suite after each push, every Monday and on request (Actions > Full regression run > Run workflow), and a failure there shows as a red mark on the commit after it is live. Run `node tools/run-suites.mjs all` before committing.

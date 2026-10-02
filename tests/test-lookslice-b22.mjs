@@ -49,7 +49,7 @@ await check('kohar', 'Kohar Valley fetches nothing of the new map: the modules i
   const game = SOURCE ? fs.readFileSync(SOURCE, 'utf8') : read('game.js'), {KOHAR} = await import(new URL('dist/map-kohar.js', projectRoot));
   for (const t of ['WORLD.sky.environment??.35', 'WORLD.sky.background??.75', 'WORLD.sky.ambient??1.6', 'WORLD.sun.colour??0xffe6c2', 'WORLD.sun.power??3.6', 'WORLD.terrain.surface||groundY', 'LOOKMAP=WORLD.look||null']) assert(game.includes(t), `the game keeps ${t}`);
   for (const k of ['environment', 'background', 'ambient']) assert(!(k in KOHAR.sky)); for (const k of ['colour', 'power']) assert(!(k in KOHAR.sun)); assert(!('surface' in KOHAR.terrain) && !('look' in KOHAR) && !('build' in KOHAR) && !('block' in KOHAR));
-  assert.match(read('index.html'), /BUILD 36/);
+  assert.match(read('index.html'), /BUILD 37/);
   report.kohar = {modulesLoaded: graph.length, assetsAskedFor: asked.length, drawn: d, note: 'that its world is Build 20\'s, number for number, is checked by T31 on this same build'};
 });
 

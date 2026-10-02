@@ -15,6 +15,8 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
+- `dist/squad.js`: squad codes, the game's side (Build 37). `service/`: the signalling service's source (a Cloudflare Worker;
+  outside `dist/`, not served, deployed by the user). `tools/run-suites.mjs`, `tests/suite-groups.json`: the quick and slow suites.
 - `dist/map-kohar.js`: Kohar Valley, map 1, as a description (Build 21). `dist/maps.js`: the maps and the active one.
 - `dist/map-dehrun.js`, `dist/terraces.js`, `dist/GLTFLoader.js`, `dist/assets/dehrun/`: Dehrun Terraces, map 2 (Build 28: the
   whole town in grey-box round the look-slice block and the customs house; walked as a look map, played as Skirmish).
@@ -28,6 +30,25 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 37 (local, 2026-10-01): squad codes and fast publishing (F.12, E54). **CREATE SQUAD / JOIN SQUAD make the same connection as
+the long codes, the two descriptions carried by a signalling service** (`service/`: a Cloudflare Worker and one Durable Object,
+outside `dist/`, deployed by the user with wrangler, never served by Pages). `service/src/lobby.js` is the whole rule and has no
+Cloudflare in it (T47 runs that file); `worker.js` only adds allowed origins and the Durable Object. `dist/squad.js`: `SQUAD`
+(`url`: the service's address, **empty until the user has deployed it and given it**: the one absolute URL allowed in `dist/`),
+`SquadService`, `readSquadCode`, `SERVICE_FAULTS`. `network.js`: `hostSquad`, `squadPoll` (every 2 s), `joinSquad`, `leaveSquad`.
+Codes: 4 characters of 31 (no 0, 1, I, L, O), issued only when free, one use (used up at `/join`), ten minutes; a build mismatch
+is refused and does not use the code up (the page's stamp is its build: `pageBuild()`). **The manual connection (the long codes,
+unchanged, behind `#manual-link`) is offered only when the service failed at its own work (`SERVICE_FAULTS`: unreachable, unset,
+busy, refused), never for a wrong, used or expired code or a mismatch; nothing falls back silently: a failure is said and the
+player chooses.** **Privacy: the service stores the two descriptions (they hold network addresses), the build, two keys and three
+times; deleted when the answer is collected, on cancel (`pagehide`, `close`), a minute after the host stops asking, at ten minutes
+at the latest; no `console` call, the caller's address never read, Workers logs off. Keep it so (T47 checks the source).** Requests
+are `text/plain` POSTs (no preflight), nothing in the URL, no cookies. The harness keeps what a page sends (`peer.send` is
+replaced): hand messages across yourself in a two-page test. **Publishing: `pages.yml` runs the stamp check and the quick suites
+(`node tools/run-suites.mjs quick --jobs 4`: every suite not listed `slow` in `tests/suite-groups.json`, the traces among them) and
+deploys; `full.yml` runs every suite after a push (not gating), on Mondays and on request. A new suite is quick until listed slow;
+a trace must never be listed slow. Before every commit run all of them locally (`node tools/run-suites.mjs all`).** The deployed
+Worker itself is exercised by no check, and no two networks were connected by a code: UNVERIFIED until the user deploys.
 Build 36 (local, 2026-10-01): movement naturalness and spawn spread on Dehrun Terraces, after the user's playtest of Build 35
 (variety better, bombers and rushers good; the movement jagged, rushers looked like shooters and were too hard to hit, the beep
 carried too far with no direction, arrivals one-sided). **Hostiles that vary (`ai.v`: Dehrun's Ambush only) are steered:
@@ -497,15 +518,18 @@ node tests/test-ambush-dehrun-b33.mjs
 node tests/test-difficulty-b34.mjs
 node tests/test-variety-b35.mjs
 node tests/test-natural-b36.mjs
+node tests/test-squad-codes-b37.mjs
 ```
+
+All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what gates a publish).
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 36 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 37 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety and 5 naturalness-and-spread checks (343 in 39 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread and 10 squad-code checks (353 in 40 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
@@ -516,16 +540,18 @@ headless results as a real gameplay or network playtest.
 The repository is https://github.com/alex-wilson141/Dustline (public, branch `main`, remote
 `origin`). The live game is https://alex-wilson141.github.io/Dustline/ , served by GitHub Pages
 from `dist/` as the site root. **Every push to `main` publishes**: `.github/workflows/pages.yml`
-runs `node tools/stamp-build.mjs --check` and every `tests/test-*.mjs` suite, and deploys only if
-all pass. So: never push a build the user has not asked to release, stamp before committing, and
-keep the suites green. The site lives under the path `/Dustline/`: keep every URL in `dist/`
+runs `node tools/stamp-build.mjs --check` and the quick suites (Build 37: `tools/run-suites.mjs quick`,
+the three traces among them), and deploys only if all pass; the slow suites run in `full.yml` after
+the push without holding it up. So: never push a build the user has not asked to release, stamp
+before committing, run every suite locally before a commit, and keep the suites green. The site lives under the path `/Dustline/`: keep every URL in `dist/`
 relative. Commits use the GitHub no-reply address (repo-local `user.email`); never put the user's
 personal email, local user name or absolute home paths in tracked files. Commit IDs were rewritten
 on 2026-09-27; the old-to-new table is in the roadmap (H2).
 
 The earlier public Site https://dustline-mountain-front.smart-heron-4139.chatgpt.site/ is a
 separate, older deployment; repository access does not publish to it. Assets are bundled; co-op
-setup uses Google STUN and has no TURN relay. The game has no account, database or save backend
+setup uses Google STUN and has no TURN relay; squad codes use the user's Cloudflare Worker (`service/`), which holds
+connection descriptions for minutes. The game has no account, database or save backend
 (the Ambush personal bests, solo and co-op, are browser storage only).
 
 Historical `work/` checks mentioned in the roadmap belong to the original

@@ -1,0 +1,22 @@
+# DUSTLINE squad codes (Build 37). Deployed by the user with `npx wrangler deploy` from this folder; see README.md here.
+name = "dustline-squad"
+main = "src/worker.js"
+compatibility_date = "2025-06-01"
+workers_dev = true
+
+# The pages that may use the service: the published game and a local copy. Add an origin here if the game moves.
+[vars]
+ALLOWED_ORIGINS = "https://alex-wilson141.github.io,http://localhost:*,http://127.0.0.1:*"
+
+[[durable_objects.bindings]]
+name = "LOBBY"
+class_name = "SquadLobby"
+
+# The free plan's Durable Objects are the SQLite-backed kind.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SquadLobby"]
+
+# Privacy: no Workers logs are kept.
+[observability]
+enabled = false

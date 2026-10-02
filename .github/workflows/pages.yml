@@ -1,6 +1,7 @@
 # Publishes the game to GitHub Pages on every push to main.
-# dist/ is the site root. The regression suites and the build-stamp check run first;
-# nothing is published if any of them fails, so a broken build never reaches players.
+# dist/ is the site root. The build-stamp check and the quick regression suites run first (the three traces among them);
+# nothing is published if any of them fails. Build 37: the slow suites (tests/suite-groups.json) no longer hold a publish
+# up: they run in full.yml after every push, weekly and on request, and every suite is run locally before a commit.
 name: Publish to GitHub Pages
 
 on:
@@ -29,15 +30,8 @@ jobs:
           node-version: 24
       - name: Build stamp is current
         run: node tools/stamp-build.mjs --check
-      - name: Regression suites
-        run: |
-          set -e
-          for t in tests/test-*.mjs; do
-            echo "::group::$t"
-            node "$t" > /tmp/out.json
-            node -e "const r=JSON.parse(require('fs').readFileSync('/tmp/out.json','utf8'));console.log(r.passed+' checks passed')"
-            echo "::endgroup::"
-          done
+      - name: Quick regression suites and the three traces
+        run: node tools/run-suites.mjs quick --jobs 4
 
   deploy:
     needs: check

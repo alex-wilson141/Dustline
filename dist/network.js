@@ -3,6 +3,7 @@
 // breaks, and every way a code can be wrong has its own message; a pasted code is routed by what it is, not by which
 // button was pressed; a network that cannot connect is reported as that, never as a wrong code.
 import './build.js'; // DEPLOY-01 upgrade guard
+import {SQUAD, SquadError, readSquadCode, squadMessage} from './squad.js';
 
 export const CODE_VERSION = 3;
 const HEAD = 'DUSTLINE', KIND = {offer: 'H', answer: 'A'}, KIND_OF = {H: 'offer', A: 'answer'}, NAME = {offer: 'host code', answer: 'answer code'};
@@ -57,8 +58,8 @@ export const NETWORK_FAILURE = 'The codes were right, but your two networks coul
 export class CodeError extends Error { constructor(reason, message) { super(message); this.reason = reason; } }
 
 export class PeerSquad {
- constructor({status,onReady,onMessage,onClose,onUnstable}){Object.assign(this,{status,onReady,onMessage,onClose,onUnstable});this.pc=null;this.channel=null;this.role=null;this.connected=false;this.myCode=null;this.offerId=null;this.exchanged=false;this.connectTimeout=30000;this.timer=null;this.unstable=false;this.graceTime=15000;this.grace=null;}
- close(notify=false){this.connected=false;this.unstable=false;this.exchanged=false;clearTimeout(this.timer);clearTimeout(this.grace);this.timer=this.grace=null;const pc=this.pc,ch=this.channel;this.pc=null;this.channel=null;if(ch){ch.onopen=ch.onclose=ch.onmessage=null;ch.close();}pc?.close();if(notify)this.onClose?.();}
+ constructor({status,onReady,onMessage,onClose,onUnstable,onSquad}){Object.assign(this,{status,onReady,onMessage,onClose,onUnstable,onSquad});this.pc=null;this.channel=null;this.role=null;this.connected=false;this.myCode=null;this.offerId=null;this.exchanged=false;this.connectTimeout=30000;this.timer=null;this.unstable=false;this.graceTime=15000;this.grace=null;this.squad=null;this.squadTimer=null;}
+ close(notify=false){this.leaveSquad();this.connected=false;this.unstable=false;this.exchanged=false;clearTimeout(this.timer);clearTimeout(this.grace);this.timer=this.grace=null;const pc=this.pc,ch=this.channel;this.pc=null;this.channel=null;if(ch){ch.onopen=ch.onclose=ch.onmessage=null;ch.close();}pc?.close();if(notify)this.onClose?.();}
  setup(role){this.close();this.role=role;this.myCode=null;this.offerId=null;const pc=this.pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.onconnectionstatechange=()=>{if(this.pc!==pc)return;const s=pc.connectionState;
    // NET-04 (Build 16): 'disconnected' is often a hiccup that the browser repairs by itself. An open session is held
    // (unstable) for up to graceTime; only 'failed', 'closed', a closed channel or a hiccup that outlasts the grace ends it.
@@ -68,7 +69,7 @@ export class PeerSquad {
    if(s==='failed'&&!this.connected&&this.exchanged)this.status(this.networkFailure());else if(s==='connecting')this.status('Codes accepted. Connecting…');else if(s!=='connected'&&s!=='new')this.status('Connection: '+s);
    if(['failed','disconnected','closed'].includes(s))this.drop();};pc.ondatachannel=e=>{if(this.pc!==pc){e.channel.close();return;}this.bind(e.channel);};return pc;}
  drop(){const was=this.unstable;this.connected=false;this.unstable=false;clearTimeout(this.timer);clearTimeout(this.grace);this.grace=null;if(was)this.onUnstable?.(false);this.onClose?.();}
- bind(channel){this.channel=channel;channel.onopen=()=>{if(this.channel!==channel)return;this.connected=true;clearTimeout(this.timer);this.status('Connected. Host can deploy the squad.');this.onReady?.(this.role);};channel.onclose=()=>{if(this.channel!==channel)return;this.drop();};channel.onmessage=e=>{if(this.channel!==channel)return;if(typeof e.data!=='string'||e.data.length>100000)return;try{const m=JSON.parse(e.data);if(m&&typeof m==='object'&&typeof m.type==='string')this.onMessage(m);}catch{}};}
+ bind(channel){this.channel=channel;channel.onopen=()=>{if(this.channel!==channel)return;this.connected=true;clearTimeout(this.timer);clearTimeout(this.squadTimer);this.squad=null;this.status('Connected. Host can deploy the squad.');this.onReady?.(this.role);};channel.onclose=()=>{if(this.channel!==channel)return;this.drop();};channel.onmessage=e=>{if(this.channel!==channel)return;if(typeof e.data!=='string'||e.data.length>100000)return;try{const m=JSON.parse(e.data);if(m&&typeof m==='object'&&typeof m.type==='string')this.onMessage(m);}catch{}};}
  async gathered(pc){if(pc.iceGatheringState==='complete')return;await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pc.removeEventListener('icegatheringstatechange',check);if(pc.localDescription?.sdp?.includes('candidate:'))resolve();else reject(new Error('This network gave the game no address to connect through. Try another browser or network.'));},12000);const check=()=>{if(pc.iceGatheringState==='complete'){clearTimeout(timer);pc.removeEventListener('icegatheringstatechange',check);resolve();}};pc.addEventListener('icegatheringstatechange',check);});}
  // What to say when the codes matched and the connection still did not come up.
  networkFailure(){const mine=hasPublicAddress(this.pc?.localDescription?.sdp),theirs=hasPublicAddress(this.pc?.remoteDescription?.sdp);return NETWORK_FAILURE+(mine&&theirs?'':` (${!mine?'This':'Your teammate’s'} network did not reveal a public address.)`);}
@@ -90,5 +91,30 @@ export class PeerSquad {
   if(r.type==='answer'){await this.accept(text);return null;}
   if(button==='accept')throw new CodeError('wrong-kind','That is a host code, not an answer. You have both created host codes: decide who hosts. The one who joins pastes the host code and presses JOIN WITH CODE.');
   return this.join(text);}
+ // ---- Build 37: squad codes. The same connection as the long codes make, with the two descriptions carried by the squad
+ // service (squad.js) under a 4-character code instead of by the players. `service`: a SquadService.
+ // The host: its description goes to the service, which answers with the code; then the page asks every two seconds
+ // whether someone has joined, and takes their answer when it is there. Throws a SquadError (its `reason` says what).
+ async hostSquad(service){this.status('Preparing squad code…');const pc=this.setup('host');this.bind(pc.createDataChannel('dustline',{ordered:true}));await pc.setLocalDescription(await pc.createOffer());await this.gathered(pc);if(this.pc!==pc)throw new Error('Connection setup cancelled.');
+  const r=await service.create(pc.localDescription.sdp);if(this.pc!==pc){service.cancel(r.code,r.key);throw new Error('Connection setup cancelled.');}
+  this.squad={code:r.code,key:r.key,service,pc,misses:0,state:'waiting',until:Date.now()+(r.life||SQUAD.life)};this.status(`Squad code ${r.code}. Tell it to your teammate: they type it and press JOIN SQUAD. It works once, for ten minutes. Keep this page open.`);this.squadAsk();return r.code;}
+ squadAsk(){clearTimeout(this.squadTimer);this.squadTimer=setTimeout(()=>this.squadPoll(),SQUAD.pollEvery);}
+ async squadPoll(){const q=this.squad;if(!q||this.pc!==q.pc||this.connected)return;let r;
+  try{r=await q.service.poll(q.code,q.key);}catch(e){if(this.squad!==q)return;
+   // The service not answering for a moment loses nothing; lost for good, or the code gone from it, ends the wait.
+   if(e.reason==='unreachable'&&++q.misses<SQUAD.lost){this.squadAsk();return;}
+   this.squad=null;this.onSquad?.(e.reason==='unreachable'?'unreachable':'expired');this.status(e.reason==='unreachable'?'The squad service stopped answering, so nobody can join by this code now. Press CREATE SQUAD again, or use the manual connection below.':squadMessage('expired'));return;}
+  if(this.squad!==q||this.pc!==q.pc||this.connected)return;q.misses=0;
+  if(r.state==='answer'){this.squad=null;this.exchanged=true;try{await q.pc.setRemoteDescription({type:'answer',sdp:r.answer});}catch{this.status('Your teammate’s page sent something that is not a connection. Press CREATE SQUAD again.');this.onSquad?.('failed');return;}if(this.pc!==q.pc||this.connected||q.pc.connectionState==='failed')return;this.watch(q.pc);this.status('Teammate found. Connecting… this can take up to 30 seconds.');this.onSquad?.('answer');return;}
+  if(r.state==='joining'){if(q.state!=='joining'){q.state='joining';q.joinedAt=Date.now();this.status('Someone entered your code. Waiting for their page…');this.onSquad?.('joining');}
+   else if(Date.now()-q.joinedAt>SQUAD.joinWait){this.squad=null;q.service.cancel(q.code,q.key);this.status('Someone entered your code but their page never finished joining, and a code works once. Press CREATE SQUAD for a new code.');this.onSquad?.('failed');return;}}
+  this.squadAsk();}
+ // The joiner: the code fetches the host's description (and uses the code up), the answer goes back by the service.
+ async joinSquad(service,text){const c=readSquadCode(text);if(!c.ok)throw new SquadError(c.reason,c.message);this.status(`Looking for squad ${c.code}…`);const r=await service.join(c.code);
+  const pc=this.setup('guest');try{await pc.setRemoteDescription({type:'offer',sdp:r.offer});}catch{throw new SquadError('refused','The squad service returned something that is not a connection. Ask the host to create a new code.');}
+  await pc.setLocalDescription(await pc.createAnswer());await this.gathered(pc);if(this.pc!==pc)throw new Error('Connection setup cancelled.');
+  await service.answer(c.code,r.ticket,pc.localDescription.sdp);if(this.pc!==pc)throw new Error('Connection setup cancelled.');this.watch(pc);this.status(`Squad ${c.code} found. Connecting… this can take up to 30 seconds.`);return c.code;}
+ // A code still waiting when this page lets go of it (a new code, a reload, DISCONNECT) is taken back from the service.
+ leaveSquad(){const q=this.squad;clearTimeout(this.squadTimer);this.squadTimer=null;this.squad=null;if(q)q.service.cancel(q.code,q.key);}
  send(message){if(!this.connected||this.channel?.readyState!=='open'||this.channel.bufferedAmount>200000)return false;this.channel.send(JSON.stringify(message));return true;}
 }
