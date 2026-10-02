@@ -34,7 +34,7 @@ Build 37 (local, 2026-10-01): squad codes and fast publishing (F.12, E54). **CRE
 the long codes, the two descriptions carried by a signalling service** (`service/`: a Cloudflare Worker and one Durable Object,
 outside `dist/`, deployed by the user with wrangler, never served by Pages). `service/src/lobby.js` is the whole rule and has no
 Cloudflare in it (T47 runs that file); `worker.js` only adds allowed origins and the Durable Object. `dist/squad.js`: `SQUAD`
-(`url`: the service's address, **empty until the user has deployed it and given it**: the one absolute URL allowed in `dist/`),
+(`url`: the service's address, `https://dustline-squad.awilson183.workers.dev`, deployed by the user 2026-10-01 and set the same day: the one absolute URL allowed in `dist/`; empty means no service and manual connection only),
 `SquadService`, `readSquadCode`, `SERVICE_FAULTS`. `network.js`: `hostSquad`, `squadPoll` (every 2 s), `joinSquad`, `leaveSquad`.
 Codes: 4 characters of 31 (no 0, 1, I, L, O), issued only when free, one use (used up at `/join`), ten minutes; a build mismatch
 is refused and does not use the code up (the page's stamp is its build: `pageBuild()`). **The manual connection (the long codes,
@@ -48,7 +48,9 @@ replaced): hand messages across yourself in a two-page test. **Publishing: `page
 (`node tools/run-suites.mjs quick --jobs 4`: every suite not listed `slow` in `tests/suite-groups.json`, the traces among them) and
 deploys; `full.yml` runs every suite after a push (not gating), on Mondays and on request. A new suite is quick until listed slow;
 a trace must never be listed slow. Before every commit run all of them locally (`node tools/run-suites.mjs all`).** The deployed
-Worker itself is exercised by no check, and no two networks were connected by a code: UNVERIFIED until the user deploys.
+Worker was checked once by hand on 2026-10-01 (every call, the origins, and two real browser tabs on one machine connecting by a
+code); no suite calls it (suites must not depend on the network), and a code across two networks is UNVERIFIED until the user
+and a friend try it. After changing `service/`, the user must deploy again (`service/README.md`).
 Build 36 (local, 2026-10-01): movement naturalness and spawn spread on Dehrun Terraces, after the user's playtest of Build 35
 (variety better, bombers and rushers good; the movement jagged, rushers looked like shooters and were too hard to hit, the beep
 carried too far with no direction, arrivals one-sided). **Hostiles that vary (`ai.v`: Dehrun's Ambush only) are steered:

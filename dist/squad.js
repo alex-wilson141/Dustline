@@ -5,7 +5,7 @@
 import './build.js'; // DEPLOY-01 upgrade guard
 
 // `url`: where the service answers (no slash at the end); empty: no service. The alphabet has no 0, 1, I, L or O.
-export const SQUAD = {url: '', alphabet: '23456789ABCDEFGHJKMNPQRSTUVWXYZ', length: 4, timeout: 7000, pollEvery: 2000, life: 10 * 60e3, joinWait: 40e3, lost: 4};
+export const SQUAD = {url: 'https://dustline-squad.awilson183.workers.dev', alphabet: '23456789ABCDEFGHJKMNPQRSTUVWXYZ', length: 4, timeout: 7000, pollEvery: 2000, life: 10 * 60e3, joinWait: 40e3, lost: 4};
 
 export class SquadError extends Error { constructor(reason, message, more = {}) { super(message); this.reason = reason; Object.assign(this, more); } }
 // What a player typed, without spaces, dashes and case. Returns {ok, code} or {ok: false, reason, message}.
