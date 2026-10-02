@@ -79,7 +79,7 @@ export const ASSET_VERSIONS = {
   "assets/dehrun/tex/yellow_stone_wall_diff_1k.jpg": "b7f5ceea60",
   "assets/dehrun/tex/yellow_stone_wall_nor_gl_1k.jpg": "1f2d6557ec",
   "assets/kloofendal_48d_partly_cloudy_puresky_1k.hdr": "fd94c84997",
-  "assets/models/arms.glb": "a5d0024263",
+  "assets/models/arms.glb": "b37d0f1e50",
   "assets/models/kareth_a.glb": "9658bad83e",
   "assets/models/kareth_b.glb": "5ffbb340dc",
   "assets/models/machete.glb": "1c9dec2e77",

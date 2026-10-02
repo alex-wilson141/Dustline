@@ -15,6 +15,7 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
+- `dist/hud.js`: the HUD panel's model (Build 40: pure; `game.js` draws it).
 - `tests/probe-pressure.mjs`: a probe (not a suite) that measures how Dehrun's Ambush presses on a standing player (Build 39).
 - `dist/models.js`, `dist/assets/models/`: the bodies, the first-person arms and the machete (Build 38); `tools/models/`: how they
   were converted (Blender); `incoming/`: raw downloads, ignored by git.
@@ -33,7 +34,30 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
-Build 39 (local, 2026-10-02): the playtest of Build 38: the arms, the reload and the pressure of Dehrun's Ambush (E57). **User
+Build 40 (2026-10-02): the HUD's panel (F.17) and the arms' cloth (E58). **The panel is the bottom-right corner (`#panel` in
+`index.html`): the weapon block (`#ammo`: name, calibre, a silhouette by `data-gun`, the rounds large, the reserve, the fire
+mode, what the weapon is doing, the reload key), six tiles (`#kit`: the other weapon, knife, dressings; frag, smoke, flash) each
+with its key on it and its count, the Ambush points on top (`#ambushhud`), and at a crate a row of purchase chips (`#shop`: key,
+icon, price; `short` when the points do not reach, `full` when no more can be carried).** It replaces the line of text
+(`gearLine`, `#gear`), the weapon's text line and the dressing line under the health (`#medical`): **do not bring any of them
+back, and add no sentence to the panel.** `dist/hud.js` is the whole rule and is pure (`panelModel(state)`, `weaponState`, `PANEL`:
+`low` a quarter of a magazine, three digits shown whole, more as 999); `panelState()` in `game.js` gathers the state and
+`panelDraw()` writes it (every tenth of a second with the rest of the HUD, and at once from `weaponLabel()` when the weapon
+changes). **The panel reads and changes nothing: no seeded number, no state (T50 `kohar` draws it a hundred times a frame and
+compares).** Every key shown comes from `KEYS`; the chosen throwable carries the throw key, `Tab` stands beside the three.
+Icons are inline SVG symbols drawn in `index.html` (`#icons`: `i-*` for tiles and chips, `g-*` silhouettes for the four rifles
+and the sidearm), used by `<use href>`: **no icon is an asset; a new tile needs its symbol in the page and its place in
+`panelDraw` (T50 `page` checks every place and every icon).** The crate's prompt in the middle of the screen is unchanged
+(T22 presses its keys). The points keep their corner (now the panel's top line, `PTS`); the health, the objective and the radio
+keep their places (the radio line is narrower only in windows under 1,360 px, so that it never runs under the panel). In the
+tactical view the panel stands above the help line. **The arms' cloth:** it looked like cardboard because its picture was plain
+cloth and its folds were only in the normal picture, which shows nothing in the shade (indoors, where Ambush is played). The
+folds are now in the colour too (`texlib.folds`: darker by how much the normal tilts, a little by which way), with a weave
+(`texlib.weave`) and no broad blotches (`decamo(shade=0)`); the relief is doubled in the material (`normalTexture.scale` 2) and
+the roughness is the squad's bodies' (.86); the file says so (`extras.cloth`: `contrast`, `relief`, `roughness`). **The squad's
+and the Brigade's bodies are untouched (T50 `cloth` compares their files with Build 39's).** The bench hooks answer
+`DBG.run("...")` in the page for setting a state to look at (`?bench=hands&mode=ambush&at=x,y,z`).
+Build 39 (2026-10-02): the playtest of Build 38: the arms, the reload and the pressure of Dehrun's Ambush (E57). **User
 decisions: arrivals still start 35 m off (20 s to the top floor is acceptable if what follows is dense); alive at once stays where
 this build set it, to be judged by play; the weapon models come after this.** **Arms:** `arms.glb` is cut from the long-sleeved
 avatar (Military_Male_01), tan sleeves to the gloves; the squad's body has its bare forearms painted as sleeves
@@ -584,6 +608,7 @@ node tests/test-natural-b36.mjs
 node tests/test-squad-codes-b37.mjs
 node tests/test-models-b38.mjs
 node tests/test-pressure-b39.mjs
+node tests/test-panel-b40.mjs
 ```
 
 All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what gates a publish).
@@ -592,9 +617,9 @@ All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what ga
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 39 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 40 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code, 7 model and 12 arms-and-pressure checks (372 in 42 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code, 7 model, 12 arms-and-pressure and 7 panel-and-cloth checks (379 in 43 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

@@ -5,7 +5,7 @@
 import bpy, sys, os, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import texlib as T
 OUT = sys.argv[sys.argv.index('--') + 1]; RB = os.environ.get('ROCKETBOX') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'incoming', 'rocketbox'); DIR, PRE = 'Military_Male_01', 'sm002'
-TAN, COYOTE = (.60, .52, .37), (.33, .28, .20)
+TAN, COYOTE = (.60, .52, .37), (.33, .28, .20); RELIEF = 2.0
 PAINT = [(132, 530, 222, 650), (804, 532, 892, 656)]
 GEAR = [(0, 872, 280, 1024), (750, 872, 1024, 1024)]
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -52,8 +52,11 @@ def load(kind):
     for suf in (f'{PRE}_body_{kind}_acu.tga', f'{PRE}_body_{kind}.tga'):
         p = os.path.join(RB, DIR, suf)
         if os.path.exists(p): return T.load(p)
-c = load('color'); island = (c.max(2) > .035).astype(np.float32); c = T.inpaint(c, island, PAINT); c, island = T.decamo(c, TAN, COYOTE, gear_rects=GEAR, cloth_rects=PAINT); c = T.bleed(c, island)
+c = load('color'); island = (c.max(2) > .035).astype(np.float32); c = T.inpaint(c, island, PAINT); c, island = T.decamo(c, TAN, COYOTE, gear_rects=GEAR, cloth_rects=PAINT, shade=0)
 n = load('normal'); m = np.clip(T.blur(T.rect_mask(n.shape, PAINT), 3) * 1.5, 0, 1)[:, :, None]; n = n * (1 - m) + np.array((.5, .5, 1), np.float32) * m
+# Build 40: the cloth has its folds in its colour (and a weave), not only in the normal picture: seen from a hand's length in
+# the shade of a house, plain cloth with a normal picture is cardboard. The gloves keep the light and dark they had.
+cloth = 1 - T.rect_mask(c.shape, GEAR); c = c * (1 - cloth[:, :, None]) + c * cloth[:, :, None] * (T.folds(n) * T.weave(c.shape))[:, :, None]; c = T.bleed(c, island)
 uv = mesh.data.uv_layers.active.data; us = np.array([d.uv[:] for d in uv]); u0, v0 = us.min(0); u1, v1 = us.max(0)
 H, W = c.shape[:2]; pad = 8; y0 = max(0, int(v0 * H) - pad); y1 = min(H, int(math.ceil(v1 * H)) + pad); y1 = y0 + int(math.ceil((y1 - y0) / 4) * 4)
 c = c[y0:y1]; n = n[y0:y1]
@@ -63,11 +66,11 @@ imgC = T.to_image(c, 'arms_colour'); imgN = T.to_image(n, 'arms_normal'); imgN.c
 mat = bpy.data.materials.new('arms'); mat.use_nodes = True; nt = mat.node_tree; bsdf = next(x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED')
 tc = nt.nodes.new('ShaderNodeTexImage'); tc.image = imgC; nt.links.new(tc.outputs['Color'], bsdf.inputs['Base Color'])
 tn = nt.nodes.new('ShaderNodeTexImage'); tn.image = imgN; nm = nt.nodes.new('ShaderNodeNormalMap'); nt.links.new(tn.outputs['Color'], nm.inputs['Color']); nt.links.new(nm.outputs['Normal'], bsdf.inputs['Normal'])
-bsdf.inputs['Roughness'].default_value = .82; bsdf.inputs['Metallic'].default_value = 0
+bsdf.inputs['Roughness'].default_value = .86; bsdf.inputs['Metallic'].default_value = 0; nm.inputs['Strength'].default_value = RELIEF      # the squad's bodies' roughness; the folds stand out more than on a body seen from afar
 mesh.data.materials.clear(); mesh.data.materials.append(mat)
 for poly in mesh.data.polygons: poly.material_index = 0
 for a_ in list(mesh.data.color_attributes): mesh.data.color_attributes.remove(a_)
-arm['look'] = 'arms'; arm['source'] = 'Microsoft Rocketbox Military_Male_01 (MIT)'; arm['worn'] = {'upper': T.worn(mesh, c, ['UpperArm']), 'fore': T.worn(mesh, c, ['Forearm']), 'hand': T.worn(mesh, c, ['Hand', 'Finger'])}
+arm['look'] = 'arms'; arm['source'] = 'Microsoft Rocketbox Military_Male_01 (MIT)'; arm['worn'] = {'upper': T.worn(mesh, c, ['UpperArm']), 'fore': T.worn(mesh, c, ['Forearm']), 'hand': T.worn(mesh, c, ['Hand', 'Finger'])}; arm['cloth'] = {'contrast': T.contrast(mesh, c, ['UpperArm', 'Forearm']), 'relief': RELIEF, 'roughness': .86}
 arm.name = 'ArmsRig'; mesh.name = 'Arms'; select(arm, mesh)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_image_format='JPEG', export_jpeg_quality=88, export_animations=False, export_skins=True, export_yup=True, export_apply=False, export_tangents=False, export_materials='EXPORT', export_extras=True)
 print('DONE arms bones', len(arm.data.bones), 'tris', tris, 'picture', c.shape, 'uv rows', round(float(v0), 3), round(float(v1), 3), 'file', os.path.getsize(OUT))

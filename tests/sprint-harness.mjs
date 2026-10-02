@@ -72,7 +72,8 @@ fire=(m,event,arg={})=>{for(const fn of m.get(event)||[])fn(arg);};
    // Build 20: the session, down and revive.
    fall:typeof fallen==='object'?{fallen,REVIVE,reviveTarget,reviving,reviveKey,held:()=>reviveHeld,mateReviving:()=>mateReviving,tick:fallTick,raise,line:fallLine,wire:fallWire,humanDown,lobby,skirmishCoop:()=>skirmishCoop,BODY,boxEntry,LINKABLE}:undefined,
    // Build 19: equipment.
-   equip:typeof sidearm==='object'?{sidearm,remoteSide,kit,remoteKit,slot:()=>slot,remoteSlot:()=>remoteSlot,drawing:()=>drawing,item:()=>item,setItem:k=>{item=k;},cooking:()=>cooking,blind:()=>blind,hand,handConfig,swap:swapWeapon,knife,knifeScan,cookStart,cookEnd,throwItem,nades,smokes,nadePool,smokePool,blastPool,nadeAdvance,detonate,blast,flashBurst,clear,mateNow,buyItem:ambushBuyItem,gearLine,equipReset,tick:equipTick,remoteDraw:()=>remoteDraw}:undefined,
+   hud:typeof panelState==='function'?{state:panelState,draw:panelDraw,gun:()=>gunId,dressings:()=>bandages,setDressings:v=>{bandages=v;}}:undefined,
+   equip:typeof sidearm==='object'?{sidearm,remoteSide,kit,remoteKit,slot:()=>slot,remoteSlot:()=>remoteSlot,drawing:()=>drawing,item:()=>item,setItem:k=>{item=k;},cooking:()=>cooking,blind:()=>blind,hand,handConfig,swap:swapWeapon,knife,knifeScan,cookStart,cookEnd,throwItem,nades,smokes,nadePool,smokePool,blastPool,nadeAdvance,detonate,blast,flashBurst,clear,mateNow,buyItem:ambushBuyItem,gearLine:typeof gearLine==='function'?gearLine:undefined,equipReset,tick:equipTick,remoteDraw:()=>remoteDraw}:undefined,
    // Build 18: fairness between host and guest.
    fair:typeof rewind==='function'?{NETVIEW,viewAt,history:viewHistory,rewind,viewTime,record:viewRecord,remoteFire,credit:()=>remoteCredit,setCredit:v=>{remoteCredit=v;},creditCap,matePaused:()=>matePaused,spectatorCamera,SPECTATE,pickPrey:ambushPickPrey,bearing:ambushBearing,setElapsed:v=>{elapsed=v;}}:undefined,
    // Build 16 co-op internals.

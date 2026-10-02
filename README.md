@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 39)
+# DUSTLINE — Operation Broken Signal (Build 40)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -46,6 +46,19 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
+
+## The HUD panel and the arms' cloth (Build 40)
+
+The bottom-right corner is a panel of icons and numbers. The weapon in hand: its name and calibre, a silhouette, the rounds
+in the magazine (the largest thing on it; gold at a quarter or less, red at none), the reserve, AUTO or SEMI, what it is doing
+(RELOADING with a bar and the seconds left, DRAWING, DRESSING, a throwable IN HAND, RELOAD, NO AMMUNITION) and the reload key.
+Beside it six tiles with the key on each: the other weapon with its rounds, the knife, the dressings, and the frag, smoke and
+flash with their counts (the chosen one is outlined and carries the throw key; Tab beside them chooses). In Ambush the points
+stand over it, and at a crate a row of chips shows what can be bought: the key, the icon and the price, dimmed when the points
+do not reach and FULL when no more can be carried. It replaces the line of equipment text, the weapon's text and the dressing
+line under the health. The icons are drawn in the page (no assets). `dist/hud.js` works the panel out; `tests/test-panel-b40.mjs`
+(T50) checks every value against the game. The first-person arms' sleeves have their folds in the cloth itself now and no
+longer look like cardboard in the shade.
 
 ## Arms, reload and Ambush pressure (Build 39)
 

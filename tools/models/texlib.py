@@ -75,7 +75,7 @@ def decamo(x, uniform, gear, camo_at=.074, close=16, gear_rects=(), cloth_rects=
     family = np.maximum(family0 * solid, camo)
     m = max(1e-3, float((L * camo).sum() / max(1, camo.sum())))
     rng = np.random.default_rng(seed); n = rng.standard_normal(L.shape).astype(np.float32); n = blur(n, .8) * 2.2
-    sh = np.clip(mblur(L, camo, shade) / m, .62, 1.3) * (1 + weave * n)
+    sh = (np.clip(mblur(L, camo, shade) / m, .62, 1.3) if shade else 1) * (1 + weave * n)      # shade 0 (Build 40, the arms): no broad light and dark taken from the patterned picture; the folds are given by `folds`
     if len(force_rects):      # what was not cloth is shaded by its own light and dark about the cloth's middle tone, not by how dark skin is beside cloth
         fm = np.clip(blur(rect_mask(x.shape, force_rects), 2), 0, 1) * island * (1 - family0 * solid); mf = max(1e-3, float((L * fm).sum() / max(1, fm.sum())))
         own = np.clip(mblur(L, np.maximum(fm, 1e-4), shade) / mf, .82, 1.15) * (1 + weave * n); sh = sh * (1 - fm) + own * fm
@@ -108,3 +108,38 @@ def worn(mesh, picture, names):
         u = np.mean([uv[li].uv[0] for li in poly.loop_indices]); v_ = np.mean([uv[li].uv[1] for li in poly.loop_indices])
         got.append(picture[min(H - 1, max(0, int(v_ * H))), min(W - 1, max(0, int(u * W)))])
     return [round(float(c), 3) for c in np.median(np.array(got), 0)] if got else [0, 0, 0]
+
+def folds(normal, slope=.9, side=.35, fine=1.4, floor=.62):
+    """Build 40: what light and dark a cloth's folds have of themselves, from its normal picture: darker where the surface
+    tilts (the flanks of a fold and the creases between), a little lighter or darker by which way it tilts across the
+    picture (as if lit from one side), about 1 on the flat. Multiplied into the cloth's colour so that the folds are there
+    in any light: a normal picture alone shows nothing in the shade (the arms looked like cardboard indoors)."""
+    nx = normal[:, :, 0] * 2 - 1; ny = normal[:, :, 1] * 2 - 1
+    tilt = np.sqrt(nx * nx + ny * ny); tilt = blur(tilt, fine)
+    lit = blur(nx, fine) - blur(nx, 12)                                   # which way it tilts, without the broad shape
+    sh = 1 - slope * tilt + side * lit
+    return np.clip(sh, floor, 1.12).astype(np.float32)                    # the flat (no tilt) stays the cloth's own colour
+
+def weave(shape, seed=11, strength=.06):
+    """A woven cloth's grain: threads both ways, a pixel or two wide, uneven."""
+    h, w = shape[:2]; rng = np.random.default_rng(seed); y, x = np.mgrid[0:h, 0:w]
+    warp = np.sin(x * 2.1 + rng.standard_normal((h, 1)) * .6) * np.sin(y * .23 + 1.3); weft = np.sin(y * 2.1 + rng.standard_normal((1, w)) * .6) * np.sin(x * .23 + .4)
+    n = blur(rng.standard_normal((h, w)).astype(np.float32), .7) * 1.6
+    return (1 + strength * (.45 * warp + .45 * weft + .6 * n)).astype(np.float32)
+
+def contrast(mesh, picture, names):
+    """How much light and dark the picture has where the faces of the bones `names` are drawn: the spread of its brightness
+    over its middle brightness there (a plain coat of paint is near 0)."""
+    vg = {g.index: g.name for g in mesh.vertex_groups}; uv = mesh.data.uv_layers.active.data; H, W = picture.shape[:2]; got = []; lead = {}
+    for v in mesh.data.vertices:
+        best = max(v.groups, key=lambda g: g.weight, default=None); lead[v.index] = vg[best.group] if best else ''
+    L = lum(picture)
+    for poly in mesh.data.polygons:
+        if not all(any(k in lead[vi] for k in names) for vi in poly.vertices): continue
+        us = [uv[li].uv[0] for li in poly.loop_indices]; vs = [uv[li].uv[1] for li in poly.loop_indices]
+        for a in (0, .5, 1):
+            for b in (0, .5, 1):
+                if a + b > 1: continue
+                u = us[0] + (us[1] - us[0]) * a + (us[2] - us[0]) * b if len(us) > 2 else us[0]; v_ = vs[0] + (vs[1] - vs[0]) * a + (vs[2] - vs[0]) * b if len(vs) > 2 else vs[0]
+                got.append(L[min(H - 1, max(0, int(v_ * H))), min(W - 1, max(0, int(u * W)))])
+    got = np.array(got); return round(float(np.std(got) / max(1e-3, np.median(got))), 3) if len(got) else 0
