@@ -15,6 +15,7 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
+- `tests/probe-pressure.mjs`: a probe (not a suite) that measures how Dehrun's Ambush presses on a standing player (Build 39).
 - `dist/models.js`, `dist/assets/models/`: the bodies, the first-person arms and the machete (Build 38); `tools/models/`: how they
   were converted (Blender); `incoming/`: raw downloads, ignored by git.
 - `dist/squad.js`: squad codes, the game's side (Build 37). `service/`: the signalling service's source (a Cloudflare Worker;
@@ -32,6 +33,37 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 39 (local, 2026-10-02): the playtest of Build 38: the arms, the reload and the pressure of Dehrun's Ambush (E57). **User
+decisions: arrivals still start 35 m off (20 s to the top floor is acceptable if what follows is dense); alive at once stays where
+this build set it, to be judged by play; the weapon models come after this.** **Arms:** `arms.glb` is cut from the long-sleeved
+avatar (Military_Male_01), tan sleeves to the gloves; the squad's body has its bare forearms painted as sleeves
+(`convert_body.py` `sleeves`, `texlib.decamo(force_rects=)`); every body and the arms carry `extras.worn` (what the upper arm,
+forearm and hand wear: T49 reads it, the pictures cannot be read headless). **The hand is the gun's, the arm is the body's:**
+`GRIPS` give `elbow` and `upper` in the EYE's space and `poseArm` turns them into the gun's (`gun.quaternion`), so a reload's
+31-degree roll no longer swings the upper sleeve in front of the eye; the support arm leans to `elbow2`/`upper2` by the reload's
+tilt. **Never turn an elbow by the gun or by the grip's frame again** (T49 `reload`). A reload takes the rifle off the sights
+(`sights` in `game.js`: the picture only; aim and zoom stay). **What is in hand is drawn in front of the world**
+(`front()` in `viewmodel.js`: every mesh under the gun takes the depth range 0 to .1 while drawn; the rifle reaches 1.3 m and a
+hostile's head showed inside it): call `front(o)` on anything added under the gun. **On a ladder** the gun is not drawn and the
+hands hold the rungs where they are in the world (`poseClimb`, `CLIMB`; the game passes `ladder`); where the rungs run out a hand
+stays at the chest, never on a rung below the feet. **Dehrun's Ambush (`ambush.push` replaces `ambush.around`; `PUSH`,
+`PUSH_WAYS`, `FLANK_WAYS`, `ambushFront`, `flankMask`, `ambushFlankWay`):** each player's arrivals go turn about, push then
+flank (`ai.part`). The push takes the shortest way (`push` doors only, `push-w` may break a window, turn about); a flanker takes
+the map's routes in their turn as `roof+`, `window+`, `door+` (`way.flank` is the route), in a field where the push's own last
+stretch (7 to 15 m of way from the player, `push.shut`, 1.6 m to each side) is shut, so it comes round another side; with no way
+round it comes with the push. **The stretch is shut by a thin slab at chest height: `LAYERS.masked` shuts every place whose
+standing body meets a box, and a box as tall as a body shut the landing under a flight too** (a top-floor player with the first
+floor bought got no flanker: found by T44). Each player's flankers are counted and timed apart (`most`, `apart`, `wayAt` by
+player). A place to start is chosen by the length of its way, the direction only a preference (`push.off`). A wave's first three
+set out half a second apart (`burst`). **Curve: `cap` [4, 1] (5 at wave 1, ten from wave 6), `gap` .4, `rest` [8, 5] (first wave
+after 8 s, the next 5 s after a wave is cleared); count, tokens, run and every price unchanged. This replaces the numbers in the
+Build 34 paragraph below.** Kohar Valley names no push and no rest and is Build 38's (T49 `kohar`). **Near is kept
+(`NEAR_KEEP`): one near its player stays near until 4 m more of way is left; without it the hunt's five seconds began again at
+every crossing of the 12 m line and a hostile paced the next room (T49 `hunt`).** **Measure pressure with `tests/probe-pressure.mjs`
+(a probe, not a suite: `STAND=top|topfirst|first|ground|roof|square SECS=300 KILL=1 [OLD=<commit>]`), against an older build
+from its commit; report arrival timings and directions, not route names.** Structural, not to be "fixed": from 35 m off the
+shortest way to the top floor is 105 m, about 20 s; on the top and first floors with nothing else bought every flanker comes
+over the roof (one stair is open below).
 Build 38 (local, 2026-10-02): models, part one: bodies, first-person arms and the faction (F.16, F.19, E55, E56). **The weapon models
 (Set A, the sidearm, the throwables) are NOT in: they wait for files the user downloads from Sketchfab into `incoming/`.**
 **Models are looks only.** `dist/models.js` loads `.glb` files from `dist/assets/models/` (`loadModel`, `loadModels`, `cloneSkinned`,
@@ -551,6 +583,7 @@ node tests/test-variety-b35.mjs
 node tests/test-natural-b36.mjs
 node tests/test-squad-codes-b37.mjs
 node tests/test-models-b38.mjs
+node tests/test-pressure-b39.mjs
 ```
 
 All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what gates a publish).
@@ -559,9 +592,9 @@ All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what ga
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 38 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 39 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code and 7 model checks (360 in 41 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code, 7 model and 12 arms-and-pressure checks (372 in 42 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

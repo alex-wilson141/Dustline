@@ -225,7 +225,13 @@ export const DEHRUN = {
     // Valley 2, 2, 3, 3 ... 9 from wave 15); half as many again a wave; arrivals at six tenths of the gap; one more of them may
     // fire at a player at once from wave 3 and another from wave 6 (three on Kohar Valley, always); and they run (6 m/s for
     // 2.8) while more than 12 m of their way is left and they see nobody. Accuracy, damage and the cadence of each are every map's.
-    curve: {cap: [2, 1], ceiling: 10, count: 1.5, gap: .6, tokens: [3, 6], run: 6},
+    // Build 39 (the user's playtest of Build 38: no pressure; and a round in the chest counts again, so each of them is in
+    // view a third as long): 4 + the wave's number alive at once (5, 6 ... 10 from wave 6) and arrivals at four tenths of the
+    // gap. Measured, 61% of a wave was spent waiting at the old limit of alive while those alive were still walking in. The
+    // number in a wave, the three, four and five that may fire at once and every price are unchanged. `rest`: the first wave
+    // sets out after 8 s and the next 5 s after the last of a wave falls (10 and 12 on Kohar Valley): from 35 m off the
+    // shortest way to the top floor is 105 m, some 20 s, and that is the quiet a player has between waves.
+    curve: {cap: [4, 1], ceiling: 10, count: 1.5, gap: .4, tokens: [3, 6], run: 6, rest: [8, 5]},
     // Build 35: the kinds of hostile (ambush.js `waveKinds`, game.js `rusherPlan`, `bomberPlan`) and how one differs from
     // the next (`vary`). A rusher runs at its player at `speed` whether seen or not, fires at nobody, and strikes for
     // `strike` (times armor) every `every` seconds within `reach`. A bomber runs at `speed`, is heard from `hear` metres
@@ -248,7 +254,13 @@ export const DEHRUN = {
     // the house are the roof way's alone.
     // The roof way also leaves out the west stair's flight below the top floor: down from the roof by the west stair, and
     // further down by the east one, so that a player on the first floor has them from both ends.
-    around: 135,
+    // Build 39: `push` takes `around`'s place (game.js `PUSH`): every `every`-th arrival is a flanker, the others the push.
+    // The push comes from the wave's direction by the shortest way; the wave's first `burst` arrivals set out `burstGap`
+    // seconds apart. A flanker starts `flank` degrees round from the wave's direction (the list in turn) and takes the ways
+    // below in turn, with the push's own last stretch (between `shut` half-metres of way from the player, `wide` metres to
+    // each side) shut to it. A place to start from is chosen by the length of its way; one outside the direction is taken
+    // when its way is `off` metres shorter.
+    push: {every: 2, flank: [180, 100, 260, 140, 220], off: 25, shut: [14, 30], wide: 1.6, burst: 3, burstGap: .5},
     routes: [
       {id: 'door', share: 1, ladders: 'low', vaults: 'none'},
       {id: 'roof', share: 2, most: 4, apart: 1.5, vaults: 'none', shut: [{x: [-10.02, -7.5], y: [5.4, 6.5], z: [59.2, 59.8]}, {x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},

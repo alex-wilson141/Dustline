@@ -1,12 +1,13 @@
-# Build 38: first-person arms cut from the squad avatar (Rocketbox Military_Male_03): both arms from the shoulder, every
-# finger bone kept, no triangles removed, the body picture cropped to what the arms use.
+# Build 38: first-person arms cut from a Rocketbox avatar: both arms from the shoulder, every finger bone kept, no triangles
+# removed, the body picture cropped to what the arms use. Build 39: from Military_Male_01, whose sleeves reach the gloves
+# (the squad's own avatar, Military_Male_03, has them rolled above the elbow), in the squad's cloth.
 # Run: Blender -b --python convert_arms.py -- <out.glb>
 import bpy, sys, os, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import texlib as T
-OUT = sys.argv[sys.argv.index('--') + 1]; RB = os.environ.get('ROCKETBOX') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'incoming', 'rocketbox')   # the avatars' folders as downloaded (never tracked); DIR, PRE = 'Military_Male_03', 'sm004'
+OUT = sys.argv[sys.argv.index('--') + 1]; RB = os.environ.get('ROCKETBOX') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'incoming', 'rocketbox'); DIR, PRE = 'Military_Male_01', 'sm002'
 TAN, COYOTE = (.60, .52, .37), (.33, .28, .20)
-PAINT = [(140, 500, 226, 610), (792, 512, 880, 632), (470, 356, 552, 386), (532, 942, 606, 1006)]
-GEAR = [(418, 100, 604, 730), (322, 556, 706, 736), (160, 222, 270, 318), (752, 222, 862, 318), (0, 858, 262, 1024), (762, 858, 1024, 1024), (282, 110, 420, 250), (600, 110, 700, 240), (0, 0, 140, 60), (880, 0, 1024, 60)]
+PAINT = [(132, 530, 222, 650), (804, 532, 892, 656)]
+GEAR = [(0, 872, 280, 1024), (750, 872, 1024, 1024)]
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=os.path.join(RB, DIR, DIR + '.fbx'), automatic_bone_orientation=False)
 arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE'); mesh = next(o for o in bpy.data.objects if o.type == 'MESH')
@@ -56,6 +57,7 @@ n = load('normal'); m = np.clip(T.blur(T.rect_mask(n.shape, PAINT), 3) * 1.5, 0,
 uv = mesh.data.uv_layers.active.data; us = np.array([d.uv[:] for d in uv]); u0, v0 = us.min(0); u1, v1 = us.max(0)
 H, W = c.shape[:2]; pad = 8; y0 = max(0, int(v0 * H) - pad); y1 = min(H, int(math.ceil(v1 * H)) + pad); y1 = y0 + int(math.ceil((y1 - y0) / 4) * 4)
 c = c[y0:y1]; n = n[y0:y1]
+if os.environ.get('VIEW'): T.save(c, os.environ['VIEW'])
 for d in uv: d.uv = (d.uv[0], (d.uv[1] * H - y0) / (y1 - y0))
 imgC = T.to_image(c, 'arms_colour'); imgN = T.to_image(n, 'arms_normal'); imgN.colorspace_settings.name = 'Non-Color'
 mat = bpy.data.materials.new('arms'); mat.use_nodes = True; nt = mat.node_tree; bsdf = next(x for x in nt.nodes if x.type == 'BSDF_PRINCIPLED')
@@ -65,7 +67,7 @@ bsdf.inputs['Roughness'].default_value = .82; bsdf.inputs['Metallic'].default_va
 mesh.data.materials.clear(); mesh.data.materials.append(mat)
 for poly in mesh.data.polygons: poly.material_index = 0
 for a_ in list(mesh.data.color_attributes): mesh.data.color_attributes.remove(a_)
-arm['look'] = 'arms'; arm['source'] = 'Microsoft Rocketbox Military_Male_03 (MIT)'
+arm['look'] = 'arms'; arm['source'] = 'Microsoft Rocketbox Military_Male_01 (MIT)'; arm['worn'] = {'upper': T.worn(mesh, c, ['UpperArm']), 'fore': T.worn(mesh, c, ['Forearm']), 'hand': T.worn(mesh, c, ['Hand', 'Finger'])}
 arm.name = 'ArmsRig'; mesh.name = 'Arms'; select(arm, mesh)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_image_format='JPEG', export_jpeg_quality=88, export_animations=False, export_skins=True, export_yup=True, export_apply=False, export_tangents=False, export_materials='EXPORT', export_extras=True)
 print('DONE arms bones', len(arm.data.bones), 'tris', tris, 'picture', c.shape, 'uv rows', round(float(v0), 3), round(float(v1), 3), 'file', os.path.getsize(OUT))

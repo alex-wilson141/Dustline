@@ -4,13 +4,14 @@
 import bpy, bmesh, sys, os, math, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); import texlib as T
 args = sys.argv[sys.argv.index('--') + 1:]; VARIANT, OUT = args[0], args[1]; TRIS = int(args[2]) if len(args) > 2 else 4500
-RB = os.environ.get('ROCKETBOX') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'incoming', 'rocketbox')   # the avatars' folders as downloaded (never tracked)
+RB = os.environ.get('ROCKETBOX') or os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'incoming', 'rocketbox')
 TAN, COYOTE, HELMET = (.60, .52, .37), (.33, .28, .20), (.52, .45, .32)
 OLIVE, OLIVE_CAP, BOOT_DARK = (.235, .262, .205), (.215, .240, .190), (.13, .115, .10)
 V = {
  'squad': dict(dir='Military_Male_03', pre='sm004', body=dict(uniform=TAN, gear=COYOTE,
      paint=[(140, 500, 226, 610), (792, 512, 880, 632), (470, 356, 552, 386), (532, 942, 606, 1006)],
-     gear_rects=[(418, 100, 604, 730), (322, 556, 706, 736), (160, 222, 270, 318), (752, 222, 862, 318), (0, 858, 262, 1024), (762, 858, 1024, 1024), (282, 110, 420, 250), (600, 110, 700, 240), (0, 0, 140, 60), (880, 0, 1024, 60)]),
+     gear_rects=[(418, 100, 604, 730), (322, 556, 706, 736), (160, 222, 270, 318), (752, 222, 862, 318), (0, 858, 262, 1024), (762, 858, 1024, 1024), (282, 110, 420, 250), (600, 110, 700, 240), (0, 0, 140, 60), (880, 0, 1024, 60)],
+     sleeves=[(0, 630, 280, 864), (744, 630, 1024, 864)]),      # Build 39: this avatar's sleeves are rolled above the elbow; the forearms are painted as sleeves, to the gloves
    helmet=dict(uniform=HELMET, gear=None, paint=[(612, 568, 690, 606)], all_cloth=True), equipment=dict(uniform=COYOTE, gear=COYOTE, paint=[]), head=None),
  'kareth_a': dict(dir='Military_Male_02', pre='sm024', body=dict(uniform=OLIVE, gear=None, boots=BOOT_DARK,
      paint=[(132, 530, 216, 646), (804, 540, 888, 662), (398, 556, 466, 584), (490, 596, 540, 640), (540, 554, 628, 586)]),
@@ -73,13 +74,15 @@ def tex(part, kind):
         p = os.path.join(RB, V['dir'], suf)
         if os.path.exists(p): return T.load(p)
     return None
+PAINTED = {}
 def colour(part):
     x = tex(part, 'color'); cfg = V.get(part)
     if x is None: return None, None
     island = (x.max(2) > .035).astype(np.float32)
     if cfg:
         x = T.inpaint(x, island, cfg['paint'])
-        x, island = T.decamo(x, cfg['uniform'], cfg['gear'], gear_rects=cfg.get('gear_rects', ()), cloth_rects=[(0, 0, 1024, 1024)] if cfg.get('all_cloth') else cfg['paint'])
+        x, island = T.decamo(x, cfg['uniform'], cfg['gear'], gear_rects=cfg.get('gear_rects', ()), force_rects=cfg.get('sleeves', ()), cloth_rects=[(0, 0, 1024, 1024)] if cfg.get('all_cloth') else cfg['paint'])
+        if cfg.get('sleeves'): m = T.rect_mask(x.shape, [(x0 + 30, y0 + 40, x1 - 30, y1 - 30) for x0, y0, x1, y1 in cfg['sleeves']]) * island; PAINTED['sleeve'] = [round(float(v), 3) for v in (x * m[:, :, None]).sum((0, 1)) / max(1, m.sum())]      # what the painted forearms wear now
         if cfg.get('boots'):
             r, g, b = x[:, :, 0], x[:, :, 1], x[:, :, 2]; boots = island * ((r - b) > .1) * (r < g * 1.2) * (T.lum(x) > .2)
             boots = np.clip(T.blur(boots.astype(np.float32), 2) * 1.4, 0, 1) * island; x = T.tint_where(x, boots, cfg['boots'])
@@ -119,7 +122,7 @@ if os.environ.get('ATLAS_PREVIEW'): T.save(T.half(atlasC), os.environ['ATLAS_PRE
 
 for a_ in list(mesh.data.color_attributes): mesh.data.color_attributes.remove(a_)      # two all-white sets: dead weight
 # what the model is, written into the file for whoever loads it (the pictures cannot be read without drawing them)
-arm['look'] = VARIANT; arm['uniform'] = [round(c, 3) for c in V['body']['uniform']]; arm['headgear'] = 'helmet' if 'helmet' in V else 'cap'; arm['armour'] = bool(V['body'].get('gear_rects')); arm['source'] = 'Microsoft Rocketbox ' + V['dir'] + ' (MIT)'
+arm['look'] = VARIANT; arm['uniform'] = [round(c, 3) for c in V['body']['uniform']]; arm['headgear'] = 'helmet' if 'helmet' in V else 'cap'; arm['armour'] = bool(V['body'].get('gear_rects')); arm['source'] = 'Microsoft Rocketbox ' + V['dir'] + ' (MIT)'; arm['worn'] = {'upper': T.worn(mesh, atlasC, ['UpperArm']), 'fore': T.worn(mesh, atlasC, ['Forearm']), 'hand': T.worn(mesh, atlasC, ['Hand']), **PAINTED}
 arm.name = 'Rig'; mesh.name = 'Body'; select(arm, mesh)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_image_format='JPEG', export_jpeg_quality=84, export_animations=False, export_skins=True, export_yup=True, export_apply=False, export_tangents=False, export_materials='EXPORT', export_extras=True)
 print('DONE', VARIANT, 'bones', len(arm.data.bones), 'tris', before, '->', after, 'file', os.path.getsize(OUT))

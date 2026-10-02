@@ -61,19 +61,24 @@ def classes(x):
 def closing(m, r):
     d = (blur(m, r) > .12).astype(np.float32); return (blur(d, r) > .88).astype(np.float32)
 
-def decamo(x, uniform, gear, camo_at=.074, close=16, gear_rects=(), cloth_rects=(), shade=30, weave=.035, debug=None, seed=7):
+def decamo(x, uniform, gear, camo_at=.074, close=16, gear_rects=(), cloth_rects=(), force_rects=(), shade=30, weave=.035, debug=None, seed=7):
     """Patterned cloth becomes plain cloth of colour `uniform` (its broad shading kept, a fine weave added); the rest of the
     grey-green family (webbing, straps, pads, gloves) keeps its detail and is tinted `gear`. Rects (as seen at 1024, y from
-    the top) say where the guess is to be overruled."""
+    the top) say where the guess is to be overruled; `force_rects` are cloth whatever the picture shows there."""
     island, family0, energy = classes(x); L = lum(x)
     solid = (mblur(family0, island, 7) > .4).astype(np.float32) * island
     camo = closing((energy > camo_at).astype(np.float32) * solid, close) * solid
     if len(cloth_rects): camo = np.maximum(camo, rect_mask(x.shape, cloth_rects) * solid)
     if len(gear_rects): camo = camo * (1 - rect_mask(x.shape, gear_rects))
-    camo = np.clip(blur(camo, 2), 0, 1) * solid; family = np.maximum(family0 * solid, camo)
+    camo = np.clip(blur(camo, 2), 0, 1) * solid
+    if len(force_rects): camo = np.maximum(camo, np.clip(blur(rect_mask(x.shape, force_rects), 2), 0, 1) * island)      # cloth whatever was there (Build 39: a bare forearm becomes a sleeve)
+    family = np.maximum(family0 * solid, camo)
     m = max(1e-3, float((L * camo).sum() / max(1, camo.sum())))
     rng = np.random.default_rng(seed); n = rng.standard_normal(L.shape).astype(np.float32); n = blur(n, .8) * 2.2
     sh = np.clip(mblur(L, camo, shade) / m, .62, 1.3) * (1 + weave * n)
+    if len(force_rects):      # what was not cloth is shaded by its own light and dark about the cloth's middle tone, not by how dark skin is beside cloth
+        fm = np.clip(blur(rect_mask(x.shape, force_rects), 2), 0, 1) * island * (1 - family0 * solid); mf = max(1e-3, float((L * fm).sum() / max(1, fm.sum())))
+        own = np.clip(mblur(L, np.maximum(fm, 1e-4), shade) / mf, .82, 1.15) * (1 + weave * n); sh = sh * (1 - fm) + own * fm
     cloth = sh[:, :, None] * np.array(uniform, np.float32)[None, None, :]
     g = family * (1 - camo); mg = max(1e-3, float((L * g).sum() / max(1, g.sum())))
     gearc = np.clip(L / mg, .15, 1.6)[:, :, None] * np.array(gear, np.float32)[None, None, :] if gear is not None else x
@@ -90,3 +95,16 @@ def tint_where(x, mask, colour, keepL=True):
     L = lum(x); m = max(1e-3, float((L * mask).sum() / max(1, mask.sum())))
     t = (np.clip(L / m, .2, 2)[:, :, None] if keepL else 1) * np.array(colour, np.float32)[None, None, :]
     return x * (1 - mask[:, :, None]) + t * mask[:, :, None]
+
+def worn(mesh, picture, names):
+    """The middle colour (the median of each channel: a glove's cuff over a sleeve does not tint it) of the picture where the faces of the bones `names` (by most weight) are drawn: what that limb wears.
+    Written into the file (Build 39) so that a check can tell a sleeve from a bare arm without drawing the picture."""
+    vg = {g.index: g.name for g in mesh.vertex_groups}; uv = mesh.data.uv_layers.active.data; H, W = picture.shape[:2]; got = []
+    lead = {}
+    for v in mesh.data.vertices:
+        best = max(v.groups, key=lambda g: g.weight, default=None); lead[v.index] = vg[best.group] if best else ''
+    for poly in mesh.data.polygons:
+        if not all(any(k in lead[vi] for k in names) for vi in poly.vertices): continue
+        u = np.mean([uv[li].uv[0] for li in poly.loop_indices]); v_ = np.mean([uv[li].uv[1] for li in poly.loop_indices])
+        got.append(picture[min(H - 1, max(0, int(v_ * H))), min(W - 1, max(0, int(u * W)))])
+    return [round(float(c), 3) for c in np.median(np.array(got), 0)] if got else [0, 0, 0]

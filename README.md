@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 38)
+# DUSTLINE — Operation Broken Signal (Build 39)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -46,6 +46,18 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
+
+## Arms, reload and Ambush pressure (Build 39)
+
+After the playtest of Build 38. **The arms** wear the squad's tan sleeves to the gloves (the squad's bodies too), no longer
+roll with the rifle in a reload (the elbows belong to the body, not to the gun), hold a ladder's rungs hand over hand with the
+rifle put away, and whatever is in hand is drawn in front of the world (a hostile at arm's length no longer shows inside the
+rifle). A reload takes the rifle off the sights and gives it back. **Ambush on Dehrun Terraces** sends each wave as a push
+and a flank, turn about: the push comes the shortest way (by the doors, or through a window it breaks), the flankers come
+round another side (the push's own last stretch is shut to them). A wave's first three set out together; alive at once is
+4 + the wave's number up to ten; arrivals are closer together; the rest between waves is 5 s. Arrivals still start 35 m off:
+the first of a wave reaches the top floor after about 20 s. Kohar Valley is unchanged. `tests/test-pressure-b39.mjs` (T49)
+checks it; `tests/probe-pressure.mjs` measures it (arrivals a minute, first contact, directions) against an older build.
 
 ## Soldiers, hands and the Kareth Brigade (Build 38)
 

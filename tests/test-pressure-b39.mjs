@@ -1,0 +1,213 @@
+// Build 39 (T49): the playtest of Build 38. The arms: sleeves to the gloves (the squad's cloth, on the player's arms and on
+// the squad's bodies), an arm that is the body's and does not roll with the gun in a reload, the rifle off the sights while
+// it is reloaded, hands on the rungs of a ladder, and whatever is in hand drawn in front of the world. Dehrun Terraces'
+// Ambush: each wave a push and a flank, turn about; the flank never by the stretch the push comes in by; a wave's first
+// three together; more alive at once, shorter gaps, a shorter rest; measured against Build 38 played here from its commit.
+// Kohar Valley's Ambush is Build 38's.
+// Headless: rendering is mocked and pictures are blank. Nothing here says how the arms LOOK or how a wave FEELS: those
+// are the user's to see and to play. What a stand-in player measures (it stands still and kills what has been in its
+// sight for a second) is not what a person does.
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath, pathToFileURL} from 'node:url';
+globalThis.location = {search: ''};
+import {createGame, projectRoot} from './sprint-harness.mjs';
+import {oldBuild} from './old-build.mjs';
+
+const THREE = await import(new URL('dist/three.module.js', projectRoot));
+const maps = await import(new URL('dist/maps.js', projectRoot));
+const A = await import(new URL('dist/ambush.js', projectRoot));
+const R = await import(new URL('dist/records.js', projectRoot));
+const {CLASSES} = await import(new URL('dist/combat.js', projectRoot));
+const {ENEMY_AI} = await import(new URL('dist/enemy-ai.js', projectRoot));
+const SOURCE = process.env.DUSTLINE_GAME_SOURCE ? new URL('file://' + process.env.DUSTLINE_GAME_SOURCE) : undefined;
+const ONLY = process.env.DUSTLINE_T49_ONLY?.split(',');
+const BEFORE = 'd564f7a';   // Build 38
+const dist = fileURLToPath(new URL('dist/', projectRoot));
+const results = [], report = {};
+async function check(tag, name, fn) { if (ONLY && !ONLY.includes(tag)) return; await fn(); results.push(name); }
+const DEHRUN = await maps.loadMap('dehrun'); maps.selectMap('kohar');
+const D = DEHRUN.ambush, same = v => JSON.parse(JSON.stringify(v)), wire = same;
+const tick = (ms = 0) => new Promise(r => setTimeout(r, ms)), until = async (f, ms = 20000) => { const t = Date.now(); while (!f()) { if (Date.now() - t > ms) return false; await tick(5); } return true; };
+const enemies = g => g.actors.filter(a => a.team === 'enemy'), alive = g => enemies(g).filter(a => a.hp > 0), V = (x, y, z) => new THREE.Vector3(x, y, z);
+const wp = o => o.getWorldPosition(new THREE.Vector3()), median = l => [...l].sort((a, b) => a - b)[l.length >> 1], pct = (l, p) => l.length ? [...l].sort((a, b) => a - b)[Math.min(l.length - 1, Math.floor(l.length * p))] : null;
+const kill = (g, a, score = true) => { a.hp = 0; a.dead = 999; a.diedAt = g.state().elapsed; if (score) g.ambush.kill(false); };
+const extras = file => { const d = fs.readFileSync(path.join(dist, 'assets/models', file)), j = JSON.parse(d.toString('utf8', 20, 20 + d.readUInt32LE(12))); return j.nodes.map(n => n.extras).find(e => e?.look); };
+
+// A game with its models (two frames are drawn: the game asks after the first).
+async function modelled(map, mode = 'story') { maps.selectMap(map); const g = await createGame({...(SOURCE ? {sourcePath: SOURCE} : {}), models: true}); g.prepare({clearLane: false}); if (g.built) await g.built.ready; g.el('blood').checked = false; let clock = 0;
+  g.step = (n = 1) => { for (let i = 0; i < n; i++) g.frame(clock += 1000 / 60); }; g.run = (s, each) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { g.frame(clock += 1000 / 60); if (each?.(i / 60) === false) break; } };
+  g.hold = (code, s, each) => { g.press(code); g.run(s, each); g.release(code); }; g.put = (x, y, z, yaw = 0) => { g.player.set(x, y, z); g.set({yaw, pitch: 0}); g.height?.settle?.(); };
+  g.setMode(mode); g.reset(); g.play(); g.step(2); assert(await until(() => g.models.bodies()), 'the models never arrived'); g.step(1); assert.equal(g.viewmodel.armed, true, 'the arms are not on');
+  let mesh = null; g.gun.traverse(o => { if (o.isSkinnedMesh) mesh = o; }); g.arm = Object.fromEntries(mesh.skeleton.bones.map(b => [b.name, b])); g.armMesh = mesh; return g; }
+// A game of Ambush, driven as the other suites drive one.
+function drive(g, mode = 'ambush') { g.prepare({clearLane: false}); g.el('blood').checked = false; for (const a of g.actors) a.animate = a.visual.animate; let clock = 0;
+  g.begin = (m = mode) => { g.setMode(m); g.reset(); g.play(); g.restoreAI(); g.set({hp: 1e9}); g.frame(clock += 1000 / 60); };
+  g.run = (s, each) => { for (let i = 0, n = Math.round(s * 60); i < n; i++) { g.frame(clock += 1000 / 60); if (each?.(i / 60) === false) break; } };
+  g.put = (x, y, z, yaw = 0) => { g.player.set(x, y, z); g.set({yaw, pitch: 0}); g.height?.settle?.(); }; return g; }
+async function world(map = 'dehrun', {source = SOURCE} = {}) { maps.selectMap(map); const g = drive(await createGame(source ? {sourcePath: source} : {})); if (g.built) await g.built.ready; g.begin(); return g; }
+let OLD; const before = async () => { if (OLD) return OLD; const old = await oldBuild(BEFORE), om = await old.module('maps.js'); await om.loadMap('dehrun'); om.selectMap('dehrun'); const g = drive(await old.createGame()); await g.built.ready; g.begin(); return OLD = {g, old, om, A: await old.module('ambush.js')}; };
+
+// What a player who stands in one place has come at it. A hostile ARRIVES when it is first in the player's sight within
+// 15 m; one that has been so for `after` seconds in all is killed (the stand-in for the player's rifle: a round in the chest
+// counts again since Build 38). Directions are the eight of the compass, from where the player stands.
+const STANDS = {top: {at: [0, 6.6, 61.3], open: []}, topFirst: {at: [0, 6.6, 61.3], open: ['first']}, first: {at: [0, 3.4, 61.3], open: ['first']}, ground: {at: [0, .05, 61.3], open: ['first', 'ground']}};
+const NAMES = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'], octant = (dx, dz) => Math.round(((Math.atan2(dx, -dz) * 180 / Math.PI + 360) % 360) / 45) % 8;
+function pressure(g, AM, stand, seconds, after = 1) { const S = STANDS[stand]; g.begin(); for (const id of S.open) assert(g.ambush.openGate(id), `the barricade ${id}`);
+  const inSight = new Map(), born = new Map(), list = [], contact = []; let wave = 0, t0 = 0, met = false, frames = 0, held = 0, some = 0;
+  g.run(seconds, t => { g.put(...S.at); g.set({hp: 1e9}); const d = g.amb; if (d.phase === 'decision') g.ambush.decide(false); if (d.phase === 'wave' && d.wave !== wave) { wave = d.wave; t0 = t; met = false; } let n = 0;
+    for (const a of alive(g)) { const p = a.g.position, k = a.index + ':' + a.life; if (!born.has(k)) born.set(k, {t, part: a.ai?.part || null, way: a.ai?.way?.id || null, wave});
+      if (!(a.seen && p.distanceTo(g.player) < 15)) continue; n++;
+      if (!inSight.has(k)) { const b = born.get(k); list.push({t, wave: b.wave, part: b.part, way: b.way, from: NAMES[octant(p.x - S.at[0], p.z - S.at[2])], travel: t - b.t, kind: a.ai?.kind || 'rifle'}); if (!met && b.wave === wave) { met = true; contact.push(+(t - t0).toFixed(1)); } }
+      const c = (inSight.get(k) || 0) + 1 / 60; inSight.set(k, c); if (c >= after) kill(g, a); }
+    if (d.phase === 'wave') { frames++; if (n) some++; if (d.toSpawn > 0 && alive(g).length >= AM.waveSpec(d.wave, d.squad).aliveCap) held++; } });
+  const gaps = list.slice(1).map((a, i) => a.t - list[i].t), by = part => list.filter(a => a.part === part), sides = l => { const o = {}; for (const a of l) o[a.from] = (o[a.from] || 0) + 1; return o; };
+  let other = 0, flankers = 0; for (const w of new Set(list.map(a => a.wave))) { const s = sides(list.filter(a => a.wave === w && a.part === 'push')), main = Object.entries(s).sort((u, v) => v[1] - u[1])[0]?.[0]; for (const a of list.filter(a => a.wave === w && a.part === 'flank')) { flankers++; if (a.from !== main) other++; } }
+  return {stand, seconds, waves: wave, arrivals: list.length, aMinute: +(list.length / (seconds / 60)).toFixed(1), firstContact: contact, gapMedian: +median(gaps).toFixed(1), gapP90: +pct(gaps, .9).toFixed(1), withSomeoneInSight: +(some / Math.max(1, frames)).toFixed(2), heldByTheLimit: +(held / Math.max(1, frames)).toFixed(2),
+    from: sides(list), push: {n: by('push').length, from: sides(by('push')), travel: +(median(by('push').map(a => a.travel)) || 0).toFixed(1)}, flank: {n: by('flank').length, from: sides(by('flank')), travel: +(median(by('flank').map(a => a.travel)) || 0).toFixed(1)},
+    flankFromAnotherSide: flankers ? +(other / flankers).toFixed(2) : null, came: same(g.amb.came), ways: sides(list.map(a => ({from: a.way}))), list}; }
+
+await check('sleeves', 'the arms and the squad wear sleeves to the gloves: the player\'s arms are cut from the long-sleeved avatar; in their picture the forearm wears what the upper arm wears (the squad\'s tan, no skin) and the hand a darker glove; the squad\'s body, whose avatar has its sleeves rolled, has the stretch that was bare painted in the uniform\'s own colour; the Kareth Brigade\'s forearms wear what their upper arms wear', async () => {
+  const far = (a, b) => Math.max(...a.map((v, i) => Math.abs(v - b[i]))), lum = c => c[0] * .299 + c[1] * .587 + c[2] * .114;
+  const arms = extras('arms.glb'), squad = extras('squad.glb'); assert.match(arms.source, /Military_Male_01/); assert(arms.worn, 'the arms\' file does not say what they wear');
+  assert(far(arms.worn.fore, arms.worn.upper) < .06, `the forearm ${arms.worn.fore} does not wear what the upper arm ${arms.worn.upper} wears`); assert(arms.worn.fore[0] - arms.worn.fore[1] < .12, `the forearm is skin (${arms.worn.fore})`);
+  assert(far(arms.worn.upper, squad.uniform) < .08, `the arms' cloth ${arms.worn.upper} is not the squad's ${squad.uniform}`); assert(lum(arms.worn.hand) < .7 * lum(arms.worn.fore), `no glove (${arms.worn.hand})`);
+  assert(squad.worn.sleeve && far(squad.worn.sleeve, squad.uniform) < .03, `the squad's forearm wears ${squad.worn.sleeve}`); assert(far(squad.worn.upper, squad.uniform) < .08); assert(lum(squad.worn.hand) < .7 * lum(squad.worn.upper));
+  for (const f of ['kareth_a.glb', 'kareth_b.glb']) { const k = extras(f); assert(far(k.worn.fore, k.worn.upper) < .06, `${f}: a bare forearm`); assert(far(k.worn.upper, squad.uniform) > .2, 'the sides wear one colour'); }
+  report.sleeves = {arms: arms.worn, squad: squad.worn};
+});
+
+await check('reload', 'the arm is the body\'s and does not roll with the gun: through a rifle\'s reload, looked at every twentieth of it with the gun where the game holds it and rolled as the game rolls it (31 degrees), each elbow lies from its wrist where the grip says in the eye\'s space, to within two degrees (the trigger arm the same all through, the support arm leaning to its second lie as the gun tilts); the support arm\'s elbow stays below its wrist while the magazine is out; and neither shoulder end of an arm comes into the picture at any point, for a picture twice as wide as it is high; the same holds for the sidearm; the hands are still on the grips, and the support hand still goes down with the magazine and comes back', async () => {
+  const g = await modelled('kohar'), vm = g.viewmodel, gun = g.gun, B = g.arm, G = vm.grips, cam = gun.parent, HIP = [.235, -.25, -.65];
+  const base = {reloadRemaining: 0, reloadDuration: 2, time: 0, moving: false, running: false, aiming: false, jump: 0, landing: 0, dt: 1 / 60};
+  // The gun as a frame of the game leaves it: held at the hip, rolled and pitched by the view model; settled over forty frames.
+  const pose = p => { for (let i = 0; i < 40; i++) { gun.position.set(...HIP); gun.rotation.set(0, 0, 0); vm.animate({...base, ...p}); } cam.updateMatrixWorld(true); };
+  const eye = () => new THREE.Matrix4().copy(cam.matrixWorld).invert(), at = n => wp(B[n]).applyMatrix4(eye()), dir = (a, b) => at(b).sub(at(a)).normalize(), deg = 180 / Math.PI;
+  const inView = p => p.z < -.07 && Math.abs(p.y) < Math.tan(35 / deg) * -p.z && Math.abs(p.x) < 2 * Math.tan(35 / deg) * -p.z, smooth = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  let worst = {R: 0, L: 0}, rolled = 0, lowest = 9; const seen = [];
+  for (let t = 0; t <= 1.0001; t += .05) { pose({reloadRemaining: t >= 1 ? 0 : (1 - t) * 2}); const tilt = t > 0 && t < 1 ? smooth(t / .16) * (1 - smooth((t - .85) / .15)) : 0; rolled = Math.max(rolled, Math.abs(gun.rotation.z));
+    const wantR = G.rifle.R.elbow, wantL = G.rifle.L.elbow.clone().lerp(G.rifle.L.elbow2, tilt).normalize(), gotR = dir('Bip01_R_Hand', 'Bip01_R_Forearm'), gotL = dir('Bip01_L_Hand', 'Bip01_L_Forearm');
+    worst.R = Math.max(worst.R, gotR.angleTo(wantR) * deg); worst.L = Math.max(worst.L, gotL.angleTo(wantL) * deg);
+    if (t > .2 && t < .8) assert(at('Bip01_L_Forearm').y < at('Bip01_L_Hand').y - .12, `at ${t.toFixed(2)} of the reload the support arm's elbow is not below its wrist`);
+    for (const s of 'LR') { const sh = at(`Bip01_${s}_UpperArm`); if (inView(sh)) seen.push(`${s} at ${t.toFixed(2)}: ${sh.toArray().map(v => v.toFixed(2))}`); }
+    const inGun = n => wp(B[n]).applyMatrix4(new THREE.Matrix4().copy(gun.matrixWorld).invert()); assert(inGun('Bip01_R_Hand').distanceTo(G.rifle.R.at) < .002, 'the trigger hand left its grip'); lowest = Math.min(lowest, inGun('Bip01_L_Hand').y); if (t >= 1) assert(inGun('Bip01_L_Hand').distanceTo(G.rifle.L.at) < .01, 'the support hand did not come back'); }
+  assert(rolled > .5, `the gun was rolled ${rolled.toFixed(2)} in the reload`); assert(worst.R < 2 && worst.L < 2, `an elbow turned with the gun: ${JSON.stringify(worst)} degrees off`); assert.deepEqual(seen, [], 'a shoulder end came into the picture'); assert(lowest < G.rifle.L.at.y - .2, 'the support hand did not go down with the magazine');
+  vm.setSidearm(true); let pistol = 0; for (let t = 0; t <= 1.0001; t += .1) { pose({reloadRemaining: t >= 1 ? 0 : (1 - t) * 2}); pistol = Math.max(pistol, dir('Bip01_R_Hand', 'Bip01_R_Forearm').angleTo(G.pistol.R.elbow) * deg, dir('Bip01_L_Hand', 'Bip01_L_Forearm').angleTo(G.pistol.L.elbow) * deg); for (const s of 'LR') assert(!inView(at(`Bip01_${s}_UpperArm`)), 'the sidearm: a shoulder end in the picture'); } vm.setSidearm(false); assert(pistol < 2, `the sidearm: an elbow ${pistol.toFixed(1)} degrees off`);
+  report.reload = {gunRolled: +(rolled * deg).toFixed(0), elbowOffDegrees: {trigger: +worst.R.toFixed(2), support: +worst.L.toFixed(2), sidearm: +pistol.toFixed(2)}, supportHandDrop: +(G.rifle.L.at.y - lowest).toFixed(2)};
+});
+
+await check('sights', 'a reload takes the rifle from the sights and gives it back, and changes nothing else: aiming, the rifle is held at the middle; reloading while aiming it is held at the hip again within half a second, while the aim is still on and the picture still drawn in (and the reload takes the time it took); when the reload is done the rifle is at the middle again', async () => {
+  const g = await modelled('kohar'), gun = g.gun, w = g.weapon; g.set({aim: true}); g.run(.6); assert(Math.abs(gun.position.x) < .01, `aiming, the rifle is at ${gun.position.x.toFixed(3)}`); const fov = g.camera.fov; assert(fov < 69, 'the picture is not drawn in');
+  w.ammo = 3; g.press('KeyR'); g.release('KeyR'); g.step(1); assert(w.reloadRemaining > 0, 'no reload began'); const took = w.reloadRemaining; g.run(.5); assert(gun.position.x > .2, `reloading, the rifle is still at the sights (${gun.position.x.toFixed(3)})`); assert.equal(g.state().aim, true, 'the reload took the aim off'); assert(Math.abs(g.camera.fov - fov) < .5, 'the reload let the picture out');
+  let t = .5; while (w.reloadRemaining > 0 && t < 6) { g.run(.1); t += .1; } assert(Math.abs(t - took) < .2, `the reload took ${t.toFixed(1)} s of ${took.toFixed(1)}`); g.run(.6); assert(Math.abs(gun.position.x) < .01, 'the rifle did not come back to the sights'); assert.equal(g.state().aim, true);
+  report.sights = {reloadSeconds: +took.toFixed(2)};
+});
+
+await check('front', 'whatever is in hand is drawn in front of the world, and nothing else is: every drawing under the gun (the rifle, the sidearm, the knife, the throwable, the arms, the flash, what a class adds) takes the nearest tenth of the depth range for itself while it is drawn and gives the whole range back after, for every class; no soldier and nothing of the world does', async () => {
+  const g = await modelled('kohar'), gun = g.gun, none = THREE.Object3D.prototype.onBeforeRender, calls = [], fake = {getContext: () => ({depthRange: (a, b) => calls.push([a, b])})}; let n = 0;
+  for (const id of Object.keys(CLASSES)) { g.viewmodel.configure(id); gun.traverse(m => { if (!m.isMesh) return; n++; calls.length = 0; m.onBeforeRender(fake); m.onAfterRender(fake); assert.deepEqual(calls, [[0, .1], [0, 1]], `a drawing under the gun is not kept in front (${m.geometry?.type}, class ${id})`); }); }
+  assert(n > 80, `${n} drawings under the gun`); assert.equal(g.armMesh.onBeforeRender === none, false);
+  let others = 0; g.scene.traverse(m => { if (!m.isMesh) return; let o = m, under = false; while (o) { if (o === gun) under = true; o = o.parent; } if (under) return; others++; assert.equal(m.onBeforeRender, none, 'something of the world is drawn in front of it'); }); assert(others > 100);
+  report.front = {drawingsUnderTheGun: n / Object.keys(CLASSES).length, others};
+});
+
+await check('ladder', 'on a ladder the hands are on its rungs and nothing is in them: on three ladders of Dehrun Terraces, climbed from foot to top, at every frame the rifle and the sidearm are not drawn, each wrist is on its own side of the ladder and at the ladder, the left hand holds an even rung and the right an odd one or is on its way up to the next but one, never both on their way at once below the top, each hand takes rung after rung upward as the body climbs, and neither is ever more than two metres above the feet or less than nine tenths of one (where the rungs run out at the top a hand lets go and stays at the chest, never on a rung below the feet); stepped off, the rifle is drawn again and the hands are on its grips', async () => {
+  const g = await modelled('dehrun'), gun = g.gun, B = g.arm, G = g.viewmodel.grips, L = g.height.space.ladders, rifle = gun.children.find(c => c.isGroup && Math.abs(c.position.y - .08) < 1e-9), stats = [];
+  for (const i of [0, 6, 9]) { const l = L[i], yaw = Math.atan2(l.dir[0], l.dir[1]), from = g.height.space.floor(l.standX, l.standZ, l.bottom + .5).y, px = l.standX - l.dir[0] * .42, pz = l.standZ - l.dir[1] * .42, y0 = l.bottom + .28; g.set({hp: 100});
+    g.put(l.standX + l.dir[0] * .3, from, l.standZ + l.dir[1] * .3, yaw); g.hold('KeyW', .3); assert.equal(g.height.climbing(), true, `took hold of ladder ${i}`); const held = {L: new Set(), R: new Set()}, rungs = Math.floor((l.top - .05 - y0) / .3 - 1e-6); let frames = 0, both = 0, low = 0;
+    g.hold('KeyW', 12, () => { if (!g.height.climbing()) return false; frames++; assert.equal(rifle.visible, false, 'the rifle is drawn on a ladder'); let moving = 0;
+      for (const [s, side, par] of [['L', -1, 0], ['R', 1, 1]]) { const w = wp(B[`Bip01_${s}_Hand`]), lat = (w.x - px) * l.dir[1] - (w.z - pz) * l.dir[0], off = (w.x - px) * l.dir[0] + (w.z - pz) * l.dir[1], rung = (w.y + .071 - y0) / .3, k = Math.round(rung), up = w.y - g.player.y;
+        assert(Math.abs(lat - side * .135) < .06, `the ${s} wrist is ${lat.toFixed(2)} m to the side`); assert(off > -.02 && off < .25, `the ${s} wrist is ${off.toFixed(2)} m from the ladder`); assert(up > .9 && up < 2.05, `the ${s} hand is ${up.toFixed(2)} m above the feet`);   /* also where the rungs run out at the top: a hand lets go there and stays at the chest, never on a rung below the feet */
+        if (Math.abs(rung - k) < .06 && off < .09 && k <= rungs) { assert.equal(((k % 2) + 2) % 2, par, `the ${s} hand holds rung ${k}`); held[s].add(k); } else moving++; }
+      if (g.player.y < l.top - 2.2) { low++; if (moving === 2) both++; } });
+    assert(frames > 60, `ladder ${i} was climbed for ${frames} frames`); assert(both <= low * .02, `both hands were off the rungs in ${both} of ${low} frames below the top`);
+    for (const s of 'LR') { const ks = [...held[s]].sort((a, b) => a - b); assert(ks.length >= Math.max(1, Math.floor(rungs / 2) - 4), `ladder ${i}: the ${s} hand held ${ks.length} rungs of ${rungs}`); for (let j = 1; j < ks.length; j++) assert.equal(ks[j] - ks[j - 1], 2, `the ${s} hand missed a rung of its own (${ks})`); }
+    g.run(.3); assert.equal(g.height.climbing(), false); assert.equal(rifle.visible, true, 'off the ladder the rifle is not drawn'); gun.updateWorldMatrix(true, true); const inv = new THREE.Matrix4().copy(gun.matrixWorld).invert(); for (const s of 'LR') { const d = wp(B[`Bip01_${s}_Hand`]).applyMatrix4(inv).distanceTo(G.rifle[s].at); assert(d < .01, `off the ladder the ${s} hand is ${d.toFixed(3)} m from its grip`); }
+    stats.push({ladder: i, height: +(l.top - l.bottom).toFixed(1), frames, left: held.L.size, right: held.R.size}); }
+  report.ladder = stats;
+});
+
+let TOP;   // the top floor's measurement, shared by the checks that read it
+const top = async () => TOP ??= pressure(await world('dehrun'), A, 'top', 240);
+await check('mix', 'each wave is a push and a flank: on the top floor of Dehrun Terraces for four minutes (a stand-in that stands still and kills what has been in its sight for a second), about half of what arrives is of the push and the rest flankers (each at least four in ten); every flanker comes from another side than its wave\'s push (the push up the east stair, the flankers over the roof and down the west one); the push comes by the doors and through windows it breaks, both; in every wave both are among its first five to arrive; and on the ground floor, bought, the push comes from one side and the flankers from at least two others, seven in ten of them or more from another side than the push (measured: .76 to 1 over five runs); and on the top floor with the first floor bought, where everything from below and from the roof passes one landing, a third or more are still flankers and come up the other stair', async () => {
+  const m = await top(); assert(m.waves >= 3 && m.arrivals >= 30, `${m.arrivals} arrivals in ${m.waves} waves`); const share = m.push.n / m.arrivals; assert(share >= .4 && share <= .6 && m.flank.n / m.arrivals >= .4, `the push is ${m.push.n} of ${m.arrivals}, the flank ${m.flank.n}`);
+  assert.equal(m.flankFromAnotherSide, 1, 'a flanker came from the side of the push'); assert.deepEqual(Object.keys(m.push.from), ['E']); assert.deepEqual(Object.keys(m.flank.from), ['W']);
+  assert(m.came.door >= 4 && m.came.window >= 4 && m.came.ladder >= 8, `how they came: ${JSON.stringify(m.came)}`); assert(m.ways.push >= 4 && m.ways['push-w'] >= 4 && m.ways['roof+'] >= 8, JSON.stringify(m.ways));
+  for (let w = 1; w < m.waves; w++) { const firstFive = m.list.filter(a => a.wave === w).slice(0, 5).map(a => a.part); assert(firstFive.includes('push') && firstFive.includes('flank'), `wave ${w} began ${firstFive}`); }
+  const low = pressure(await world('dehrun'), A, 'ground', 200); assert(low.push.n >= 15 && low.flank.n >= 12, `the ground floor: ${low.push.n} and ${low.flank.n}`); const main = Object.entries(low.push.from).sort((u, v) => v[1] - u[1])[0]; assert(main[1] >= .85 * low.push.n, `the push came from ${JSON.stringify(low.push.from)}`);
+  const sides = Object.entries(low.flank.from).filter(([s, n]) => s !== main[0] && n >= 2); assert(sides.length >= 2, `the flankers came from ${JSON.stringify(low.flank.from)}`); assert(low.flankFromAnotherSide >= .7, `${low.flankFromAnotherSide} of the flankers from another side`); assert(low.ways['window+'] >= 3 && low.ways['roof+'] >= 3, JSON.stringify(low.ways));
+  // The top floor with the first floor bought: both stairs lead up from the first floor, and everything from below and from the roof passes the push's own landing. Flankers still come, by the other stair (found by T44's two-player check: none came while the stretch was shut as tall as a body, which shut the landing under the flight as well).
+  const mid = pressure(await world('dehrun'), A, 'topFirst', 160); assert(mid.flank.n >= .35 * mid.arrivals && mid.push.n >= .35 * mid.arrivals, `the top floor with the first bought: ${mid.push.n} of the push and ${mid.flank.n} flankers`); assert(mid.flankFromAnotherSide >= .9, `${mid.flankFromAnotherSide} of them from another side`);
+  const strip = r => { const {list, ...rest} = r; return rest; }; report.mix = {topFloor: strip(m), groundFloor: strip(low), topFloorWithTheFirstBought: strip(mid)};
+});
+
+await check('pressure', 'more of them, sooner after one another, than in Build 38: the same stand-in on the top floor for four minutes in Build 38 played here from its commit and in the present game: half as many again arrive a minute or more; the middle gap between one arrival and the next is three fifths of Build 38\'s or less and under four seconds; someone is in sight for a larger share of a wave; less of a wave is spent waiting at the limit of alive; and the first of a wave is not later than it was', async () => {
+  const now = await top(), was = pressure((await before()).g, (await before()).A, 'top', 240); assert(was.arrivals >= 15, `Build 38: ${was.arrivals} arrivals`);
+  assert(now.aMinute >= 1.5 * was.aMinute, `${now.aMinute} a minute against Build 38's ${was.aMinute}`); assert(now.gapMedian <= .6 * was.gapMedian && now.gapMedian < 4, `the middle gap ${now.gapMedian} s against ${was.gapMedian}`);
+  assert(now.withSomeoneInSight > was.withSomeoneInSight, `someone in sight ${now.withSomeoneInSight} of a wave against ${was.withSomeoneInSight}`); assert(now.heldByTheLimit < was.heldByTheLimit, `held at the limit ${now.heldByTheLimit} against ${was.heldByTheLimit}`);
+  assert(median(now.firstContact) <= median(was.firstContact) + 1, `first contact ${now.firstContact} against ${was.firstContact}`);
+  const strip = r => ({aMinute: r.aMinute, waves: r.waves, firstContact: r.firstContact, gapMedian: r.gapMedian, gapP90: r.gapP90, withSomeoneInSight: r.withSomeoneInSight, heldByTheLimit: r.heldByTheLimit, from: r.from}); report.pressure = {build38: strip(was), now: strip(now)};
+});
+
+await check('opening', 'a wave opens together and the rest is shorter, on Dehrun Terraces only: the first wave sets out 8 s after the run begins; its first three set out within a second and a half of one another, a push, a flanker, a push; a wave cleared, the next sets out after 5 s; alive at once is 4 + the wave\'s number up to ten and arrivals are at four tenths of Kohar Valley\'s gap, never under a second; the number in a wave and who may fire at once are what they were; Kohar Valley still rests 10 s and 12 s and names no push', async () => {
+  const g = await world('dehrun'); g.begin(); let t1 = null; g.run(12, t => { g.put(...STANDS.top.at); if (g.amb.phase === 'wave') { t1 = t; return false; } }); assert(t1 != null && Math.abs(t1 - 8) < .2, `the first wave set out at ${t1}`);
+  const born = []; g.run(6, t => { g.put(...STANDS.top.at); for (const a of alive(g)) if (!a.noted) { a.noted = true; born.push([t, a.ai.part, a.ai.way.id]); } }); assert(born.length >= 3, `${born.length} set out in six seconds`); assert(born[2][0] - born[0][0] < 1.5, `the first three set out over ${(born[2][0] - born[0][0]).toFixed(2)} s`); assert.deepEqual(born.slice(0, 3).map(b => b[1]), ['push', 'flank', 'push']); assert(born.length < 3 + 5, 'the rest set out one by one');
+  g.amb.toSpawn = 0; for (const a of alive(g)) kill(g, a); let t2 = null; g.run(1, () => { g.put(...STANDS.top.at); }); assert.equal(g.amb.phase, 'break'); g.run(9, t => { g.put(...STANDS.top.at); if (g.amb.phase === 'wave') { t2 = t + 1; return false; } }); assert(t2 != null && Math.abs(t2 - 5) < .3, `the next wave set out after ${t2}`);
+  maps.selectMap('kohar'); const K = n => A.waveSpec(n), kohar = Array.from({length: 30}, (_, i) => K(i + 1)); maps.selectMap('dehrun'); assert.deepEqual(same(A.CURVE), {cap: [4, 1], ceiling: 10, count: 1.5, gap: .4, tokens: [3, 6], run: 6, rest: [8, 5]});
+  for (let n = 1; n <= 30; n++) { const s = A.waveSpec(n), k = kohar[n - 1]; assert.equal(s.aliveCap, Math.min(10, 4 + n)); assert.equal(s.count, Math.min(60, Math.round(k.count * 1.5))); assert(Math.abs(s.spawnGap - Math.max(1, k.spawnGap * .4)) < 1e-9); assert.equal(A.aiTuningFor(n, ENEMY_AI).attackTokens, 3 + (n >= 3) + (n >= 6)); }
+  assert.deepEqual(same(D.push), {every: 2, flank: [180, 100, 260, 140, 220], off: 25, shut: [14, 30], wide: 1.6, burst: 3, burstGap: .5}); assert.equal(D.around, undefined);
+  const k = await maps.loadMap('kohar'); assert.equal(k.ambush.push, undefined); assert.equal(k.ambush.curve, undefined); assert.equal(A.AMBUSH.firstBreak, 10); assert.equal(A.AMBUSH.breakTime, 12);
+  report.opening = {firstWaveAt: +t1.toFixed(1), firstThreeOver: +(born[2][0] - born[0][0]).toFixed(2), nextWaveAfter: +t2.toFixed(1), aliveAtOnce: [1, 2, 3, 6].map(n => A.waveSpec(n).aliveCap)};
+});
+
+await check('stretch', 'the flank never comes in by the push\'s own stretch: on the ground floor (bought) with a wave on, the push\'s last stretch is known (twenty places or more, each between 7 and 15 m of the push\'s way from the player or beside one that is); in every flanker\'s field those places have no way, and in the push\'s they have; from most places to start from, the flankers\' ways by the roof, by a window and by the doors all still reach the player; watched for two minutes, no flanker with more than 12 m of its way left stands on the stretch; and where the house leaves no other side (the top floor, one stair open) the window and door ways have no way round and the roof\'s has', async () => {
+  const g = await world('dehrun'), S = STANDS.ground; g.begin(); for (const id of S.open) assert(g.ambush.openGate(id)); g.put(...S.at); g.ambush.startWave(2); g.run(8, () => { g.put(...S.at); }); const fr = g.ambush.front('player'); assert(fr?.mask, 'no stretch after the wave\'s first of the push');
+  const ids = []; fr.mask.forEach((v, i) => { if (v) ids.push(i); }); assert(ids.length >= 20, `${ids.length} places`); const P = g.ambush.field('player', fr.way), spots = g.ambush.spots(), [lo, hi] = D.push.shut; let core = 0; for (const i of ids) { assert(P.far[i] >= 0, 'a place of the stretch that the push cannot reach'); if (P.far[i] >= lo && P.far[i] <= hi) core++; assert(P.far[i] >= lo - 12 && P.far[i] <= hi + 12, `a place of the stretch at ${P.far[i] / 2} m of way`); } assert(core >= 15, `${core} places on the push's own way`);
+  const reach = {}; for (const w of g.ambush.flankWays) { const F = g.ambush.field('player', w); for (const i of ids) assert.equal(F.far[i], -1, `${w.id} has a way over the push's stretch`); reach[w.id] = spots.filter(s => F.far[s[3]] >= 0).length / spots.length; } for (const id of ['roof+', 'window+']) assert(reach[id] > .5, `${id} reaches the player from ${reach[id].toFixed(2)} of the places`);   /* the doors' way round is whatever street door the barricades and the push leave: often none (reported) */
+  let on = 0, watched = 0; g.run(120, () => { g.put(...S.at); g.set({hp: 1e9}); if (g.amb.phase === 'decision') g.ambush.decide(false); const f = g.ambush.front('player'); for (const a of alive(g)) { if (a.ai.part === 'flank' && a.ai.way?.flank && a.ai.left > 24 && !a.climb && !a.fall && f?.mask) { watched++; const n = g.ambush.layers.nearest(a.g.position.x, a.g.position.z, a.g.position.y, 1); if (n && f.mask[n.id] && Math.abs(n.y - a.g.position.y) < .4) on++; } if (a.seen && a.g.position.distanceTo(g.player) < 15) { a.inSight = (a.inSight || 0) + 1 / 60; if (a.inSight > 1) kill(g, a); } } });
+  assert(watched > 2000, `${watched} frames of flankers on their way`); assert(on <= watched * .01, `a flanker stood on the push's stretch in ${on} of ${watched} frames`);
+  g.begin(); g.put(...STANDS.top.at); g.ambush.startWave(2); g.run(8, () => { g.put(...STANDS.top.at); }); assert(g.ambush.front('player')?.mask); const up = Object.fromEntries(g.ambush.flankWays.map(w => { const F = g.ambush.field('player', w); return [w.id, +(spots.filter(s => F.far[s[3]] >= 0).length / spots.length).toFixed(2)]; }));
+  assert(up['roof+'] > .9 && up['door+'] === 0 && up['window+'] === 0, `from the top floor: ${JSON.stringify(up)}`);
+  report.stretch = {places: ids.length, groundFloorReach: Object.fromEntries(Object.entries(reach).map(([k, v]) => [k, +v.toFixed(2)])), flankerFramesWatched: watched, onTheStretch: on, topFloorReach: up};
+});
+
+await check('hunt', 'one that is near its player stays near until it is clearly far, so that it comes for a player it cannot see: a hostile is put on the top floor a little inside the line that makes it near (12 m of way), out of the player\'s sight, and is given a place to make for that is blind and a little beyond that line (found in the navigation: 13.5 to 15 m of way, within 12.5 m); it does not go near, far and near again with its five seconds beginning anew each time (found by T45 with this build\'s draws: one paced the next room for 17 s and would have for good): it is in the player\'s sight between 4 and 12 s after, while the blind place is still its to make for', async () => {
+  const g = await world('dehrun'), T = STANDS.top.at; g.begin(); g.put(...T); g.ambush.startWave(2); let one = null; g.run(60, () => { g.put(...T); one = alive(g)[0]; return !one; }); assert(one); g.amb.toSpawn = 0; for (const a of alive(g)) if (a !== one) kill(g, a, false);
+  const F = g.ambush.field('player', null), N = g.ambush.layers.nodes, eye = g.player.clone().setY(T[1] + 1.4), blindAt = n => !g.glass.clear(new THREE.Vector3(n.x, n.y + 1.4, n.z), eye), level = n => !n.shut && Math.abs(n.y - T[1]) < .3;
+  const spots = N.filter(n => level(n) && F.far[n.id] >= 27 && F.far[n.id] <= 30 && Math.hypot(n.x - T[0], n.z - T[2]) < 12.5 && blindAt(n)); let spot = null, from = null;
+  for (const q of spots) { const near = N.filter(n => level(n) && F.far[n.id] >= 20 && F.far[n.id] <= 23 && Math.hypot(n.x - q.x, n.z - q.z) < 3.5 && blindAt(n) && g.ambush.layers.walkable(n, q) && [.2, .4, .6, .8].every(f => blindAt({x: n.x + (q.x - n.x) * f, y: n.y, z: n.z + (q.z - n.z) * f}))); if (near.length) { spot = q; from = near[0]; break; } }   /* and blind all the way between them */ assert(spot && from, `no blind place beyond the line with a place inside it beside (${spots.length} blind places)`);
+  one.ai.kind = 'rifle'; g.ambush.setKind(one, 0); one.g.position.set(from.x, from.y, from.z); one.route = []; one.climb = one.fall = null; Object.assign(one.ai, {routeAt: 0, far: false, way: null, part: 'push', path: [], head: null, spd: 0, sawAt: 0, nearSince: null, state: 'advance', left: null, leftAt: 0}); one.ai.v.hold = 3.5; one.seen = null; one.senseTimer = .3; one.ai.spot = {at: [spot.x, spot.z, spot.y], of: [...T], stalls: one.ai.stalls || 0};
+  let came = null, flips = 0, was = false; g.run(20, t => { g.put(...T); g.amb.toSpawn = 0; if (t < 12) one.ai.spot = {at: [spot.x, spot.z, spot.y], of: [...T], stalls: one.ai.stalls || 0}; const near = one.ai.nearSince != null; if (near && !was) flips++; was = near; if (process.env.SHOW && Math.round(t * 60) % 12 === 0) console.error(t.toFixed(1), one.g.position.toArray().map(v => +v.toFixed(2)).join(','), 'left', one.ai.left, 'near', near, 'seen', !!one.seen, 'state', one.ai.state, 'blind here', blindAt({x: one.g.position.x, y: one.g.position.y, z: one.g.position.z})); if (t > .5 && one.seen && came == null) { came = t; return false; } });
+  if (process.env.SHOW) console.error('from', from.x, from.z, F.far[from.id], 'spot', spot.x, spot.z, F.far[spot.id]);
+  assert(came != null && came > 4 && came < 12, `it came for the player after ${came?.toFixed(1)} s (it went near ${flips} times)`); assert(flips <= 2, `it went near ${flips} times`);
+  report.hunt = {from: [from.x, from.z].map(v => +v.toFixed(1)), wayFrom: F.far[from.id] / 2, blindPlace: [spot.x, spot.z].map(v => +v.toFixed(1)), wayOfThePlace: F.far[spot.id] / 2, cameAfter: +came.toFixed(1), wentNear: flips};
+});
+
+await check('coop', 'two players have a push and a flank each: in a two-player run on the top floor, hosted, for three waves, each player\'s own arrivals go turn about beginning with the push (a flanker with no way round comes with the push, never two flankers running), each player is sent four or more of each, and each player\'s flankers are given ways of their own turn', async () => {
+  maps.selectMap('dehrun'); const page = async role => { const g = await createGame(SOURCE ? {sourcePath: SOURCE} : {}); g.prepare({role, clearLane: false}); g.el('blood').checked = false; for (const a of g.actors) a.animate = a.visual.animate; await g.built.ready; return g; }, host = await page('host'), guest = await page('guest');
+  host.peer.send = m => { if (!host.peer.connected) return false; guest.receive(wire(m)); return true; }; guest.peer.send = m => { if (!guest.peer.connected) return false; host.receive(wire(m)); return true; };
+  host.receive({type: 'hello', classId: 'assault'}); guest.receive({type: 'hello', classId: 'assault'}); host.setMode('ambush'); host.start(); host.play(); guest.play(); host.restoreAI(); let clock = 0; host.frame(0); guest.frame(0);
+  const place = (who, x, y, z) => { const me = who === 'host' ? host : guest, other = who === 'host' ? guest : host; me.player.set(x, y, z); me.height?.settle?.(); other.remote.g.position.set(x, y, z); other.remote.netPos = null; }, step = () => { clock += 1000 / 60; host.frame(clock); guest.frame(clock); };
+  const sent = {player: [], mate: []}, noted = new Map(); host.set({hp: 1e9}); host.remote.hp = 1e9;
+  for (let f = 0; f < 60 * 300 && host.amb.survived < 3; f++) { place('host', -4, 6.6, 61.3); place('guest', 6, 6.6, 61.3); step(); host.set({hp: 1e9}); host.remote.hp = 1e9; if (host.amb.phase === 'decision') host.ambush.decide(false);
+    for (const a of alive(host)) { if (noted.get(a) !== a.bornAt) { noted.set(a, a.bornAt); sent[a.ai.prey === 'mate' ? 'mate' : 'player'].push([host.amb.wave, a.ai.part, a.ai.way?.id]); } const q = a.ai.prey === 'mate' ? host.remote.g.position : host.player; if (a.g.position.distanceTo(q) < 12) { a.near = (a.near || 0) + 1 / 60; if (a.near > 1) kill(host, a); } } }
+  assert(host.amb.survived >= 3, `three waves in five minutes (wave ${host.amb.wave})`);
+  for (const k of ['player', 'mate']) { const l = sent[k], push = l.filter(a => a[1] === 'push').length, flank = l.filter(a => a[1] === 'flank').length; assert(push >= 4 && flank >= 4, `${k}: ${push} of the push and ${flank} flankers`);
+    for (const w of [1, 2, 3]) { const parts = l.filter(a => a[0] === w).map(a => a[1]); assert.equal(parts[0], 'push', `${k}, wave ${w}: began with ${parts[0]}`); for (let i = 1; i < parts.length; i++) assert(!(parts[i] === 'flank' && parts[i - 1] === 'flank'), `${k}, wave ${w}: two flankers running (${parts})`); }
+    assert(l.filter(a => a[1] === 'flank').every(a => /\+$/.test(a[2])) && l.filter(a => a[1] === 'push').every(a => /^push/.test(a[2])), 'a way that is not its part\'s'); }
+  report.coop = Object.fromEntries(['player', 'mate'].map(k => [k, {push: sent[k].filter(a => a[1] === 'push').length, flank: sent[k].filter(a => a[1] === 'flank').length}]));
+});
+
+await check('kohar', 'Kohar Valley\'s Ambush is Build 38\'s: both curves for forty waves, the hostiles\' tunables, every price, the rules, the arena and both keys of the bests equal Build 38 taken from its commit; the lines that keep Dehrun\'s push, its rest and its ways from Kohar Valley are in the source; a solo run of 150 s played by the present game and by Build 38\'s is the same in every sample, and no enemy there is of a push or a flank or has a way', async () => {
+  const old = await oldBuild(BEFORE), OA = await old.module('ambush.js'), OR = await old.module('records.js'); maps.selectMap('kohar'); (await old.module('maps.js')).selectMap('kohar'); assert.equal(A.KINDS, null); assert.equal(A.VARY, null); assert.equal(A.CURVE, null);
+  for (let n = 1; n <= 40; n++) { assert.deepEqual(A.waveSpec(n), OA.waveSpec(n)); assert.deepEqual(A.waveSpec(n, 2), OA.waveSpec(n, 2)); assert.deepEqual(same(A.aiTuningFor(n, ENEMY_AI)), same(OA.aiTuningFor(n, ENEMY_AI))); for (const c of Object.values(CLASSES)) assert.equal(A.magazinePrice(c, n), OA.magazinePrice(c, n)); assert.equal(A.dressingPrice(n), OA.dressingPrice(n)); }
+  assert.deepEqual(same(A.AMBUSH), same(OA.AMBUSH)); assert.deepEqual(same(A.GATES), same(OA.GATES)); assert.deepEqual(same(A.STATIONS), same(OA.STATIONS)); assert.deepEqual(same(A.AREAS), same(OA.AREAS)); assert.equal(R.bestKey('kohar'), OR.bestKey('kohar')); assert.equal(R.bestKey('kohar', true), OR.bestKey('kohar', true));
+  const text = fs.readFileSync(SOURCE || new URL('dist/game.js', projectRoot), 'utf8'); for (const f of ['const PUSH=LEVELS&&WORLD.ambush.push||null', 'timer:WORLD.ambush.curve?.rest?.[0]??AMBUSH.firstBreak', 'd.timer=WORLD.ambush.curve?.rest?.[1]??AMBUSH.breakTime', 'for(const [wide,far] of PUSH?', 'if(PUSH){a.ai.way=way;', 'return LEVELS&&a.ai.v?ambushSteer(a,a.ai,p,plan,dt):plan;']) assert(text.includes(f), `Kohar Valley's side of a line is no longer guarded: ${f}`);
+  const was = pathToFileURL(path.join(old.dir, 'dist', 'game.js')), solo = async source => { const g = await world('kohar', {source}); const rows = []; g.run(150, t => { for (const a of alive(g)) { assert(!a.ai.part && !a.ai.way && !a.ai.v && a.ai.head == null, 'a Kohar Valley enemy of a push or with a way'); const d = a.g.position.distanceTo(g.player); if (d < 14 && a.seen) { a.inSight = (a.inSight || 0) + 1 / 60; if (a.inSight > 1) { a.inSight = 0; kill(g, a); } } else a.inSight = 0; } if (Math.round(t * 60) % 120 === 0) rows.push([g.amb.wave, g.amb.phase, g.amb.toSpawn, g.amb.points, ...enemies(g).map(a => [+a.g.position.x.toFixed(4), +a.g.position.z.toFixed(4), +a.g.rotation.y.toFixed(4), a.hp, a.ai?.state ?? null])]); }); return rows; };
+  const now = await solo(SOURCE), then = await solo(was); assert(now.length >= 74 && now.at(-1)[3] >= 900, `the run was played (${now.at(-1)[3]} points)`); assert.deepEqual(now, then, 'a solo run');
+  report.kohar = {against: BEFORE, waves: 40, solo: `${now.length} samples identical`};
+});
+
+maps.selectMap('kohar');
+console.log(JSON.stringify({suite: 'T49 the arms and the pressure (Build 39)', passed: results.length, results, report}, null, 1));

@@ -5,11 +5,11 @@ How the files in `dist/assets/models/` were made. The sources are not in the rep
 
 ```sh
 B=/Applications/Blender.app/Contents/MacOS/Blender
-# bodies: Microsoft Rocketbox (MIT), Assets/Avatars/Professions/Military_Male_02, _03, _06 (the .fbx and Textures/*.tga)
+# bodies: Microsoft Rocketbox (MIT), Assets/Avatars/Professions/Military_Male_01, _02, _03, _06 (the .fbx and Textures/*.tga)
 $B -b --python tools/models/convert_body.py -- squad    "$PWD/dist/assets/models/squad.glb"
 $B -b --python tools/models/convert_body.py -- kareth_a "$PWD/dist/assets/models/kareth_a.glb"
 $B -b --python tools/models/convert_body.py -- kareth_b "$PWD/dist/assets/models/kareth_b.glb"
-# first-person arms, cut from Military_Male_03
+# first-person arms, cut from Military_Male_01 (Build 39: its sleeves reach the gloves; Military_Male_03's are rolled)
 $B -b --python tools/models/convert_arms.py -- "$PWD/dist/assets/models/arms.glb"
 # a static model (Poly Haven machete, CC0)
 $B -b --python tools/models/convert_static.py -- incoming/polyhaven/machete/machete.gltf "$PWD/dist/assets/models/machete.glb" \
