@@ -1,5 +1,6 @@
 import * as THREE from './three.module.js';
 import {assetURL} from './build.js'; // also the DEPLOY-01 upgrade guard
+import {cloneSkinned} from './models.js';
 export function makeViewmodel(gun,{mat}){
  const oldParts=[...gun.children].filter(o=>o.isMesh);const loader=new THREE.TextureLoader();
  const group=new THREE.Group();group.position.y=.08;gun.add(group);
@@ -46,5 +47,41 @@ export function makeViewmodel(gun,{mat}){
  function animateAll(p){rifleAnimate(p);if(sidearmOn){left.position.set(.0,-.075,-.06);left.rotation.set(0,0,.35);right.position.set(.035,-.07,-.05);}
   const k=Math.max(0,Math.min(1,p.knife||0));blade.visible=k>0;if(k>0){const f=1-k;blade.position.set(-.52+f*.46,.1-Math.sin(f*Math.PI)*.03,.2-Math.sin(f*Math.PI)*.1);blade.rotation.set(.35,.9-f*1.3,-.9+f*.4);}   /* Build 34: a slash from the left across the view, the edge leading and the flat turned to the eye */
   can.visible=!!p.holding;if(p.holding)can.position.set(-.2,.0,-.28);}
- return {ready,configure,animate:animateAll,setSidearm,get sidearm(){return sidearmOn;},resetMotion(){roll=pitchOffset=0;},get loaded(){return !!model;}};
+ // ---- Build 38: arms with fingers (cut from the squad's body: assets/models/arms.glb). The capsule hands above stay as
+ // what says where a hand is (`left`, `right`, the knife's fist, the can): they are posed exactly as before and no longer
+ // drawn; each frame the arms' bones are put where they say. A hand is a wrist, the way the hand points, the way its palm
+ // faces, where the elbow lies from the wrist, and how far each finger is curled (GRIPS, in the gun's space: x right, y up,
+ // -z forward). The arm is not hung from a shoulder: like every first-person arm it reaches in from below the picture.
+ const V=(x,y,z)=>new THREE.Vector3(x,y,z).normalize(),P=(x,y,z)=>new THREE.Vector3(x,y,z),FIST=[[1.05,1.25,.95],[1.05,1.3,.95],[1.05,1.3,.95],[1.05,1.3,.95]];
+ const GRIPS={
+  rifle:{R:{at:P(.03,-.062,.135),point:V(-.02,.5,-.87),palm:V(-1,-.04,.04),elbow:V(.36,-.6,.72),upper:V(.15,-.75,.64),thumb:[.25,.3,.25],fingers:[[.3,.45,.3],...FIST.slice(1)]},
+         L:{at:P(-.03,.012,-.285),point:V(.3,.12,-.95),palm:V(.15,.98,.1),elbow:V(-.45,-.66,.6),upper:V(-.2,-.82,.53),thumb:[.1,.2,.15],fingers:[[.75,.95,.6],[.8,1,.65],[.8,1,.65],[.8,.95,.6]]}},
+  pistol:{R:{at:P(.052,-.118,.04),point:V(-.03,.4,-.92),palm:V(-1,0,.02),elbow:V(.36,-.5,.79),upper:V(.2,-.3,.93),thumb:[.2,.3,.2],fingers:[[.3,.45,.3],...FIST.slice(1)]},
+          L:{at:P(-.045,-.135,.04),point:V(.36,.36,-.86),palm:V(.93,.3,.2),elbow:V(-.5,-.48,.72),upper:V(-.3,-.35,.89),thumb:[.2,.3,.2],fingers:FIST}},
+  knife:{at:P(.0,-.012,.105),point:V(0,.1,-1),palm:V(1,0,0),elbow:V(.12,-.3,.95),upper:V(-.2,-.4,.9),thumb:[.5,.5,.4],fingers:FIST},          // in the blade's own space
+  can:{at:P(-.03,-.085,.06),point:V(.15,.62,-.77),palm:V(.75,.2,.63),elbow:V(-.45,-.6,.66),upper:V(-.3,-.35,.89),thumb:[.3,.4,.3],fingers:[[.7,.8,.6],[.7,.8,.6],[.7,.8,.6],[.7,.8,.6]]}};          // from the can
+ let armRig=null;const REST={left:left.matrix.clone(),right:right.matrix.clone()};{left.updateMatrix();right.updateMatrix();REST.left.copy(left.matrix).invert();REST.right.copy(right.matrix).invert();}
+ function arms(model,{scale=1.06}={}){if(armRig||!model)return false;const c=cloneSkinned(model);if(!c.mesh)return false;c.root.scale.setScalar(scale);c.root.updateMatrixWorld(true);c.mesh.frustumCulled=false;c.mesh.raycast=()=>{};
+  const wp=o=>o.getWorldPosition(new THREE.Vector3()),wq=o=>o.getWorldQuaternion(new THREE.Quaternion()),side={};
+  for(const s of ['L','R']){const B=n=>c.bones[`Bip01_${s}_${n}`],U=B('UpperArm'),F=B('Forearm'),H=B('Hand');if(!U||!F||!H)return false;
+   const pU=wp(U),pF=wp(F),pH=wp(H),x=wp(B('Finger2')).sub(pH).normalize(),n0=new THREE.Vector3().crossVectors(wp(B('Finger1')).sub(wp(B('Finger4'))),x).normalize();if(n0.y>0)n0.negate();   // the palm faces down in the model's rest pose
+   const n=n0.addScaledVector(x,-n0.dot(x)).normalize(),b=new THREE.Vector3().crossVectors(x,n),rest=new THREE.Matrix4().makeBasis(x,n,b).transpose();
+   const fingers=[0,1,2,3,4].map(f=>['','1','2'].map(j=>{const bone=B(`Finger${f}${j}`),child=B(`Finger${f}${j===''?'1':j==='1'?'2':''}`),q=wq(bone),d=(j==='2'?new THREE.Vector3(1,0,0).applyQuaternion(q):wp(child).sub(wp(bone)).normalize());
+    return {bone,rest:bone.quaternion.clone(),axis:new THREE.Vector3().crossVectors(d,n).normalize().applyQuaternion(q.clone().invert())};}));
+   side[s]={U,F,H,qU:wq(U),qF:wq(F),qH:wq(H),dU:pF.clone().sub(pU).normalize(),dF:pH.clone().sub(pF).normalize(),L1:pF.distanceTo(pU),L2:pH.distanceTo(pF),rest,fingers,parent:new THREE.Matrix4().copy(U.parent.matrixWorld).invert(),parentQ:wq(U.parent).invert()};}
+  for(const g of [left,right])g.traverse(o=>{if(o.isMesh)o.visible=false;});blade.traverse(o=>{if(o.isMesh&&o.parent!==blade&&o.parent.parent===blade)o.visible=false;});   // the capsule hands and the fist go; the knife stays
+  gun.add(c.root);armRig={root:c.root,mesh:c.mesh,side,scale};poseArms({});return true;}
+ const _b=new THREE.Vector3(),_m=new THREE.Matrix4(),_r=new THREE.Quaternion(),_s=new THREE.Quaternion(),_v=new THREE.Vector3(),_w=new THREE.Vector3(),_e=new THREE.Vector3(),_x=new THREE.Vector3(),_n=new THREE.Vector3(),_d=new THREE.Vector3(),_q=new THREE.Quaternion();
+ // One arm: `frame` moves the grip (a matrix in the gun's space, or null).
+ function poseArm(a,g,frame){_w.copy(g.at);_x.copy(g.point);_n.copy(g.palm);_e.copy(g.elbow);if(frame){_w.applyMatrix4(frame);_x.transformDirection(frame);_n.transformDirection(frame);_e.transformDirection(frame);}
+  _n.addScaledVector(_x,-_n.dot(_x)).normalize();_b.crossVectors(_x,_n);_r.setFromRotationMatrix(_m.makeBasis(_x,_n,_b).multiply(a.rest));
+  const qh=_r.clone().multiply(a.qH);_d.copy(a.dF).applyQuaternion(_r);_s.setFromUnitVectors(_d,_v.copy(_e).negate());const qf=_s.clone().multiply(_r).multiply(a.qF);
+  _d.copy(a.dU).applyQuaternion(_r).applyQuaternion(_s);_q.setFromUnitVectors(_d,_v.copy(g.upper).negate());const qu=_q.clone().multiply(_s).multiply(_r).multiply(a.qU);
+  _v.copy(_w).addScaledVector(_e,a.L2).addScaledVector(g.upper,a.L1);a.U.position.copy(_v).applyMatrix4(a.parent);a.U.quaternion.copy(a.parentQ).multiply(qu);a.F.quaternion.copy(qu).invert().multiply(qf);a.H.quaternion.copy(qf).invert().multiply(qh);
+  a.fingers.forEach((f,i)=>{const c=i?g.fingers[i-1]:g.thumb;f.forEach((j,k)=>j.bone.quaternion.copy(j.rest).multiply(_q.setFromAxisAngle(j.axis,c[k])));});}
+ function poseArms(p){if(!armRig)return;const {L,R}=armRig.side,k=Math.max(0,Math.min(1,p.knife||0));left.updateMatrix();right.updateMatrix();
+  if(sidearmOn){poseArm(R,GRIPS.pistol.R,null);poseArm(L,GRIPS.pistol.L,null);}else{poseArm(R,GRIPS.rifle.R,_m.identity()&&new THREE.Matrix4().multiplyMatrices(right.matrix,REST.right));poseArm(L,GRIPS.rifle.L,new THREE.Matrix4().multiplyMatrices(left.matrix,REST.left));}
+  if(k>0){blade.updateMatrix();poseArm(L,GRIPS.knife,blade.matrix);}else if(p.holding){can.updateMatrix();poseArm(L,GRIPS.can,can.matrix);}}
+ function animateArms(p){animateAll(p);poseArms(p);}
+ return {ready,configure,animate:animateArms,arms,get armed(){return !!armRig;},grips:GRIPS,setSidearm,get sidearm(){return sidearmOn;},resetMotion(){roll=pitchOffset=0;},get loaded(){return !!model;}};
 }

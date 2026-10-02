@@ -7,7 +7,9 @@ const noop=()=>{};
 // Exercise the actual game module, including its movement/collision/camera/network code.
 // Only browser rendering, assets, audio, AI and mission completion are substituted.
 // The production source is never edited by this harness.
-export async function createGame({sourcePath=new URL('dist/game.js',projectRoot)}={}){
+export async function createGame({sourcePath=new URL('dist/game.js',projectRoot),models=false}={}){
+ // Build 38: the models (bodies, arms, weapons) are looks and arrive when they arrive: a suite gets them only if it asks (`models: true`).
+ const modelsModule=await import(new URL('dist/models.js',projectRoot)).catch(()=>null);if(modelsModule?.MODELS)modelsModule.MODELS.auto=!!models;
  const ctx=new Proxy({createRadialGradient:()=>({addColorStop:noop})},{get:(o,k)=>o[k]||noop,set:(o,k,v)=>(o[k]=v,true)});
  const elements=new Map(),docL=new Map(),winL=new Map();
  // Every addEventListener is kept (arrays), like a browser; api.listeners.get(event) still returns a dispatcher for old suites.
@@ -56,7 +58,7 @@ fire=(m,event,arg={})=>{for(const fn of m.get(event)||[])fn(arg);};
    play(){setState('playing');document.pointerLockElement=renderer.domElement;hasPointerLock=true;},
    messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
    // typeof guards keep the harness able to load older builds for baseline comparisons.
-   built:typeof built==='undefined'?undefined:built,scene,effects,hitScan,applyQuality,sounds:harnessSounds,heard:harnessHeard,squadService:typeof squadService==='object'?squadService:undefined,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
+   built:typeof built==='undefined'?undefined:built,scene,effects,hitScan,applyQuality,sounds:harnessSounds,heard:harnessHeard,squadService:typeof squadService==='object'?squadService:undefined,models:typeof askModels==='function'?{bodies:()=>bodies,asked:()=>modelsAsked,ask:askModels,dress}:undefined,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
    occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},resetNav:typeof navEdge!=='undefined'?()=>{navGrid=null;navEdge=null;navComp=null;coverCache=null;}:undefined,fx:typeof fx==='object'?fx:undefined,
    ai:typeof enemyPlan==='function'?{director:()=>director,coverTable,coverQuery,safeSpot,segClear,pathTo,navigationGrid,navComp:()=>navComp,setStage:v=>{stage=v;},humanEyes,objectivePoint,target,extract,intel,startPatrol:typeof startPatrol==='function'?startPatrol:undefined,startTravel:typeof startTravel==='function'?startTravel:undefined,finish,missionTick:(dt)=>missionTick(dt),aiRng:()=>aiRng}:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined,
    // Build 09 Ambush internals (typeof-guarded so older builds still load).

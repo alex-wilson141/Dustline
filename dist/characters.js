@@ -1,6 +1,7 @@
 import * as THREE from './three.module.js';
 import { mergeGeometries } from './BufferGeometryUtils.js';
 import './build.js'; // DEPLOY-01 upgrade guard
+import { cloneSkinned, cloneStatic } from './models.js';
 
 // Shared geometry and fabric maps keep a full squad inexpensive to draw.
 const sphere = new THREE.SphereGeometry(1, 12, 8);
@@ -207,6 +208,38 @@ export function makeSoldierVisual({ team = 'ally', index = 0, look = null, mater
   // Build 36: a blade in the right hand instead of the rifle, and a swing of it. Nothing of it exists until `makeBlade`
   // is called, and nothing of it moves until `blade(true)`: every soldier that is never given one is drawn as before.
   let bladeMesh = null, bladeOn = false, swing = 0;
+  // Build 38: a skinned body over the coded rig. The rig above stays what it was: its groups are still posed by animate()
+  // exactly as before and its meshes are still what a shot is tested against (a ray does not ask whether a mesh is drawn);
+  // they are only no longer drawn. Each frame the model's bones take the rig's pose: a limb's bone points where the rig's
+  // limb points, the spine leans as the torso does, the head stays upright on the rig as the rig's head does. The model
+  // hangs from the rig, so a fall, a slide and a crouch carry it. Nothing here exists until skin() is called.
+  let skinned = null;
+  const proxies = []; rig.traverse(o => { if (o.isMesh && o.parent !== rifle) proxies.push(o); });
+  function skin(model, { material = null, scale = .955 } = {}) {
+    if (skinned || !model) return false;
+    const { root, mesh: body, bones } = cloneSkinned(model, material); if (!body) return false;
+    root.scale.setScalar(scale); root.updateMatrixWorld(true);
+    const B = n => bones['Bip01_' + n], Q = o => o.getWorldQuaternion(new THREE.Quaternion()), P = o => o.getWorldPosition(new THREE.Vector3()), DOWN = new THREE.Vector3(0, -1, 0), list = [], at = new Map();
+    const add = (name, drive, childName) => { const bone = B(name); if (!bone) return; const restWorld = Q(bone), pre = restWorld.clone();
+      if (childName && B(childName)) pre.premultiply(new THREE.Quaternion().setFromUnitVectors(P(B(childName)).sub(P(bone)).normalize(), DOWN));   // the limb as the rig holds it at rest: straight down
+      at.set(bone, list.length); list.push({ bone, parent: at.has(bone.parent) ? at.get(bone.parent) : -1, restLocal: bone.quaternion.clone(), pre, drive, world: restWorld.clone() }); };
+    const tq = new THREE.Quaternion();
+    add('Pelvis', null); add('Spine', null); add('Spine1', q => q.copy(torso.quaternion)); add('Spine2', null); add('Neck', q => q.identity()); add('Head', null);
+    arms.forEach(({ upper, fore, side }) => { const s = side < 0 ? 'L' : 'R'; add(s + '_Clavicle', null);
+      add(s + '_UpperArm', q => q.copy(torso.quaternion).multiply(upper.quaternion), s + '_Forearm'); add(s + '_Forearm', q => q.copy(torso.quaternion).multiply(upper.quaternion).multiply(fore.quaternion), s + '_Hand'); add(s + '_Hand', null); });
+    legs.forEach(({ thigh, calf }, i) => { const s = i ? 'R' : 'L'; add(s + '_Thigh', q => q.copy(thigh.quaternion), s + '_Calf'); add(s + '_Calf', q => q.copy(thigh.quaternion).multiply(calf.quaternion), s + '_Foot'); add(s + '_Foot', q => q.identity()); });   // a foot stays flat to the rig's ground whatever the shin does
+    body.raycast = () => {};   // never shot at: the rig's own shapes are
+    body.frustumCulled = true; body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, .9, 0), 2.6);
+    for (const o of proxies) o.visible = false;
+    rig.add(root); skinned = { root, body, bones, list, tq }; syncSkin(); return true;
+  }
+  function syncSkin() {
+    const { list, tq } = skinned;
+    for (const b of list) { const pw = b.parent >= 0 ? list[b.parent].world : null;
+      if (b.drive) { b.drive(tq); b.world.copy(tq).multiply(b.pre); if (pw) b.bone.quaternion.copy(pw).invert().multiply(b.world); else b.bone.quaternion.copy(b.world); }
+      else if (pw) b.world.copy(pw).multiply(b.restLocal); }
+  }
+  function unskin() { if (!skinned) return; rig.remove(skinned.root); for (const o of proxies) o.visible = true; skinned = null; }
   function makeBlade(steel, grip, box) {
     if (bladeMesh) return;
     bladeMesh = new THREE.Group();
@@ -218,6 +251,8 @@ export function makeSoldierVisual({ team = 'ally', index = 0, look = null, mater
     bladeMesh.visible = false;
     arms.find(arm => arm.side > 0).fore.add(bladeMesh);
   }
+  // Build 38: the blade as a model (a machete, Poly Haven, CC0) in place of its three boxes, when one is given.
+  function bladeModel(model) { if (!bladeMesh || bladeMesh.userData.model || !model) return false; for (const o of bladeMesh.children) o.visible = false; bladeMesh.add(cloneStatic(model)); bladeMesh.userData.model = true; return true; }
   function blade(on) { bladeOn = !!on && !!bladeMesh; if (bladeMesh) { bladeMesh.visible = bladeOn; rifle.visible = !bladeOn; } if (!bladeOn) swing = 0; }
   function strike() { if (bladeOn) swing = 1; }
   let flinch = 0, flinchX = 0, flinchZ = 0, fall = null;
@@ -320,7 +355,8 @@ export function makeSoldierVisual({ team = 'ally', index = 0, look = null, mater
       legs.forEach(({ thigh, calf }, i) => { thigh.rotation.x = mix(thigh.rotation.x, i ? -.06 : .06); thigh.rotation.z = mix(thigh.rotation.z, i ? -.07 : .07); calf.rotation.x = mix(calf.rotation.x, -.1); });
       for (const { upper, fore, side } of arms) { upper.rotation.x = mix(upper.rotation.x, .04); upper.rotation.z = mix(upper.rotation.z, side * .06); fore.rotation.x = mix(fore.rotation.x, .12); fore.rotation.z = mix(fore.rotation.z, 0); }
     }
+    if (skinned) syncSkin();
   }
   animate({ dt: 0 });
-  return { group, animate, react, reset, state, makeBlade, blade, strike, swinging: () => swing, bladeShown: () => !!bladeMesh && bladeMesh.visible && !rifle.visible };
+  return { skin, unskin, skinned: () => skinned, proxies, bladeModel, parts: { rig, torso, arms, legs, rifle }, group, animate, react, reset, state, makeBlade, blade, strike, swinging: () => swing, bladeShown: () => !!bladeMesh && bladeMesh.visible && !rifle.visible };
 }

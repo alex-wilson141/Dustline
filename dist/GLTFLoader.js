@@ -1,5 +1,6 @@
 // three.js r169, examples/jsm/loaders/GLTFLoader.js (MIT, see THREE-LICENSE.txt). Changed for DUSTLINE only in its import
-// paths and the line below. Loaded only with a map that has models (Build 22); Kohar Valley never asks for it.
+// paths and the line below. Loaded with a map that has models (Build 22) and, since Build 38, by models.js once a game's
+// first frame has been drawn (the bodies and arms); never before that first frame, on any map.
 import './build.js'; // DEPLOY-01 upgrade guard
 import {
 	AnimationClip,

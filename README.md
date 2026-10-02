@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 37)
+# DUSTLINE — Operation Broken Signal (Build 38)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -46,6 +46,16 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
+
+## Soldiers, hands and the Kareth Brigade (Build 38)
+
+The squad, the co-op teammate and the hostiles are skinned bodies now, and the player's hands are arms with fingers. The
+bodies come from the Microsoft Rocketbox Avatar Library (MIT), cut down and repainted (no real flag, name, rank, unit mark
+or camouflage is left); the rusher's blade is a Poly Haven machete (CC0). They are looks only: every pose is still the game's
+own code, and a shot is still tested against the same shapes as before. The hostiles are a fictional army, the Kareth
+Brigade: dark olive-grey, soft caps, no armour, against the squad's tan, helmets and vests. The models (3.2 MB) are fetched
+after the first frame has been drawn. `tests/test-models-b38.mjs` (T48) checks them; `tools/models/` holds how they were made.
+Distinct weapon models are not in yet.
 
 ## Squad codes (Build 37)
 

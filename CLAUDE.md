@@ -15,6 +15,8 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/combat.js`, `network.js`, `environment.js`, `characters.js`, and
   `viewmodel.js`: existing combat, networking, scenery and animation systems.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
+- `dist/models.js`, `dist/assets/models/`: the bodies, the first-person arms and the machete (Build 38); `tools/models/`: how they
+  were converted (Blender); `incoming/`: raw downloads, ignored by git.
 - `dist/squad.js`: squad codes, the game's side (Build 37). `service/`: the signalling service's source (a Cloudflare Worker;
   outside `dist/`, not served, deployed by the user). `tools/run-suites.mjs`, `tests/suite-groups.json`: the quick and slow suites.
 - `dist/map-kohar.js`: Kohar Valley, map 1, as a description (Build 21). `dist/maps.js`: the maps and the active one.
@@ -30,6 +32,33 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 38 (local, 2026-10-02): models, part one: bodies, first-person arms and the faction (F.16, F.19, E55, E56). **The weapon models
+(Set A, the sidearm, the throwables) are NOT in: they wait for files the user downloads from Sketchfab into `incoming/`.**
+**Models are looks only.** `dist/models.js` loads `.glb` files from `dist/assets/models/` (`loadModel`, `loadModels`, `cloneSkinned`,
+`cloneStatic`); `GLTFLoader.js` is fetched by `import()` inside `models.js` the first time a model is wanted, and **the game asks
+only after its first frame has been drawn** (`askModels`, `frameN===2`, `MODELS.auto`): nothing is fetched earlier on any map, and
+the harness turns `MODELS.auto` off unless a suite passes `createGame({models: true})`. `game.js` still has no `import()`.
+**The coded rig in `characters.js` is untouched and is still what a shot is tested against** (`proxies`: its meshes stay in the scene,
+no longer drawn; a ray does not ask whether a mesh is drawn). `visual.skin(model)` hangs a skinned body from `rig`; `syncSkin()` at
+the end of `animate()` gives each bone the rig's pose (a limb's bone points where the rig's limb points: `pre` aligns the model's
+A-pose to the rig's hanging limbs; Spine1 takes the torso; neck and feet stay upright on the rig), so every coded pose and all six
+deaths carry over with no clips. **Never give a body `userData.actor` without `userData.skin`, never let it answer a ray
+(`body.raycast` is a no-op), never move or remove the proxies: T48 compares 150 shots with and without the models.** `hitScan` takes
+only meshes with `userData.actor===a` and no `userData.skin`: **since Build 35 the hidden marks of rushers and bombers (made for
+every Dehrun hostile) had stopped every round at the chest; fixed here** (T48 `hits`). Bodies: `squad.glb` (squad and teammate; the
+teammate's material tinted `MATE_TINT`), `kareth_a.glb`, `kareth_b.glb` (hostiles by `index%2`), `machete.glb` (the rusher's blade:
+`visual.bladeModel`), `arms.glb` (`viewmodel.arms`). A soldier made later (Ambush's pool) is dressed in `soldier()` (`dress`).
+**First-person arms:** the capsule hands (`left`, `right`, the knife's fist, the can) still say where a hand is and are no longer
+drawn; `GRIPS` in `viewmodel.js` gives each hand a wrist, a direction, a palm, an elbow and finger curls, in the gun's space;
+`poseArm` puts the bones there (no shoulder: the arm reaches in from below). Tune a grip by eye with the bench hook
+(`?bench=hands&gr=0,1.35,0&gb=...`). **The hostiles are the Kareth Brigade** (fictional: dark olive-grey, soft caps, no armour;
+the squad tan, helmets, vests); Dehrun's wave lines and the briefs name it; Kohar Valley's Ambush wave line is pinned by T20 and
+unchanged. **No real insignia: the Rocketbox textures' flag, names, ranks, unit marks and camouflage are painted out by
+`tools/models/convert_body.py` (rectangles per avatar; `texlib.decamo`); a new avatar needs its own rectangles and a look at the
+result.** Sources and Blender work live in `incoming/` (ignored); conversion scripts in `tools/models/`. Credits: Rocketbox MIT
+(`dist/ROCKETBOX-LICENSE.txt`), machete CC0. With ten hostiles up at wave 12 the count is 666,000 triangles of 700,000 (T48
+`budget`): bodies are 4,500 triangles each; more soldiers in view need smaller bodies. The scratchpad browser pane only draws while
+it is shown: reopen it with `preview_start {url}` if screenshots time out.
 Build 37 (local, 2026-10-01): squad codes and fast publishing (F.12, E54). **CREATE SQUAD / JOIN SQUAD make the same connection as
 the long codes, the two descriptions carried by a signalling service** (`service/`: a Cloudflare Worker and one Durable Object,
 outside `dist/`, deployed by the user with wrangler, never served by Pages). `service/src/lobby.js` is the whole rule and has no
@@ -296,7 +325,7 @@ requirement (user, E38): the Ambush arena of Dehrun Terraces is a large multi-st
 (internal stairs, a roof, a street around it); if that cannot work within the map, say so and do not compromise.** Doors must be
 wide enough for enemies before any mode is played there.
 Build 22 (local, 2026-09-29): the look slice of Dehrun Terraces, map build 2 of 9. **Kohar Valley must fetch nothing of the new
-map**: `map-dehrun.js`, `terraces.js` and `GLTFLoader.js` are never imported by a module the game loads with Kohar Valley (only
+map** (since Build 38 `GLTFLoader.js` is also fetched by `models.js` after the first frame, for the bodies): `map-dehrun.js`, `terraces.js` and `GLTFLoader.js` are never imported statically by a module the game loads with Kohar Valley (only
 `maps.js` fetches the description, by `import('./map-dehrun.js')`, for the address `?map=dehrun`); a later import must name its
 module in full so that the import map versions it. The kit holds no place: every position is in the map's `block`. A map may bring
 `build`, `terrain.surface` (the drawn ground, below what is built), its own light and `look` (a map to walk and look at: nobody
@@ -521,6 +550,7 @@ node tests/test-difficulty-b34.mjs
 node tests/test-variety-b35.mjs
 node tests/test-natural-b36.mjs
 node tests/test-squad-codes-b37.mjs
+node tests/test-models-b38.mjs
 ```
 
 All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what gates a publish).
@@ -529,9 +559,9 @@ All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what ga
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 37 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 38 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread and 10 squad-code checks (353 in 40 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code and 7 model checks (360 in 41 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

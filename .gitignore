@@ -6,3 +6,6 @@ node_modules/
 !.env.example
 *.log
 .claude/settings.local.json
+
+# Build 38: raw model downloads and conversion work, never published (the converted files live in dist/assets)
+incoming/

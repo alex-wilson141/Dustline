@@ -1,8 +1,22 @@
-# NOW — DUSTLINE current state
+**Build 38 is committed locally and NOT pushed** (models, part one: bodies, first-person arms, the Kareth Brigade). **Build 37 is LIVE.** **The user plays locally and says when a build is to be published: do not push. Do not take Safari: give bench URLs.**
 
-_Updated 2026-10-01. The master tracker is `DUSTLINE-ROADMAP.md`; this file is the short version._
+**Build 38 in short: the soldiers are skinned bodies, your hands are arms with fingers, the hostiles are the Kareth Brigade. The distinct weapon models are NOT in: they wait for the eight Sketchfab files in `incoming/`.**
+- **OPEN, the user's step: download the eight Sketchfab models** (links in the roadmap's E55 and in the session report) as GLB into `incoming/`. Then: convert, grips and reloads per weapon, crates, third person, checks, a second commit.
+- **Found and fixed (MAP-17): since Build 35, a round at the chest or belly of any Dehrun hostile did nothing.** The hidden rusher and bomber marks on every hostile stopped it. Only heads and limbs could be hit. Chest shots count again: Dehrun's Ambush is easier than in Builds 35 to 37, which were played with this fault.
+- **1. Hands:** arms cut from the squad's body (bare forearms, gloves, 15 finger bones a hand). The trigger hand wraps the pistol grip with the index finger forward; the support hand is under the handguard and goes down with the magazine in a reload; both hands hold the sidearm; the left hand takes the knife and the throwable. The rifle, pistol, knife and throwable themselves are still the old ones.
+- **2. Bodies:** squad and teammate: tan uniform, helmet, coyote vest (the teammate tinted blue under its marker). Kareth Brigade: dark olive-grey, soft cap, no armour, two men by turns. Every pose is the game's own code carried to the bones: walking, running, crouching, ladders, windows, the flinch, the blade's swing, the six deaths. One drawing a body (was 25), 4,500 triangles.
+- **3. Looks only:** what a shot hits is the old shapes (150 shots the same with and without the models); nothing is fetched before the first frame; Kohar Valley plays the same.
+- **4. The Kareth Brigade** is named in the Story and Skirmish briefs and in Dehrun's wave lines. No real flag, name, rank, unit mark or camouflage is left on the bodies. The rusher's red cloth and the bomber's black vest and amber light sit on the new bodies; the rusher's blade is a machete.
+- **What to look at:** `http://localhost:8765/` on both maps. Your hands on the rifle, in a reload (R), on the sidearm (Z), in a knife swing (T), holding a frag (G held). Your squad beside you; hostiles at 30 to 60 m: can you tell them from the squad at a glance? A rusher and a bomber on Dehrun. Shoot a hostile in the chest: it now counts. Deaths.
+- **Checks:** 41 suites, 360 checks, all pass (headless), the three traces identical. T48 is new (7 checks). Breakage pass: 44 of 44 caught (41 at first).
+- **Bench (B33), awaiting the user:** `http://localhost:8770/b38/?map=dehrun&bench=ambush&case=dehrun12` (wave 12, ten skinned hostiles) · `http://localhost:8770/b38/?bench=ambush&case=kohar12` (control) · line-ups to look at: `http://localhost:8770/b38/?bench=cast&pose=mix&d=3.2`, `...&pose=dead&d=4.5&pitch=-0.3`, `http://localhost:8770/b38/?map=dehrun&bench=cast&mode=story&kinds=1&swing=1&at=0,0,76.5&d=3`, hands: `http://localhost:8770/b38/?bench=hands` (`&sidearm=1`, `&reload=0.45`, `&knife=0.5`, `&hold=frag`).
+- **Sizes:** models 3.22 MB; `dist/` 45 to 48.4 MB. Wave 12 with ten up: 260 drawings, 666,000 triangles (ceiling 700,000).
 
-**Build 38 (models: F.16, F.19): STEP A REPORTED 2026-10-02, AWAITING THE USER'S APPROVAL OF THE ASSET LIST. Nothing has been downloaded into the game and nothing built.** The list and the findings are E55 in the roadmap: Rocketbox (MIT) for bodies and first-person arms, driven by the game's own coded poses (no Mixamo); weapons from a credit-line low-poly set or textured credit-line models (CC0 has almost nothing modern); Blender needed as a tool; a uniformed fictional army recommended for the hostiles. **Do not download anything until the user approves.**
+**Decisions for the user (Build 38):**
+- **Download the weapon files** (above).
+- **Dehrun's difficulty now that chest shots count:** play it; say if the curve should be raised.
+- **Triangle headroom:** 666,000 of 700,000 at wave 12. Bodies at 3,000 triangles instead of 4,500 would give 15,000 back; say if you want it.
+- **The hands' positions** were set by eye from a few pictures: say what looks wrong.
 
 **Build 37 is LIVE (pushed 2026-10-02; published in 3 min 28 s; the full run passed on GitHub).** Earlier note: **Build 37 was committed locally** (squad codes and fast publishing). **Build 24 is LIVE.** **The user plays locally and says when a build is to be published: do not push. Do not take Safari: give bench URLs.**
 
