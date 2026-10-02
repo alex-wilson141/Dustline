@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 35)
+# DUSTLINE — Operation Broken Signal (Build 36)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -120,6 +120,15 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 3. **Host:** paste the answer and press ACCEPT ANSWER. Keep both pages open and do not reload in between.
 
 Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the game connects players directly and has no relay server. Both players must be on the same build.
+
+## Movement and spawn spread on Dehrun Terraces (Build 36)
+
+Dehrun's hostiles turn, gain speed and brake as people do (their ways are pulled straight and followed by steering) and still
+differ from one another. A rusher carries a blade, raises it before it strikes (step back and it misses) and comes in a straight
+line over its last nine metres. A bomber's beep carries 16 m, is heard to the side the bomber is on, and is faint and dull
+through a wall or a floor. Arrivals start from all round: over low stretches of the square's walls, up four ladders to the roof,
+through windows on every face. `tests/test-natural-b36.mjs` (T46) measures all of it against Build 35 played from its commit.
+Kohar Valley is unchanged.
 
 ## Hostile variety on Dehrun Terraces (Build 35)
 

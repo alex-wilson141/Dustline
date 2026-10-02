@@ -98,6 +98,10 @@ const H = (id, x, z, storeys, o = {}) => { const base = level((z[0] + z[1]) / 2)
   const twin = DIST.houses.length % 2 === 0, fits = (f, places, at) => { const [lo, hi] = f === 'north' || f === 'south' ? x : z; return at - 1.2 >= lo + 1 && at + 1.2 <= hi - 1 && places.every(o => o === at || Math.abs(o - at) >= 3.4); };
   DIST.houses.push({id, x, z, plain: true, glazed: true, base, beamEnds: ['south'], roof: {parapet: .5}, storeys: storeys.map(([h, sf, band], n) => ({height: h, surface: sf, band, ...Object.fromEntries(Object.entries(faces).map(([f, places]) => [f, places.map(at => n ? (twin && fits(f, places, at) ? dwin : win)(at, {sill: .8, open: [2.75, 1 + (Math.abs(at) * 7 % 3) * .8]}) : win(at, {bars: true}))]))}))}); };
 const P = ['masonry', 'plaster', 'ochre', 'white'];
+// Build 36: a wall with a stretch of it (`a` to `b`) standing only `LOW` high: three walls for one.
+// On the south wall the low stretch is a buttress as deep as the terrace wall's parapet under it, down to the lower town's ground:
+// a body dropping from it lands on the square and not on that parapet's ledge.
+const BUTTRESS = {thick: 1.3, foot: 1.6}, LOW = 2.2, lowWall = (w, a, b, o = {}) => [{...w, to: a}, {...w, from: a, to: b, height: LOW, ...o}, {...w, from: b}];
 const rows = [
   // the lower terrace, level 0 (z 17..80): lanes at x -48 / 48, cross street z 30
   ['WL1', [-66, -56], [20, 28], [[3, P[0]], [2.8, P[1], 'white']], {faces: {east: [22, 26]}}], ['WL2', [-42, -32], [19, 27], [[3, P[2]]], {faces: {west: [22]}}], ['WL3', [-66, -58], [34, 44], [[3, P[1]], [2.7, P[3], 'ochre']], {faces: {east: [37, 41]}}],
@@ -210,6 +214,8 @@ export const DEHRUN = {
       {a: 3, b: 4, line: [-10.02, 59.8, -7.5, 59.8], y: 3.4},            // the west stair down to the ground floor
       {a: 4, b: 5, line: [2.3, 53.05, 3.7, 53.05], y: .05},              // the north street door
       {a: 2, b: 5, line: [11.1, 53.5, 11.1, 55.1], y: 9.83},             // the head of the ladder on the roof
+      {a: 2, b: 5, line: [-11.2, 69, -11.2, 70.6], y: 9.83},             // Build 36: the head of the second ladder, at the roof's south-west corner
+      {a: 2, b: 5, line: [-5.4, 55.1, -3.8, 55.1], y: 9.83}, {a: 2, b: 5, line: [3.3, 69, 4.9, 69], y: 9.83},   // and of the ladders up the north and the south face
       {a: 5, b: 0, line: [-1.6, 44.3, 1.6, 44.3], y: 0},                 // the square's north gateway, to the block
       {a: 7, b: 0, line: [-23.7, 28.5, -23.7, 31.5], y: 0}, {a: 7, b: 0, line: [-49.7, 20.2, -46.3, 20.2], y: 0},   // the west district: the arch into the block, the lane's steps up the hill
       {a: 8, b: 0, line: [23.7, 28.5, 23.7, 31.5], y: 0}, {a: 8, b: 0, line: [46.3, 20.2, 49.7, 20.2], y: 0},
@@ -229,18 +235,24 @@ export const DEHRUN = {
     // at, how far off it stops to fire, how long it stops, whether it stops at all before it is close, its lane to one
     // side of the way, the gap before the next arrival).
     kinds: {
-      rusher: {speed: 6, reach: 1.9, strike: 28, every: 1, share: [.15, .025, .4]},
-      bomber: {speed: 4.6, trigger: 2.4, fuse: .7, hear: 30, warn: 3, every: 2},
+      rusher: {speed: 6, reach: 1.9, strike: 28, every: 1, share: [.15, .025, .4], commit: 9, wind: .35},
+      bomber: {speed: 4.6, trigger: 2.4, fuse: .7, hear: 16, wall: .3, muffle: 650, behind: 3200, warn: 3, every: 2},
     },
-    vary: {speed: [.85, 1.2], hold: [3.5, 8.5], fight: [.55, 1.1], pause: [.5, 1.7], bold: .25, lane: .9, gap: [.5, 1.5]},
+    vary: {speed: [.75, 1.3], hold: [3.5, 8.5], fight: [.55, 1.1], pause: [.5, 1.7], bold: .25, lane: .9, gap: [.5, 1.5]},
     // The ways in (game.js `WAYS`): each arrival is given one in turn, by these shares, and keeps to it until it is near its
     // player. By the doors and the stairs; by the ladder to the roof (no door and no window is a way for these); through a
     // ground-floor window, which the hostile breaks itself (no door and no ladder). Two in four go by the roof, so a player on
     // the top floor has as many coming down the west stair as up the east.
+    // Build 36: `around`: each arrival starts from its own direction round its player, this many degrees on from the last
+    // (eight arrivals: eight directions). `ladders: 'low'`: the ladders over the square's walls are every way's; the two up
+    // the house are the roof way's alone.
+    // The roof way also leaves out the west stair's flight below the top floor: down from the roof by the west stair, and
+    // further down by the east one, so that a player on the first floor has them from both ends.
+    around: 135,
     routes: [
-      {id: 'door', share: 1, ladders: false, vaults: 'none'},
-      {id: 'roof', share: 2, most: 2, apart: 2.5, vaults: 'none', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
-      {id: 'window', share: 1, ladders: false, vaults: 'all', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
+      {id: 'door', share: 1, ladders: 'low', vaults: 'none'},
+      {id: 'roof', share: 2, most: 4, apart: 1.5, vaults: 'none', shut: [{x: [-10.02, -7.5], y: [5.4, 6.5], z: [59.2, 59.8]}, {x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
+      {id: 'window', share: 2, ladders: 'low', vaults: 'all', shut: [{x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
     ],
     chart: {x: [-74, 74], z: [-118, 107]}, spots: {x: [-70, 70], z: [-28, 103], step: 4},
     brief: {title: 'Hold the customs house.', solo: 'Ambush: alone on the top floor of the customs house, survive wave after wave. The hostiles come up the stairs, over the roof and through windows that have been shot out. Kills earn points: clear barricades to open the roof, the floors below, the street doors, the square and the town beyond, and buy rifles, magazines and dressings at the crates. There is no win, only how long you last; from wave 5 you can extract between waves and bank your points, or stay for a bigger bank.', coop: 'Ambush, two players: you and your teammate hold the top floor of the customs house against wave after wave. No AI squad. Each of you earns and spends your own points; a barricade either of you clears is open for both. If one of you goes down the other fights on; the run ends when both are down. From wave 5 you can extract between waves if you both choose to.'},
@@ -282,8 +294,8 @@ export const DEHRUN = {
       {axis: 'z', at: 13.2, from: -1, to: 5.6, base: 1.6, height: 1.2, thick: .4, surface: 'drystone', coping: 'slab'},
       {axis: 'x', at: -24.2, from: 8, to: 14, base: 3.2, height: 1, thick: .4, surface: 'drystone', coping: 'slab'},
       // Build 25: the walls round the square, with a gate at its south end.
-      {axis: 'z', at: -22, from: 44.2, to: 58, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: -22, from: 66, to: 80, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: 22, from: 44.2, to: 58, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, {axis: 'z', at: 22, from: 66, to: 80, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'},   // Build 28: gates at z 62 onto the districts
-      {axis: 'x', at: 80, from: -22, to: -6, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, {axis: 'x', at: 80, from: 6, to: 22, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'},
+      ...lowWall({axis: 'z', at: -22, from: 44.2, to: 58, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, 48, 51), {axis: 'z', at: -22, from: 66, to: 80, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: 22, from: 44.2, to: 58, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, ...lowWall({axis: 'z', at: 22, from: 66, to: 80, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, 72, 75),   // Build 28: gates at z 62 onto the districts
+      ...lowWall({axis: 'x', at: 80, from: -22, to: -6, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, -15.5, -12.5, BUTTRESS), ...lowWall({axis: 'x', at: 80, from: 6, to: 22, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, 12.5, 15.5, BUTTRESS),
       ...DIST.walls,
     ],
     arches: [
@@ -368,6 +380,13 @@ export const DEHRUN = {
       {x: 8, z: -5.9, dir: [0, 1], bottom: 1.6, top: 4.25, exit: [8, -7.15]},
       // Build 33: up the customs house's east face to its roof, north of its windows: the way onto the roof from outside.
       {x: 13.1, z: 54.2, dir: [1, 0], bottom: 0, top: 10.43, exit: [11.8, 54.3]},
+      // Build 36: three more ways onto that roof (the south face at its west corner, and the middle of the north and south faces); and over the square's walls where a
+      // stretch of each stands lower (`lowWall`): from the west district, the east district and twice from the lower town.
+      // A ladder outside, a drop inside: ways in for the hostiles, and no way out for a player.
+      {x: -12.1, z: 71.1, dir: [0, 1], bottom: 0, top: 10.43, exit: [-11.9, 69.8]},
+      {x: -4.6, z: 52.9, dir: [0, -1], bottom: 0, top: 10.43, exit: [-4.6, 54.3]}, {x: 4.1, z: 71.1, dir: [0, 1], bottom: 0, top: 10.43, exit: [4.1, 69.8]},   // and one in the middle of the north face and of the south: four ways onto the roof, one to a side
+      {x: -22.3, z: 49.5, dir: [-1, 0], bottom: 0, top: LOW + .08, exit: [-22, 49.5]}, {x: 22.3, z: 73.5, dir: [1, 0], bottom: 0, top: LOW + .08, exit: [22, 73.5]},
+      {x: -14, z: 80.75, dir: [0, 1], bottom: -1.6, top: LOW + .08, exit: [-14, 80]}, {x: 14, z: 80.75, dir: [0, 1], bottom: -1.6, top: LOW + .08, exit: [14, 80]},
     ],
     leanTos: [
       {x: [4.5, 10.6], z: [.4, 5.8], base: 1.6, high: 2.95, low: 2.3, fall: 'z-'},

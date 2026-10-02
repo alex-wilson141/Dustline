@@ -145,6 +145,7 @@ export function deathVariant({ x = 0, z = 1, zone = 'upper', height = null, side
 }
 
 /** A 1.8 m articulated visual. Outer placement belongs to the game; flinch and fall are animated here. */
+const SWING_SECONDS = .8;
 export function makeSoldierVisual({ team = 'ally', index = 0, look = null, materials = {} } = {}) {
   const p = palette(look || team, materials.mat);
   const group = new THREE.Group();
@@ -203,6 +204,22 @@ export function makeSoldierVisual({ team = 'ally', index = 0, look = null, mater
     if (look === 'mate') { marker.userData.isMateMarker = true; marker.renderOrder = 20; group.userData.look = 'mate'; }
   }
   let stride = index * 1.79, movement = 0, low = 0, down = 0;
+  // Build 36: a blade in the right hand instead of the rifle, and a swing of it. Nothing of it exists until `makeBlade`
+  // is called, and nothing of it moves until `blade(true)`: every soldier that is never given one is drawn as before.
+  let bladeMesh = null, bladeOn = false, swing = 0;
+  function makeBlade(steel, grip, box) {
+    if (bladeMesh) return;
+    bladeMesh = new THREE.Group();
+    bladeMesh.position.set(0, -.262, -.02);
+    const part = (m, w, h, d, y, z) => { const o = new THREE.Mesh(box, m); o.scale.set(w, h, d); o.position.set(0, y, z); o.castShadow = false; bladeMesh.add(o); };
+    part(grip, .034, .04, .15, 0, -.01);
+    part(steel, .03, .08, .5, .012, -.33);
+    part(steel, .03, .055, .09, .0, -.61);
+    bladeMesh.visible = false;
+    arms.find(arm => arm.side > 0).fore.add(bladeMesh);
+  }
+  function blade(on) { bladeOn = !!on && !!bladeMesh; if (bladeMesh) { bladeMesh.visible = bladeOn; rifle.visible = !bladeOn; } if (!bladeOn) swing = 0; }
+  function strike() { if (bladeOn) swing = 1; }
   let flinch = 0, flinchX = 0, flinchZ = 0, fall = null;
   // Visual only: a flinch never changes the outer transform, so AI movement and hit tests continue.
   function react({ x = 0, z = 1, strength = .6, kill = false, zone = 'upper', variant = null } = {}) {
@@ -250,6 +267,23 @@ export function makeSoldierVisual({ team = 'ally', index = 0, look = null, mater
       fore.rotation.x = (left ? .79 : 1.23) - down * .7;
       fore.rotation.z = left ? .85 : -.4;
     }
+    if (bladeOn) {
+      // Arms pump with the stride; the blade is carried forward and low. A swing raises it overhead (the first .35 s: the
+      // warning) and brings it down (.15 s), then the arm comes back.
+      swing = Math.max(0, swing - delta / SWING_SECONDS);
+      const k = swing > 0 ? 1 - swing : 0, t = k * SWING_SECONDS, up = smooth(clamp01(t / .3)), chop = smooth(clamp01((t - .35) / .13)), back = smooth(clamp01((t - .55) / .25));
+      const raise = swing > 0 ? (up - chop * .82) * (1 - back) : 0, beat = Math.sin(stride) * .5 * walking;
+      for (const { upper, fore, side } of arms) {
+        if (side > 0) {
+          upper.rotation.x = (.42 - beat) * (1 - down) + raise * 2.25; upper.rotation.z = -.1 + down * .48 - raise * .12;
+          fore.rotation.x = (.95 - down * .7) * (1 - raise) + raise * .5 - chop * (1 - back) * .25; fore.rotation.z = 0;
+        } else {
+          upper.rotation.x = (.3 + beat) * (1 - down) - raise * .35; upper.rotation.z = .12 - down * .48;
+          fore.rotation.x = .85 - down * .7; fore.rotation.z = 0;
+        }
+      }
+      torso.rotation.x += raise * -.1 + (swing > 0 ? chop * (1 - back) * .3 : 0);
+    }
     flinch = Math.max(0, flinch - delta / REACTION_SECONDS);
     if (flinch > 0) {
       const k = flinch * flinch;
@@ -288,5 +322,5 @@ export function makeSoldierVisual({ team = 'ally', index = 0, look = null, mater
     }
   }
   animate({ dt: 0 });
-  return { group, animate, react, reset, state };
+  return { group, animate, react, reset, state, makeBlade, blade, strike, swinging: () => swing, bladeShown: () => !!bladeMesh && bladeMesh.visible && !rifle.visible };
 }

@@ -42,9 +42,9 @@ fire=(m,event,arg={})=>{for(const fn of m.get(event)||[])fn(arg);};
  const SNIPPET=`
  const originalBlocked=blocked, originalGroundY=groundY;
  const harnessMessages=[];
- const harnessSounds=[];
+ const harnessSounds=[],harnessHeard=[];
  const originalTickAI=tickAI,originalMissionTick=missionTick;
- tickAI=()=>{};missionTick=()=>{};sound=type=>harnessSounds.push(type);
+ tickAI=()=>{};missionTick=()=>{};sound=(type,vol,how)=>{harnessSounds.push(type);if(how)harnessHeard.push({type,vol,...how});};
  for(const a of actors)a.animate=()=>{};
  if(!peer.__custom)peer.send=m=>harnessMessages.push(structuredClone(m));
  const originalAnimate=viewmodel.animate;
@@ -56,7 +56,7 @@ fire=(m,event,arg={})=>{for(const fn of m.get(event)||[])fn(arg);};
    play(){setState('playing');document.pointerLockElement=renderer.domElement;hasPointerLock=true;},
    messages:harnessMessages,getLast:()=>last,getClass:()=>current(),getStage:()=>stage,
    // typeof guards keep the harness able to load older builds for baseline comparisons.
-   built:typeof built==='undefined'?undefined:built,scene,effects,hitScan,applyQuality,sounds:harnessSounds,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
+   built:typeof built==='undefined'?undefined:built,scene,effects,hitScan,applyQuality,sounds:harnessSounds,heard:harnessHeard,kills:()=>kills,aiHit:typeof aiHit==='function'?aiHit:undefined,autoQuality:typeof autoQuality==='object'?autoQuality:undefined,quality:()=>({renderScale,qualityMode:typeof qualityMode==='string'?qualityMode:undefined}),
    occluders,ground,restoreAI(){tickAI=originalTickAI;missionTick=originalMissionTick;},resetNav:typeof navEdge!=='undefined'?()=>{navGrid=null;navEdge=null;navComp=null;coverCache=null;}:undefined,fx:typeof fx==='object'?fx:undefined,
    ai:typeof enemyPlan==='function'?{director:()=>director,coverTable,coverQuery,safeSpot,segClear,pathTo,navigationGrid,navComp:()=>navComp,setStage:v=>{stage=v;},humanEyes,objectivePoint,target,extract,intel,startPatrol:typeof startPatrol==='function'?startPatrol:undefined,startTravel:typeof startTravel==='function'?startTravel:undefined,finish,missionTick:(dt)=>missionTick(dt),aiRng:()=>aiRng}:undefined,decalFor:typeof decalFor==='function'?decalFor:undefined,terrainAt:typeof terrainAt==='function'?terrainAt:undefined,
    // Build 09 Ambush internals (typeof-guarded so older builds still load).

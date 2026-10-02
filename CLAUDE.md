@@ -28,6 +28,29 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 36 (local, 2026-10-01): movement naturalness and spawn spread on Dehrun Terraces, after the user's playtest of Build 35
+(variety better, bombers and rushers good; the movement jagged, rushers looked like shooters and were too hard to hit, the beep
+carried too far with no direction, arrivals one-sided). **Hostiles that vary (`ai.v`: Dehrun's Ambush only) are steered:
+`ambushPlan` is a wrapper (`ambushPlan0` is the old body, Kohar Valley's whole plan) that hands the plan to `ambushSteer`:** the
+way is pulled straight (`pullPath`, `ai.path`; `a.route` is only a point 2 m ahead, or the ladder, window or drop next), the
+heading turns no faster than `STEER.turn`, speed gains and brakes (`accel`, `brake`), slows for a corner and on treads, the body
+faces by `STEER.face`. **Never judge arrival or progress by `a.route` for a steered hostile (use `ai.path`, `ai.left`).** One stopped by
+something follows its way place by place for 1.2 s (`plainUntil`). **Both must hold: smooth and varied.** The smoothing bunched
+speeds and put them in file; kept by each one's own pace on stairs and in doorways, `vary.speed` [.75, 1.3] and stepping out from
+behind another (`fileNear`, `fileOut`). T45 measures speed variety as a share of speed now; T46 measures turns frame by frame
+against Build 35 from its commit. **Rushers:** a blade and no rifle (`visual.makeBlade`, `blade`, `strike` in `characters.js`:
+nothing of it exists on a soldier never given one), a wind-up (`wind` .35 s: `ai.windAt`, `swing(a)`; the strike lands only if the
+player is still in reach), a straight line within `commit` 9 m in sight (`ai.line`), own pace within a tenth; swings go to the
+guest in every snapshot (`sw`). **The beep (`beepHeard` in `ambush.js` is the whole rule):** 16 m (`hear`), panned by the side it is
+on, duller behind, three tenths as loud and 650 Hz through a wall or floor (one `clear` ray per beep). **Spread:** `ambush.around`
+135: each arrival starts from its own direction (`amb.bearingNow`); four stretches of the square's walls stand 2.2 m (`lowWall`,
+buttresses on the south) with a ladder outside and a drop inside (ways in for hostiles, none out for a player); four ladders to
+the roof; `ladders: 'low'` on a way takes only ladders under 5 m (`FOE.lowLadder`); windows two ways in five; the roof way leaves
+out the west stair's flight below the top floor (its `shut`). **Measure spread as angles from where the player stands (first sight
+within 15 m), never by route names: a hostile on a ladder outside the wall is not an arrival.** The top and first floors have a
+stair at each end and no other way in: two directions is all they can have without ladders to upper windows. Found, not fixed:
+arrivals on the top floor are about a fifth slower than Build 35's (MAP-16). The session scratchpad was emptied in the middle of
+this build: bench hooks and breakage scripts were rewritten; keep nothing there that cannot be rebuilt.
 Build 35 (local, 2026-10-01): hostile variety on Dehrun Terraces (F.20's first part). **User decisions: Kohar Valley's Ambush must NOT
 change (variety is Dehrun's only; T45, T44 and T43 compare Kohar's with Builds 34, 33 and 32); the roof arena comes after the
 hostiles differ, not alongside; simultaneous shooters stay 3, 4, 5; the open door leaves stay.** Kinds and variation are the
@@ -473,15 +496,16 @@ node tests/test-mapchange-b32.mjs
 node tests/test-ambush-dehrun-b33.mjs
 node tests/test-difficulty-b34.mjs
 node tests/test-variety-b35.mjs
+node tests/test-natural-b36.mjs
 ```
 
 `dist/diagnostics.js` is the F3 measurement overlay. It must stay read-only: gameplay
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 35 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 36 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement and 8 hostile-variety checks (338 in 38 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety and 5 naturalness-and-spread checks (343 in 39 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat

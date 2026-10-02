@@ -320,3 +320,14 @@ export function buildMarking(kind, id, [x, z], along, groundY, mats, label, lit,
   group.userData = {marking: true, kind, id, at: [x, z], label, lit, lantern: [lx, y + top + .16, lz], height: top + .42};
   return group;
 }
+
+// Build 36: what a player hears of a bomber's beep. Nothing beyond `hear` metres. Within it: louder the nearer; to the side
+// the bomber is on (`side`: -1 hard left to 1 hard right of where the listener looks), duller behind (`front` < 0), and
+// through a wall or a floor (`walled`) both faint (`wall` of its loudness) and dull (`muffle` Hz). `every` is the gap to the
+// next beep: the nearer the quicker. Pure: the game supplies the distance, the ray and the bearing.
+export function beepHeard(K, d, walled, side = 0, front = 1) {
+  if (!K || !(d <= K.hear)) return null;
+  const near = 1 - d / K.hear, open = .12 + .88 * near;
+  return {gain: open * (walled ? K.wall : 1) * (front < 0 ? .8 : 1), pan: Math.max(-1, Math.min(1, side)) * .9,
+    cutoff: walled ? K.muffle : front < 0 ? K.behind : 0, every: Math.max(.12, Math.min(1, d / K.hear)), walled: !!walled};
+}

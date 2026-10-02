@@ -9,7 +9,7 @@ import * as THREE from './three.module.js';
 import './build.js'; // DEPLOY-01 upgrade guard
 
 // The enemies' body for walking: wider than the player's (the game's NAV_R), as tall; `climb` is their ladder speed.
-export const FOE = {radius: .45, height: 1.8, nudge: .12, step: .5, climb: 1.5, safeDrop: 3, budget: 40000, vault: 1.3, vaultOut: .95, vaultTime: 1.3};   // Build 33: `vault`: the highest sill a body climbs over, from `vaultOut` before it, in `vaultTime` seconds
+export const FOE = {radius: .45, height: 1.8, nudge: .12, step: .5, climb: 1.5, safeDrop: 3, budget: 40000, vault: 1.3, vaultOut: .95, vaultTime: 1.3, lowLadder: 5};   // Build 33: `vault`: the highest sill a body climbs over, from `vaultOut` before it, in `vaultTime` seconds
 
 // A binary heap of {f} for the A*.
 class Heap { constructor() { this.a = []; } get length() { return this.a.length; }
@@ -115,11 +115,11 @@ export function makeNav(space, {region, doors = [], ladders = [], starts = [], p
   function field(to, {ladders = true, vaults = 'broken', mask = null} = {}) { const b = nearest(to.x, to.z, to.y); if (!b) return null; const N = nodes.length;
     if (!rev) { const start = new Int32Array(N + 1); let E = 0; for (const n of nodes) for (const e of n.edges) { start[e.to.id + 1]++; E++; } for (let i = 0; i < N; i++) start[i + 1] += start[i];
       const from = new Int32Array(E), cost = new Uint8Array(E), edge = new Array(E), fill = start.slice(0, N); for (const n of nodes) for (const e of n.edges) { const k = fill[e.to.id]++; from[k] = n.id; cost[k] = Math.max(1, Math.min(60, Math.round(e.cost * 2))); edge[k] = e; }
-      rev = {start, from, cost, edge, vault: Uint8Array.from(edge, e => e.kind === 'vault' ? 1 : 0), ladder: Uint8Array.from(edge, e => e.kind === 'ladder' ? 1 : 0), shut: new Uint8Array(N), buckets: Array.from({length: 64}, () => [])}; }
+      rev = {start, from, cost, edge, vault: Uint8Array.from(edge, e => e.kind === 'vault' ? 1 : 0), ladder: Uint8Array.from(edge, e => e.kind === 'ladder' ? (e.ladder.top - e.ladder.bottom > FOE.lowLadder ? 1 : 2) : 0), shut: new Uint8Array(N), buckets: Array.from({length: 64}, () => [])}; }
     const {start, from, cost, edge, vault, ladder, shut, buckets} = rev, far = new Int32Array(N).fill(-1), via = new Int32Array(N).fill(-1); for (let i = 0; i < N; i++) shut[i] = nodes[i].shut || mask && mask[i] ? 1 : 0;
     let left = 1; far[b.id] = 0; buckets[0].push(b.id);
     for (let cur = 0; left > 0; cur++) { const q = buckets[cur & 63]; for (let k = 0; k < q.length; k++) { const id = q[k]; if (far[id] !== cur) continue;
-        for (let r = start[id], end = start[id + 1]; r < end; r++) { const f = from[r], c = cur + cost[r], was = far[f]; if (was >= 0 && was <= c || shut[f] || vault[r] && (vaults === 'none' || vaults !== 'all' && !api.vaultOpen(edge[r].vault.pane)) || ladder[r] && !ladders) continue; far[f] = c; via[f] = r; buckets[c & 63].push(f); left++; } }
+        for (let r = start[id], end = start[id + 1]; r < end; r++) { const f = from[r], c = cur + cost[r], was = far[f]; if (was >= 0 && was <= c || shut[f] || vault[r] && (vaults === 'none' || vaults !== 'all' && !api.vaultOpen(edge[r].vault.pane)) || ladder[r] && (!ladders || ladders === 'low' && ladder[r] === 1)) continue;   /* Build 36: `ladders: 'low'` takes only the ladders no taller than `FOE.lowLadder` (over a wall, not up a house) */ far[f] = c; via[f] = r; buckets[c & 63].push(f); left++; } }
       left -= q.length; q.length = 0; }
     return {to: b, at: [b.x, b.y, b.z], far, via: {get: id => via[id] < 0 ? null : edge[via[id]]}}; }
   // The first `count` places of the way a field gives from where a body is, as a path's (ladders and windows named).
