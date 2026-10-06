@@ -42,6 +42,17 @@ const wide = (at, o = {}) => ({kind: D, at, width: 1.3, head: 2.3, leaf: 'planks
 // Build 31: the stair wells are 5.1 m wide (flights 2.4 m clear) and take the house's whole depth beside the corridor
 // (the half landing 3.6 m deep): the closets that stood at their ends are gone, and the windows that looked out of them.
 const K = {x: [-13, 13], z: [53, 71], in: {x: [-12.6, 12.6], z: [53.4, 70.6]}, corridor: [59.8, 62.8], stairW: {x: [-12.6, -7.5], z: [53.4, 59.8]}, stairE: {x: [7.5, 12.6], z: [62.8, 70.6]}};
+// Build 41: the push of an Ambush wave comes on a front across the north (`ambush.push.lanes`). The customs house's four
+// street doors, each as a box that shuts it to a way, and the gateway in the square's north wall.
+const K_DOORS = {north: {x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, south: {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, west: {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, east: {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}};
+const GATEWAY = {x: [-1.8, 1.8], y: [0, 3], z: [43.4, 44.6]};
+// A lane of the push: where its hostiles start (`band`: x from, to), how they cross the square's north wall (`over`: by a
+// ladder over a low stretch, the gateway shut to them; otherwise by the gateway, no ladder theirs) and where they enter
+// the house: by the doors (the lane that comes by the gateway: the north street door is the one before it, and with the
+// player beyond the house it goes through and out by another), or `window`: the x of a barred window of the north face,
+// which they break and climb through (no other window is a way of theirs, and no door).
+const lane = (id, band, {over = false, window = null} = {}) => ({id, band, cross: over ? 'wall' : 'gateway', enter: window === null ? 3 : window, ladders: over ? 'low' : false, vaults: window === null ? 'none' : 'all', window: window === null ? null : [window, K.z[0] + .2],
+  shut: [...(over ? [GATEWAY] : []), ...(window === null ? [] : Object.values(K_DOORS))]});
 // A doorway between rooms is a bare frame (no leaf: a leaf stops nobody and only hides the view); the street doors keep their leaves.
 const way = (x, z, o = {}) => ({at: [x, z], door: false, ...o});
 const kRooms = (north, south) => [room('stair W', K.stairW.x, K.stairW.z), ...north, room('corridor', K.in.x, K.corridor), ...south, room('stair E', K.stairE.x, K.stairE.z)];
@@ -102,6 +113,8 @@ const P = ['masonry', 'plaster', 'ochre', 'white'];
 // On the south wall the low stretch is a buttress as deep as the terrace wall's parapet under it, down to the lower town's ground:
 // a body dropping from it lands on the square and not on that parapet's ledge.
 const BUTTRESS = {thick: 1.3, foot: 1.6}, LOW = 2.2, lowWall = (w, a, b, o = {}) => [{...w, to: a}, {...w, from: a, to: b, height: LOW, ...o}, {...w, from: b}];
+// Build 41: the low stretches of the square's north wall (x from, to), west and east of its gateway.
+const NORTH_LOW = [[-15.5, -12.5], [8.5, 11.5]];
 const rows = [
   // the lower terrace, level 0 (z 17..80): lanes at x -48 / 48, cross street z 30
   ['WL1', [-66, -56], [20, 28], [[3, P[0]], [2.8, P[1], 'white']], {faces: {east: [22, 26]}}], ['WL2', [-42, -32], [19, 27], [[3, P[2]]], {faces: {west: [22]}}], ['WL3', [-66, -58], [34, 44], [[3, P[1]], [2.7, P[3], 'ochre']], {faces: {east: [37, 41]}}],
@@ -260,7 +273,14 @@ export const DEHRUN = {
     // below in turn, with the push's own last stretch (between `shut` half-metres of way from the player, `wide` metres to
     // each side) shut to it. A place to start from is chosen by the length of its way; one outside the direction is taken
     // when its way is `off` metres shorter.
-    push: {every: 2, flank: [180, 100, 260, 140, 220], off: 25, shut: [14, 30], wide: 1.6, burst: 3, burstGap: .5},
+    // Build 41: the push comes from the north (`from`: a bearing; its starts within `front` degrees of it), on a front: its
+    // arrivals take the `lanes` in turn (the first three together: the gateway, the west of the wall, the east of it), each
+    // lane with its own stretch of the north to start from (a place outside it counts `aside` metres of way longer), its
+    // own way over or through the square's north wall and its own way into the house's north face. A lane's places to
+    // start from are scattered (`scatter` metres of way count for nothing between them; a wave's first arrival takes the
+    // nearest) and none is taken twice within `again` seconds while another will do. The flank is as it was, counted from the north: from the south, the east and the west.
+    push: {every: 2, flank: [180, 100, 260, 140, 220], off: 25, shut: [14, 30], wide: 1.6, burst: 3, burstGap: .5, from: 0, front: 50, aside: 40, scatter: 18, again: 60,
+      lanes: [lane('door', [-7, 7]), lane('west', [-34, -7], {over: true, window: -6.2}), lane('east', [7, 34], {over: true, window: 7}), lane('west-middle', [-34, -7], {over: true, window: -.5}), lane('far-east', [7, 34], {over: true, window: 11})]},
     routes: [
       {id: 'door', share: 1, ladders: 'low', vaults: 'none'},
       {id: 'roof', share: 2, most: 4, apart: 1.5, vaults: 'none', shut: [{x: [-10.02, -7.5], y: [5.4, 6.5], z: [59.2, 59.8]}, {x: [2.2, 3.8], y: [0, 2.4], z: [52.9, 53.5]}, {x: [-.75, .75], y: [0, 2.4], z: [70.55, 71.05]}, {x: [-13.05, -12.55], y: [0, 2.4], z: [60.55, 62.05]}, {x: [12.55, 13.05], y: [0, 2.4], z: [60.55, 62.05]}]},
@@ -299,7 +319,9 @@ export const DEHRUN = {
       // Build 28: each of the block's side walls has a gate in it (an arch at z 30, 5 and -18) onto the district beyond.
       {axis: 'z', at: -24, from: 17, to: 26, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, {axis: 'z', at: -24, from: 34, to: 44, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, {axis: 'z', at: -24, from: -6, to: 1, base: 1.6, height: 3.1, thick: .4, foot: 2.8, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: -24, from: 9, to: 17, base: 1.6, height: 3.1, thick: .4, foot: 2.8, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: -24, from: -30, to: -22, base: 3.2, height: 3.1, thick: .4, foot: 4.4, surface: 'ochre', coping: 'slab'}, {axis: 'z', at: -24, from: -14, to: -6, base: 3.2, height: 3.1, thick: .4, foot: 4.4, surface: 'ochre', coping: 'slab'},
       {axis: 'z', at: 24, from: 17, to: 26, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: 24, from: 34, to: 44, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: 24, from: -6, to: 1, base: 1.6, height: 3.1, thick: .4, foot: 2.8, surface: 'ochre', coping: 'slab'}, {axis: 'z', at: 24, from: 9, to: 17, base: 1.6, height: 3.1, thick: .4, foot: 2.8, surface: 'ochre', coping: 'slab'}, {axis: 'z', at: 24, from: -30, to: -22, base: 3.2, height: 3.1, thick: .4, foot: 4.4, surface: 'plaster', coping: 'slab'}, {axis: 'z', at: 24, from: -14, to: -6, base: 3.2, height: 3.1, thick: .4, foot: 4.4, surface: 'plaster', coping: 'slab'},
-      {axis: 'x', at: 44, from: -24, to: -5, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, {axis: 'x', at: 44, from: 5, to: 24, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'},
+      // Build 41: a stretch of the square's north wall stands low to each side of the gateway (a ladder outside, a drop inside,
+      // as on its other three walls): three ways into the square from the block where there was the gateway alone.
+      ...lowWall({axis: 'x', at: 44, from: -24, to: -5, base: 0, height: 3.1, thick: .4, surface: 'plaster', coping: 'slab'}, NORTH_LOW[0][0], NORTH_LOW[0][1]), ...lowWall({axis: 'x', at: 44, from: 5, to: 24, base: 0, height: 3.1, thick: .4, surface: 'ochre', coping: 'slab'}, NORTH_LOW[1][0], NORTH_LOW[1][1]),
       {axis: 'x', at: -30, from: -24, to: -5, base: 3.2, height: 3.1, thick: .4, foot: 4.4, surface: 'plaster', coping: 'slab'}, {axis: 'x', at: -30, from: 5, to: 24, base: 3.2, height: 3.1, thick: .4, foot: 4.4, surface: 'plaster', coping: 'slab'},
       // Low yard walls.
       {axis: 'x', at: 20.6, from: -14, to: -5.2, base: 0, height: 1.1, thick: .4, surface: 'drystone', coping: 'slab'}, {axis: 'z', at: -14, from: 20.6, to: 24, base: 0, height: 1.1, thick: .4, surface: 'drystone', coping: 'slab'},
@@ -399,6 +421,8 @@ export const DEHRUN = {
       {x: -4.6, z: 52.9, dir: [0, -1], bottom: 0, top: 10.43, exit: [-4.6, 54.3]}, {x: 4.1, z: 71.1, dir: [0, 1], bottom: 0, top: 10.43, exit: [4.1, 69.8]},   // and one in the middle of the north face and of the south: four ways onto the roof, one to a side
       {x: -22.3, z: 49.5, dir: [-1, 0], bottom: 0, top: LOW + .08, exit: [-22, 49.5]}, {x: 22.3, z: 73.5, dir: [1, 0], bottom: 0, top: LOW + .08, exit: [22, 73.5]},
       {x: -14, z: 80.75, dir: [0, 1], bottom: -1.6, top: LOW + .08, exit: [-14, 80]}, {x: 14, z: 80.75, dir: [0, 1], bottom: -1.6, top: LOW + .08, exit: [14, 80]},
+      // Build 41: and over the north wall from the block, west and east of the gateway.
+      ...NORTH_LOW.map(([a, b]) => ({x: (a + b) / 2, z: 43.7, dir: [0, -1], bottom: 0, top: LOW + .08, exit: [(a + b) / 2, 44]})),
     ],
     leanTos: [
       {x: [4.5, 10.6], z: [.4, 5.8], base: 1.6, high: 2.95, low: 2.3, fall: 'z-'},

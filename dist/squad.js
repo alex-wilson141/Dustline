@@ -2,10 +2,15 @@
 // repository: a Cloudflare Worker) under a 4-character code; JOIN SQUAD fetches it by that code and leaves the answer. The
 // service carries no game data and is asked nothing once the two pages are connected. Where it cannot be reached (or none
 // is set: `url` empty) the game says so and offers the long codes of Build 15 (network.js), which need no service.
+// Build 41: when the two pages cannot reach each other directly, the service also gives each a pass to the relay
+// (`relay`: short-lived TURN credentials) and carries a second pair of descriptions (`retry`, `next`); network.js decides when.
 import './build.js'; // DEPLOY-01 upgrade guard
 
 // `url`: where the service answers (no slash at the end); empty: no service. The alphabet has no 0, 1, I, L or O.
-export const SQUAD = {url: 'https://dustline-squad.awilson183.workers.dev', alphabet: '23456789ABCDEFGHJKMNPQRSTUVWXYZ', length: 4, timeout: 7000, pollEvery: 2000, life: 10 * 60e3, joinWait: 40e3, lost: 4};
+export const SQUAD = {url: 'https://dustline-squad.awilson183.workers.dev', alphabet: '23456789ABCDEFGHJKMNPQRSTUVWXYZ', length: 4, timeout: 7000, pollEvery: 2000, life: 10 * 60e3, joinWait: 40e3, lost: 4,
+  // Build 41: how long the direct attempt has after the descriptions are exchanged before the relay is asked for, how long
+  // the second attempt has, and how often the service is asked during it.
+  directWait: 10e3, relayWait: 40e3, relayPoll: 1000};
 
 export class SquadError extends Error { constructor(reason, message, more = {}) { super(message); this.reason = reason; Object.assign(this, more); } }
 // What a player typed, without spaces, dashes and case. Returns {ok, code} or {ok: false, reason, message}.
@@ -28,6 +33,11 @@ const MESSAGES = {
   busy: 'The squad service is busy. Try again in a minute, or use the manual connection below.',
   expired: 'The squad code expired before anyone joined (codes last ten minutes). Press CREATE SQUAD for a new one.',
   refused: 'The squad service refused the request. Reload the page; if it happens again use the manual connection below.',
+  'relay-unset': 'No relay is set up on the squad service.',
+  'relay-busy': 'The relay has given out all of today’s passes.',
+  'relay-down': 'The relay refused to issue a pass.',
+  'relay-spent': 'This squad code has had its passes to the relay.',
+  'bad-stage': 'The squad service was asked for something out of turn.',
 };
 // Which failures mean the service itself is not doing its work: these, and only these, bring up the manual connection.
 export const SERVICE_FAULTS = ['unreachable', 'unset', 'busy', 'refused'];
@@ -48,14 +58,20 @@ export class SquadService {
     if (response.ok && data && data.ok === true) return data;
     const reason = data && typeof data.error === 'string' ? data.error : '';
     // An answer that is not the service's own (a proxy's page, a server error) is the service not being reachable.
-    if (!data || typeof data.ok !== 'boolean' || response.status >= 500 && reason !== 'busy') throw new SquadError('unreachable', MESSAGES.unreachable);
-    const known = ['unknown', 'used', 'host-gone', 'build', 'busy'].includes(reason) ? reason : reason === 'not-yours' ? 'unknown' : 'refused';
+    if (!data || typeof data.ok !== 'boolean' || response.status >= 500 && !['busy', 'relay-unset', 'relay-busy', 'relay-down'].includes(reason)) throw new SquadError('unreachable', MESSAGES.unreachable);
+    // A service from before Build 41 knows nothing of the relay's paths: that is a service with no relay.
+    const known = ['unknown', 'used', 'host-gone', 'build', 'busy', 'relay-unset', 'relay-busy', 'relay-down', 'relay-spent', 'bad-stage'].includes(reason) ? reason : reason === 'not-yours' ? 'unknown' : reason === 'no-such-path' ? 'relay-unset' : 'refused';
     throw new SquadError(known, MESSAGES[known], known === 'build' ? {hostBuild: data.hostBuild, build: this.build} : {});
   }
   create(offer) { return this.call('/create', {offer, build: this.build}); }
   join(code) { return this.call('/join', {code, build: this.build}); }
   answer(code, ticket, answer) { return this.call('/answer', {code, ticket, answer}); }
   poll(code, key) { return this.call('/poll', {code, key}); }
+  // Build 41. `who`: {key} for the host, {ticket} for the joiner. `done`: the host's page is connected (or has given up).
+  relay(code, who) { return this.call('/relay', {code, ...who}); }
+  retry(code, key, offer) { return this.call('/retry', {code, key, offer}); }
+  next(code, ticket) { return this.call('/next', {code, ticket}); }
+  done(code, key) { if (this.configured()) this.call('/cancel', {code, key}).catch(() => {}); }
   // Told as the page goes away: a beacon outlives the page; without one, an ordinary call that nobody waits for.
   cancel(code, key) { if (!this.configured()) return; const body = JSON.stringify({code, key});
     try { if (!this.fetchWith && typeof navigator === 'object' && navigator.sendBeacon?.(this.url + '/cancel', body)) return; } catch {}

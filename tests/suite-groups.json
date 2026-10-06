@@ -1,5 +1,5 @@
 {
   "note": "Build 37. Every tests/test-*.mjs suite not named in `slow` is quick and runs before every publish (.github/workflows/pages.yml). The slow ones (over half a minute here; most play an older build from its commit beside the present one) run in .github/workflows/full.yml: after every push without holding the publish up, weekly, and on request. The three traces must stay quick. tools/run-suites.mjs reads this file.",
   "traces": ["test-ambush-b10", "test-ambush-coop-b16"],
-  "slow": ["test-variety-b35", "test-mapdata-b21", "test-natural-b36", "test-ambush-dehrun-b33", "test-fair-b18", "test-difficulty-b34", "test-corners-b31", "test-windows-b29", "test-revive-b20", "test-pressure-b39"]
+  "slow": ["test-variety-b35", "test-mapdata-b21", "test-natural-b36", "test-ambush-dehrun-b33", "test-fair-b18", "test-difficulty-b34", "test-corners-b31", "test-windows-b29", "test-revive-b20", "test-pressure-b39", "test-front-b41"]
 }

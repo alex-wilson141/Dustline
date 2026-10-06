@@ -131,7 +131,7 @@ await check('apart', 'the sides can be told apart and the marks are still worn: 
   // The other order: the run begun, and its marks and blades made, before the models arrived.
   { const g2 = await game('dehrun', {mode: 'ambush'}), r2 = enemies(g2)[2]; g2.ambush.setKind(r2, 1); let m2 = 0; r2.visual.parts.arms.find(x => x.side > 0).fore.traverse(o => { if (o.isMesh && o.userData.skin && o.visible) m2++; }); assert(m2 >= 1 && r2.visual.skinned(), 'a blade made before the models came is still three boxes'); }
   // The words.
-  const radios = []; const was = g.el('radiotext'); g.amb.toSpawn = 0; g.ambush.startWave(3); assert.match(was.textContent, /Wave 3, Kareth Brigade, \d+ of them: a push straight at you and more working round you\./);   /* Build 39: the push and the flank */ g.ambush.hud(); assert.match(g.el('objtext').textContent, /Kareth left · a push and a flank/);
+  const radios = []; const was = g.el('radiotext'); g.amb.toSpawn = 0; g.ambush.startWave(3); assert.match(was.textContent, /Wave 3, Kareth Brigade, \d+ of them: a push from the north on a wide front and more working round you\./);   /* Build 39: the push and the flank */ g.ambush.hud(); assert.match(g.el('objtext').textContent, /Kareth left · a push from the north, a flank round you/);
   const src = fs.readFileSync(path.join(dist, 'game.js'), 'utf8'); assert(src.includes('`Command: Wave ${n} inbound from the ${COMPASS_WORDS[d.bearing/45]}, ${w.count} hostiles.`'), 'Kohar Valley\'s wave line'); assert.match(src, /held by the Kareth Brigade/); assert.match(fs.readFileSync(path.join(dist, 'map-dehrun.js'), 'utf8'), /The Kareth Brigade comes up the stairs/);
   report.apart = {squad, kareth: [ka, kb], hostilesDressed: foes.length};
 });

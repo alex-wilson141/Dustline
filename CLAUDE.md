@@ -17,6 +17,7 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 - `dist/equipment.js`: the sidearm, the knife and the throwables (Build 19).
 - `dist/hud.js`: the HUD panel's model (Build 40: pure; `game.js` draws it).
 - `tests/probe-pressure.mjs`: a probe (not a suite) that measures how Dehrun's Ambush presses on a standing player (Build 39).
+- `tests/probe-front.mjs`: a probe that measures where the push crosses the north wall and enters the house (Build 41).
 - `dist/models.js`, `dist/assets/models/`: the bodies, the first-person arms and the machete (Build 38); `tools/models/`: how they
   were converted (Blender); `incoming/`: raw downloads, ignored by git.
 - `dist/squad.js`: squad codes, the game's side (Build 37). `service/`: the signalling service's source (a Cloudflare Worker;
@@ -34,6 +35,56 @@ Work on one requested milestone at a time; do not implement the entire backlog.
 
 ## Current state
 
+Build 41 (2026-10-05): the relay (NET-01), the arms investigated (E60: nothing changed), and the push on a front (E61).
+**The relay: a squad code's connection is tried directly first, with no relay in it (`DIRECT` in `network.js`: Google STUN
+only; the relay is not contacted and the connection does not know of it). Only when that attempt has failed (the browser says
+`failed`, or `SQUAD.directWait` 10 s after the descriptions were exchanged with the channel not open) does each page ask the
+squad service for a pass (`/relay`: Cloudflare TURN credentials good for `RELAY_TTL` 6 h) and the two exchange a second pair of
+descriptions through the service (`/retry`, `/next`, `/answer`) for a new connection that knows the relay as well (`make(relay,
+true)`, `swap`, `squadWatch`, `relayBegin`, `relayHost`, `relayGuest`, `squadNext`, `relayOver`).** The first connection is kept
+until the second is made and is used if it comes up meanwhile. **Never give a connection `iceTransportPolicy: 'relay'`, never
+put a TURN server in the first attempt, never put a relay address or password in `dist/` (T51 checks all three).** `route`
+('direct' | 'relay' | 'unknown', from `getStats`) is what the status line says ("Connected through the relay"). A joiner with no
+pass still answers (the host's relay address carries both). Every way the relay fails has its own text (`RELAY_FAILURE`,
+`failure`); none is a wrong code and none offers the manual connection. The long codes are direct only (no service, no relay).
+**The service (`service/src/lobby.js`, protocol 2): when the host collects the first answer both descriptions are deleted as
+before and what stays, for `RETRY` 2 min at most, is the code, the two keys, the build and the times (nothing with an address);
+it goes when the host's page says it is connected (`done`, a `/cancel`), when the second answer is collected, or after `RETRY`.
+A pass is issued only to the host (by key) or the joiner (by ticket) of a record whose first answer was collected, two to a
+side, `RELAY_DAY` 200 a day (one count is stored: a number and the day). This replaces the Build 37 paragraph's "deleted when
+the answer is collected".** The TURN key's id and token are two Worker secrets (`TURN_KEY_ID`, `TURN_KEY_API_TOKEN`), set by the
+user in Cloudflare's dashboard: **never ask for them, never write them anywhere**; `/health` says `relay: ready | unset |
+refused`. What goes to Cloudflare for a pass is `{ttl}` and nothing else. A game from before Build 41 works against the new
+service, and the new game against an old service (it says no relay is set up). **The user must deploy `service/` again and set
+the two secrets (`service/README.md`); until then the live game says no relay is set up when direct fails. The relay has NOT
+carried a real session: checked headless (T51) and in a real browser against a local TURN server with every direct way
+stripped; Cloudflare's side and two real networks are UNVERIFIED.** A real-browser check needs a TURN server: `node-turn` from
+npm in the scratchpad, the Worker file run under Node with a stand-in Durable Object, the page's `RTCPeerConnection` wrapped to
+strip candidates (nothing of it is in the repository).
+**The arms (E60): investigated, nothing changed. The mesh is the fault: each forearm is 85 triangles, an eight-sided tube
+with two rings between elbow and cuff (edges 5 cm long), the cuff 9 by 9 cm against a wrist of 8 by 7: no texture changes a
+silhouette. The posing is sound (wrist bent 39 and 22 degrees, no twist; no twist bones exist in the avatar and none are
+needed). Do not work on the arms' material again; the user decides between a purpose-made first-person arm model (list in E60;
+nothing downloaded) and rebuilding the Rocketbox forearm (subdivide, a cuff, folds in the geometry).**
+**The push on a front (Dehrun only; `ambush.push.from`, `front`, `lanes`, `aside`, `scatter`, `again`; `PUSH_FROM`,
+`PUSH_WAYS` from the lanes, `PUSH_ANY` the old two): every push comes from the north (`from` 0) and its arrivals take five
+lanes in turn (`amb.pushN` by player, begun again with each wave: `door` by the gateway and the north street door, then
+`west`, `east`, `west-middle`, `far-east`, each over a low stretch of the square's north wall and in by its own north window).
+A lane is a way of its own: `ladders`, `vaults`, `shut` boxes (the gateway for those that go over the wall; all four street
+doors for those that go in by a window; none for `door`, which goes through the house when the player is beyond it),
+`window` (the one window that is a way: `field(..., {window})` in `navmesh.js`), and a `band` of x to start in. **A lane's
+hostile with its own window still ahead of it is not "near" (`entry` in `ambushRoute3`: near, a path of its own took it
+round by the open door); the stretch shut to the flankers is the first lane's (`d.front` is set by `PUSH_WAYS[0]` only).** The map: two stretches of the
+square's north wall stand 2.2 m (`NORTH_LOW`: x -15.5..-12.5 and 8.5..11.5) with a ladder outside each (13 ladders).** The cause
+was the map: the gateway is 3.2 m wide and was the only way in from the north, the north door the only open door. **A body
+standing on a place its way's own mask shuts (it brushed a door not its own) keeps its way (`LAYERS.onto`, used by `follow`
+and `ambushRoute3`; T52 `lane` sets one down on a shut door's threshold): without it a lane's hostile lost its lane and went
+over the roof; do not shut windows with boxes (their own hostiles brush them).** Measured as positions with `tests/probe-front.mjs` (`STAND=... [OLD=<commit>]`; a probe;
+its stand-in does not kill a hostile before it is inside the house or has been in sight 4 s): Build 40 crossed the north
+wall's line within 2 m at every stand; now three places 24 m apart, none with more than 45%, five entries with at most 25%
+each. **Inside the house the push still has only the stairs the bought floors leave open: structural (MAP-19).** The middle
+push hostile reaches a ground-floor player about 4 s later (four lanes climb a wall and a window); a wave's first comes by
+the gateway and the door as before. `again` 60: a lane does not start twice from one place within a minute while another will do. `amb.laneN` is `varyDraw`'s counter: do not reuse the name.
 Build 40 (2026-10-02): the HUD's panel (F.17) and the arms' cloth (E58). **The panel is the bottom-right corner (`#panel` in
 `index.html`): the weapon block (`#ammo`: name, calibre, a silhouette by `data-gun`, the rounds large, the reserve, the fire
 mode, what the weapon is doing, the reload key), six tiles (`#kit`: the other weapon, knife, dressings; frag, smoke, flash) each
@@ -609,6 +660,8 @@ node tests/test-squad-codes-b37.mjs
 node tests/test-models-b38.mjs
 node tests/test-pressure-b39.mjs
 node tests/test-panel-b40.mjs
+node tests/test-relay-b41.mjs
+node tests/test-front-b41.mjs
 ```
 
 All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what gates a publish).
@@ -617,9 +670,9 @@ All of them, four at a time: `node tools/run-suites.mjs all` (`quick` is what ga
 must be bit-identical with it off or on (checked by the diagnostics test). Read
 `NOW.md` for the current task state.
 
-The last checked Build 40 source passed 34 movement, 24 firing, 3 diagnostics,
+The last checked Build 41 source passed 34 movement, 24 firing, 3 diagnostics,
 10 + 16 combat-feel, 12 enemy, 6 terrain-equivalence, 11 pause/fullscreen, 5 Build 08
-scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code, 7 model, 12 arms-and-pressure and 7 panel-and-cloth checks (379 in 43 suites). These
+scenario, 6 file-versioning, 3 enemy-engagement, 9 Ambush, 8 Build 10, 6 Build 11, 6 Build 12, 3 Build 13, 5 Build 14, 6 co-op handshake, 13 Ambush co-op, 8 squad-toggle, 8 fairness, 14 equipment, 10 session-and-revive, 7 map-data, 5 look-slice, 6 building-kit, 8 height, 8 arena, 8 enemy-height, 8 co-op-height, 6 town, 9 windows-and-stairs, 6 frames-and-eye, 7 corners-and-stairs, 7 map-change, 11 Dehrun-Ambush, 8 difficulty-and-movement, 8 hostile-variety, 5 naturalness-and-spread, 10 squad-code, 7 model, 12 arms-and-pressure, 7 panel-and-cloth, 5 relay and 5 front checks (389 in 45 suites). These
 mock rendering, pointer capture and network transport. Human camera/movement
 feel, GPU frame pacing and live WebRTC acceptance remain UNVERIFIED. Do not
 request desktop screen/audio recording. Label tests honestly and never treat
@@ -640,7 +693,8 @@ on 2026-09-27; the old-to-new table is in the roadmap (H2).
 
 The earlier public Site https://dustline-mountain-front.smart-heron-4139.chatgpt.site/ is a
 separate, older deployment; repository access does not publish to it. Assets are bundled; co-op
-setup uses Google STUN and has no TURN relay; squad codes use the user's Cloudflare Worker (`service/`), which holds
+setup uses Google STUN, and since Build 41 Cloudflare's TURN relay when two networks cannot connect directly (squad codes
+only; a pass from the user's Worker); squad codes use the user's Cloudflare Worker (`service/`), which holds
 connection descriptions for minutes. The game has no account, database or save backend
 (the Ambush personal bests, solo and co-op, are browser storage only).
 

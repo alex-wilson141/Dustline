@@ -60,7 +60,7 @@ await check('graph', 'the navigation is what the space allows an enemy and no mo
     for (const e of n.edges) { if (e.kind === 'drop') { drops++; const d = n.y - e.to.y; maxDrop = Math.max(maxDrop, d); assert(d > BODY.step && d <= FOE.safeDrop, `a drop of ${d}`); assert(!e.to.edges.some(b => b.to === n && b.kind === 'walk'), 'one way'); } if (e.kind === 'ladder') ladders++; } }
   // Build 36: a ladder over a wall is climbed and its foot is where a body drops to from its top: up by the ladder, down by the drop.
   const dropped = sp.ladders.filter(l => { const top = nav.nearest(l.exit[0], l.exit[1], l.top, 1.2), foot = nav.nearest(l.standX, l.standZ, l.bottom, 1.2); return top && foot && top.edges.some(e => e.to === foot && e.kind === 'drop'); }).length;
-  assert.equal(ladders + dropped, sp.ladders.length * 2, 'every ladder both ways'); assert(dropped <= 2);
+  assert.equal(ladders + dropped, sp.ladders.length * 2, 'every ladder both ways'); assert(dropped <= 4);   // Build 41: two more ladders over a wall (the square's north wall)
   const count = (y, box) => nav.nodes.filter(n => Math.abs(n.y - y) < .03 && (!box || n.x > box.x[0] && n.x < box.x[1] && n.z > box.z[0] && n.z < box.z[1])).length, KB = {x: K.x, z: K.z};
   const layers = {ground: count(FLOORS[0], KB), first: count(FLOORS[1], KB), second: count(FLOORS[2], KB), roof: count(ROOF, KB), lowerTerrace: count(0, {x: [-24, 24], z: [17, 44]}), middleTerrace: count(1.6), topTerrace: count(3.2), houseAUpper: count(4.6, {x: [-13, -4.2], z: [2, 13]}), houseARoof: count(7.43, {x: [-13, -4.2], z: [2, 13]}), gRoof: count(4.33, {x: [-12, -5.4], z: [-5.2, .4]})};
   for (const [k, v] of Object.entries(layers)) assert(v > (k.includes('Roof') || k.includes('Upper') ? 20 : 300), `${k}: ${v} places`);

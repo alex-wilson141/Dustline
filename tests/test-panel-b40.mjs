@@ -130,7 +130,7 @@ await check('everywhere', 'the panel works in every mode on both maps and for bo
   report.everywhere = seen;
 });
 
-await check('page', 'the page has what the panel writes to, once each, and every icon it uses is drawn in it: each place the game\'s panel code names is in the page exactly once; each icon a tile, a chip or the weapon block refers to is a symbol defined in the page with a shape in it, and none is fetched; the rounds are the largest text in the panel (40 px or more) and every number in it is set in figures of one width; the old line of text and the dressing line under the health are gone, with their styles; the purchase chips have a look of their own for too dear and for FULL; the label says BUILD 40', async () => {
+await check('page', 'the page has what the panel writes to, once each, and every icon it uses is drawn in it: each place the game\'s panel code names is in the page exactly once; each icon a tile, a chip or the weapon block refers to is a symbol defined in the page with a shape in it, and none is fetched; the rounds are the largest text in the panel (40 px or more) and every number in it is set in figures of one width; the old line of text and the dressing line under the health are gone, with their styles; the purchase chips have a look of their own for too dear and for FULL; the label says BUILD 41', async () => {
   const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8'), css = fs.readFileSync(path.join(dist, 'style.css'), 'utf8'), game = fs.readFileSync(SOURCE || new URL('dist/game.js', projectRoot), 'utf8');
   const draw = game.slice(game.indexOf('function panelDraw('), game.indexOf('\n', game.indexOf('function panelDraw(') + 2400)), named = new Set([...draw.matchAll(/(?:set|cls|\$)\('([a-z-]+)'/g)].map(m => m[1]).filter(id => !id.endsWith('-')));
   for (const k of ITEM_ORDER) for (const p of ['count-', 'key-', 'slot-', 'buy-', 'buykey-', 'buyprice-']) named.add(p + k); for (const k of ['rifle', 'mag', 'dressing']) for (const p of ['buy-', 'buykey-', 'buyprice-']) named.add(p + k); assert(named.size >= 45, `${named.size} places named`);
@@ -141,7 +141,7 @@ await check('page', 'the page has what the panel writes to, once each, and every
   const panel = css.slice(css.indexOf('/* Build 40')), sizes = [...panel.matchAll(/([#.][^{}]*)\{[^}]*?font-size:(\d+)px/g)].map(m => [m[1], +m[2]]), rounds = sizes.find(s => s[0] === '#rounds'); assert(rounds && rounds[1] >= 40, 'the rounds are under 40 px'); for (const [sel, px] of sizes) if (sel !== '#rounds') assert(px < rounds[1], `${sel} is as large as the rounds`);
   assert(/#panel\{[^}]*font-variant-numeric:tabular-nums/.test(panel)); assert(/#rounds\{[^}]*min-width:\d+px/.test(panel) && /#reserve\{[^}]*min-width:\d+px/.test(panel), 'no room is kept for three digits'); assert(/\.buy\.short\{/.test(panel) && /\.buy\.full\{/.test(panel) && /\.slot\.empty/.test(panel) && /\.slot\.chosen\{/.test(panel) && /#ammo\.low #rounds/.test(panel) && /#ammo\.empty #rounds/.test(panel));
   for (const gone of ['id="gear"', 'id="medical"']) assert(!html.includes(gone), `${gone} is still in the page`); for (const gone of ['#gear{', '#medical{']) assert(!css.includes(gone)); assert(!/function gearLine|gearLine\(\)|\$\('medical'\)|\$\('gear'\)/.test(game), 'the old line is still written');
-  assert.equal(html.split('BUILD 40').length - 1, 2);
+  assert.equal(html.split('BUILD 41').length - 1, 2);
   report.page = {places: named.size, icons: [...new Set(uses)].length, roundsPx: rounds[1]};
 });
 

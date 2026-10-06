@@ -1,4 +1,4 @@
-# DUSTLINE — Operation Broken Signal (Build 40)
+# DUSTLINE — Operation Broken Signal (Build 41)
 
 **Play:** https://alex-wilson141.github.io/Dustline/ (desktop browser, Safari or Chrome). Source: https://github.com/alex-wilson141/Dustline
 
@@ -46,6 +46,29 @@ Move a finger on the trackpad, or move a mouse, to look. Deploy in a full deskto
 - F3 (fn+F3 on Mac keyboards): diagnostic overlay, off by default; while it is shown, K dumps the last 60 s of frame/movement measurements to the browser console
 
 Cover blocks bullets and movement. There is no automatic health regeneration. AI teammates regroup after being downed. Enemies patrol, take cover, pop up to shoot and reposition; reinforcements arrive out of sight in limited numbers per stage. Enemy positions are not revealed on the map. Friendly fire is disabled.
+
+## The relay, and the push on a front (Build 41)
+
+**The relay.** A squad code (CREATE SQUAD, JOIN SQUAD) first tries to connect the two players directly, as before, with
+no relay in the connection. If that has not come up ten seconds after the two pages exchanged their descriptions, or the
+browser says it failed, both pages say that the two networks cannot reach each other and that the relay is being tried;
+each is given a pass by the squad service, and a second connection is made that knows the relay as well as the direct ways.
+It usually stands within fifteen seconds of the join. The status line then says **Connected through the relay**, or plain
+**Connected** if a direct way worked after all (the browser prefers one). Nothing else changes: the same session, the
+same modes. A relayed session lasts six hours at the most. If the relay cannot be had, the status line says which of these
+it was, and none of them is a wrong code: the squad service stopped answering; no relay is set up; the relay refused a
+pass; today's passes are used up; neither network could reach the relay; the relay was reached and still nothing
+connected. The long codes (the manual connection) connect directly only.
+
+What passes through the relay is in `service/README.md`: all of the session's game traffic, encrypted between the two
+browsers; the relay's keeper (Cloudflare) sees the two addresses, the ports and the times, and counts the bytes.
+
+**The push on a front (Dehrun Terraces, Ambush).** Every wave's push comes from the north, and no longer in a file through
+the one gateway and the one door: its hostiles take five lanes in turn. The first comes by the gateway of the square's
+north wall and the north street door; the others climb the north wall west and east of the gateway (two stretches of it
+stand low now, a ladder outside each) and break in by a window of their own on the house's north face. The flank is what
+it was, from the south, the east and the west. Inside the house they still have only the stairs the floors you have
+bought leave open. `tests/probe-front.mjs` measures it as positions.
 
 ## The HUD panel and the arms' cloth (Build 40)
 
@@ -103,7 +126,7 @@ The hosted Site is public, so both players can open the game link without a game
 4. Host pastes the answer and chooses **Accept answer**.
 5. Once connected, host chooses **Deploy squad**.
 
-Setup contacts Google STUN. A direct connection shares network addresses with the other player. No camera or microphone is requested. Use codes only with a trusted teammate. The host must keep the game open; the mission pauses when the host pauses or leaves the game tab. If disconnected, return to mode selection and reconnect. Some networks cannot connect without a TURN relay, which this prototype does not include. There is no public matchmaking, dedicated server or cross-network reliability guarantee.
+Setup contacts Google STUN. A direct connection shares network addresses with the other player. No camera or microphone is requested. Use codes only with a trusted teammate. The host must keep the game open; the mission pauses when the host pauses or leaves the game tab. If disconnected, return to mode selection and reconnect. Some networks cannot connect directly: since Build 41 a squad code (CREATE SQUAD, JOIN SQUAD) then goes through a relay (see below); the long codes connect directly only. There is no public matchmaking or dedicated server.
 
 ## Run locally
 
@@ -165,7 +188,7 @@ Graphics assets are CC0 from Poly Haven and OpenGameArt; see `dist/credits.html`
 2. **Teammate:** paste it, press JOIN WITH CODE, then COPY CODE, and send the answer back. It starts with `DUSTLINE:A:`.
 3. **Host:** paste the answer and press ACCEPT ANSWER. Keep both pages open and do not reload in between.
 
-Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the game connects players directly and has no relay server. Both players must be on the same build.
+Line breaks and spaces added by a chat app do no harm. If a code arrives cut short or changed, the game says so and by how much. If the codes are right and the game says your networks could not reach each other, that is a network limit: the long codes connect players directly only. Use a squad code (CREATE SQUAD, JOIN SQUAD), which can go through the relay (Build 41). Both players must be on the same build.
 
 ## Movement and spawn spread on Dehrun Terraces (Build 36)
 
@@ -316,6 +339,8 @@ node tests/test-arena-b25.mjs
 node tests/test-foes-b26.mjs
 node tests/test-coopheight-b27.mjs
 ```
+
+Every suite since (the list is in `CLAUDE.md`), four at a time: `node tools/run-suites.mjs all`. Build 41 added `tests/test-relay-b41.mjs` (the relay) and `tests/test-front-b41.mjs` (the push on a front).
 
 These run 34 movement, 24 firing, 3 diagnostics, 26 combat-feel, 12 enemy-behaviour, 6 terrain-raycast equivalence, 11 pause/fullscreen, 5 Build 08 scenario, 6 file-versioning, 3 enemy-engagement and 9 Ambush checks against the game code. The Build 08 scenarios cover death variety, shootable corpses and their clean-up, reinforcement waves and navigation around the new props. The combat-feel checks cover blood, splats, reactions, death variants, the kill alert, mission-failure text and cleanup in solo, host and guest paths, plus the Auto resolution rules. The earlier suites cover sustained sprint, existing action restrictions, class speeds, collisions, camera transforms, varied frame timing, and simulated host/guest messages. Rendering, pointer capture and network transport are mocked; these checks do not establish browser performance, visual feel or live co-op reliability. Automatic weapons keep their existing limit of one firing attempt per rendered frame, including during slow frames. The diagnostics check confirms a scripted gameplay trace is identical with the F3 overlay off and on.
 

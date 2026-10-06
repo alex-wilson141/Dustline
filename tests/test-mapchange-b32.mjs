@@ -119,14 +119,14 @@ await check('rooms', 'the customs house has no room too small to fight in: every
   report.rooms = {merged: ['ground: south-east room into the south hall', 'first floor: north-west room into the north room', 'first floor: south-east room into the south room', 'second floor: south-east room into the south room'], rooms: rooms.filter(r => !/stair|corridor/.test(r.id)).map(r => `${r.storey}: ${r.id} ${r.w.toFixed(1)} x ${r.d.toFixed(1)} m, ${r.area.toFixed(0)} m²`), floodPlaces: reached.length};
 });
 
-await check('menu', 'the map is chosen from the menu: the page has a button for each map and a notice while a map is built; the game binds the buttons, marks the map in use and says which map it is in its header on every map (the Ambush tab is hidden on a map without one and shown again on Kohar Valley); the address still chooses a map at load; the label is BUILD 40', async () => {
+await check('menu', 'the map is chosen from the menu: the page has a button for each map and a notice while a map is built; the game binds the buttons, marks the map in use and says which map it is in its header on every map (the Ambush tab is hidden on a map without one and shown again on Kohar Valley); the address still chooses a map at load; the label is BUILD 41', async () => {
   const html = fs.readFileSync(new URL('dist/index.html', projectRoot), 'utf8'), src = fs.readFileSync(SOURCE || new URL('dist/game.js', projectRoot), 'utf8'), mapsSrc = fs.readFileSync(new URL('dist/maps.js', projectRoot), 'utf8');
-  for (const id of ['kohar', 'dehrun']) assert(new RegExp(`<button data-map="${id}"`).test(html), `a button for ${id}`); assert(/id="maploading" hidden/.test(html)); assert(html.match(/BUILD 40/g)?.length === 2, 'BUILD 40 in the menu and the header');
+  for (const id of ['kohar', 'dehrun']) assert(new RegExp(`<button data-map="${id}"`).test(html), `a button for ${id}`); assert(/id="maploading" hidden/.test(html)); assert(html.match(/BUILD 41/g)?.length === 2, 'BUILD 41 in the menu and the header');
   for (const t of ["document.querySelectorAll?.('[data-map]').forEach(b=>b.onclick=()=>changeMap(b.dataset.map));", "b.setAttribute('aria-pressed',String(b.dataset.map===WORLD.id))", "removeAttribute('hidden')", "function dustline(PAGE){", "PAGE.peer?Object.assign(PAGE.peer,hooks):PAGE.peer=new PeerSquad(hooks)"]) assert(src.includes(t), `the game has: ${t.slice(0, 50)}`);
   assert(!/import\s*\(/.test(src), 'the game imports nothing later (a map change loads no module but the map\'s own, through maps.js)'); assert(/new URLSearchParams\(location\.search\)\.get\('map'\)/.test(mapsSrc), 'the address still chooses');
   let g = await page('kohar'); const head = () => (g.doc.querySelector?.('.mission') || {}).firstChild?.textContent; void head; const g2 = await go(g, 'dehrun'); assert.equal(g2.el('maploading').hidden, true, 'the notice is gone when the map stands'); g = await go(g2, 'kohar'); assert.equal(g.el('maploading').hidden, true);
   assert.equal(await g.changeMap('kohar'), false, 'the map in use is not built again'); g.setMode('story'); g.reset(); g.play(); assert.equal(await g.changeMap('dehrun'), false, 'not in the middle of a mission'); assert.equal(g.gameMap(), 'kohar');
-  report.menu = {maps: ['kohar', 'dehrun'], label: 'BUILD 40'};
+  report.menu = {maps: ['kohar', 'dehrun'], label: 'BUILD 41'};
 });
 
 console.log(JSON.stringify({...(ONLY ? {partial: ONLY} : {}), passed: results.length, checks: results, report, limitations: [
